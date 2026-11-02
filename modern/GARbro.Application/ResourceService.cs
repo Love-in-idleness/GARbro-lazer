@@ -174,7 +174,7 @@ public static partial class ResourceService
             {
                 byte[] signature = new byte[(int)Math.Min(256, new FileInfo(path).Length)];
                 using (var input = File.OpenRead(path)) input.ReadExactly(signature);
-                if (forcedType == "video" || MediaInfo.HasVideoHeader(name, signature))
+                if (forcedType == "video" || MediaInfo.IsVideoName(name) || MediaInfo.HasVideoHeader(name, signature))
                 {
                     var info = MediaTools.Probe(path);
                     return new("video", name, $"{info.Width} × {info.Height} · {info.VideoCodec.ToUpperInvariant()} · {TimeSpan.FromSeconds(info.Duration):hh\\:mm\\:ss}", MediaTools.Poster(path, info));

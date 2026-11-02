@@ -68,7 +68,8 @@ public sealed class VideoPlayback : IVideoOutput
             catch (Exception e) when (e is IOException or DllNotFoundException or TypeInitializationException) { Warning = "VideoMuted"; }
         }
         sound = output; clock.Restart();
-        _ = Task.Run(() => Decode(cancel, output, offset));
+        double start = offset;
+        _ = Task.Run(() => Decode(cancel, output, start));
     }
     string[] Arguments(double start) => MediaTools.Input(artifact.Path).Take(2)
         .Concat(new[] { "-ss", start.ToString("0.######", CultureInfo.InvariantCulture) })
@@ -90,9 +91,7 @@ public sealed class VideoPlayback : IVideoOutput
             {
                 music = MediaTools.Start("ffmpeg", Arguments(start).Concat(new[] { "-map", "0:a:0", "-vn", "-ac", "2", "-ar", "48000", "-f", "s16le", "pipe:1" }));
                 musicErrors = MediaTools.ReadErrors(music);
-                musicTask = FeedAudio(music, output, owner);
-                _ = musicTask.ContinueWith(task => { if (!token.IsCancellationRequested) { failed(task.Exception.GetBaseException()); owner.Cancel(); } },
-                    CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                musicTask = FeedAudioOrMute(music, output, owner);
             }
             lock (gate)
             {
@@ -175,6 +174,20 @@ public sealed class VideoPlayback : IVideoOutput
         // Keep the audio clock advancing after the last sample, including short/silent tails.
         while (output.Queued != 0) await Task.Delay(10, token);
         lock (gate) if (run == owner) { offset += output.Position; clock.Reset(); if (playing) clock.Start(); sound = null; }
+    }
+    async Task FeedAudioOrMute(Process process, PcmOutput output, CancellationTokenSource owner)
+    {
+        try { await FeedAudio(process, output, owner); }
+        catch (Exception error) when (!owner.IsCancellationRequested && error is IOException or InvalidOperationException)
+        {
+            lock (gate)
+            {
+                if (run != owner) return;
+                offset = Current(); output.Pause(true); sound = null; clock.Reset(); if (playing) clock.Start();
+                Warning = "VideoAudioUnavailable";
+            }
+            Kill(process);
+        }
     }
     static async Task<bool> ReadFrame(Stream stream, byte[] buffer, CancellationToken token)
     {

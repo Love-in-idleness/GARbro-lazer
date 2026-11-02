@@ -133,6 +133,7 @@ public sealed partial class DesktopText : INotifyPropertyChanged
 Video|Video|视频
 NoVideo|Video playback is unavailable.|视频播放不可用。
 VideoMuted|Audio output is unavailable; playing video muted.|音频设备不可用，正在静音播放视频。
+VideoAudioUnavailable|Audio decoding is unavailable; playing video muted.|音频解码不可用，正在静音播放视频。
 DiscardChildArchives|Do not keep extracted child archives after successful recursive extraction|递归解包成功后不保留子归档文件
 DiscardOriginalMedia|Do not keep original media copies in the output after conversion|转换成功后不保留输出中的原始多媒体格式
 SourceMediaPreserved|Source game files are always preserved. Clear this option to also copy the original format into the output folder.|始终保留来源游戏文件。取消勾选可将原始格式也复制到输出文件夹。

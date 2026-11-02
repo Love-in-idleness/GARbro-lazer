@@ -13,7 +13,7 @@ namespace GARbro.Application;
 /// <summary>External codec processes; no native video decoder is loaded in the GUI.</summary>
 public static class MediaTools
 {
-    public const string Formats = "mpeg,mpegts,mpegvideo,mov,mp4,m4a,3gp,3g2,mj2,matroska,webm,avi,asf,ogg,flv,ivf";
+    public const string Formats = "mpeg,mpegts,mpegvideo,m4v,mov,mp4,m4a,3gp,3g2,mj2,matroska,webm,avi,asf,ogg,flv,ivf";
     public static string Resolve(string tool)
     {
         string filename = tool + (OperatingSystem.IsWindows() ? ".exe" : "");

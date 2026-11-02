@@ -39,7 +39,7 @@ public sealed class MediaWorkflowTests
                 Assert.False(File.Exists(Path.Combine(output,"middle.xfl.unpacked","child.xfl")));
                 Assert.Equal("Hello, GARbro!\n",File.ReadAllText(Path.Combine(output,"middle.xfl.unpacked","child.xfl.unpacked","hello.txt")));
                 Assert.DoesNotContain(result.Files,f=>f.Path.EndsWith(".xfl"));
-                Assert.Equal(5,result.Entries);Assert.True(result.Bytes>result.Files.Sum(f=>f.Bytes));
+                Assert.Equal(5,result.Entries);Assert.True(result.Bytes>result.Files.Sum(f=>f.Size));
             }
             else {Assert.NotEmpty(result.Errors);Assert.True(File.Exists(Path.Combine(output,"middle.xfl")));Assert.True(File.Exists(Path.Combine(output,"middle.xfl.unpacked","child.xfl")));}
         }
