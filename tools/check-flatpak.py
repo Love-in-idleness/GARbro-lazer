@@ -12,7 +12,7 @@ def check():
     metadata=ET.parse(ROOT/f'packaging/flatpak/{APP}.metainfo.xml').getroot()
     assert manifest['app-id']==metadata.findtext('id')==APP
     assert metadata.findtext('launchable')==APP+'.desktop'
-    assert manifest['runtime-version']=='25.08'
+    assert manifest['runtime-version']=='26.08'
     assert '--socket=wayland' in manifest['finish-args']
     assert '--socket=fallback-x11' in manifest['finish-args']
     assert not any(arg.startswith(('--filesystem=','--socket=session-bus','--socket=system-bus','--device=all')) for arg in manifest['finish-args'])

@@ -36,7 +36,7 @@ def main():
             host=['dotnet']
             if args.in_sdk:
                 host=['flatpak','run','--share=network','--filesystem='+str(ROOT),'--command=sh',
-                      '--runtime=org.freedesktop.Sdk//25.08','org.freedesktop.Sdk.Extension.dotnet10//25.08',
+                      '--runtime=org.freedesktop.Sdk//26.08','org.freedesktop.Sdk.Extension.dotnet10//26.08',
                       '-c','export DOTNET_ROOT=/usr/lib/sdk/dotnet10/lib; exec /usr/lib/sdk/dotnet10/bin/dotnet "$@"','--']
             subprocess.run([*host,'restore',str(ROOT/f'modern/{project}/{project}.csproj'),'-r',rid,
                 '-p:SelfContained=true','-p:RuntimeFrameworkVersion=10.0.14','-p:NuGetAudit=false'],cwd=ROOT,check=True)

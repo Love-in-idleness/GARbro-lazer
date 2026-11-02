@@ -2,7 +2,7 @@
 
 Application ID: `io.github.love_in_idleness.GARbro-no-wpf`. The GitHub namespace
 matches the maintainer and repository, without claiming the original GARbro domain.
-The supported targets are x86_64 and aarch64 on Freedesktop 25.08 with .NET 10.
+The supported targets are x86_64 and aarch64 on Freedesktop 26.08 with .NET 10.
 The Flatpak carries its runtime within the sandbox. DEB and side-loaded Windows
 packages continue to use external .NET runtimes.
 
@@ -12,7 +12,7 @@ architecture restrictions, pins the Git source commit, then builds without netwo
 access in the build sandbox. Downloads happen before compilation. The output
 includes an installable `.flatpak` and the two files needed for a Flathub manifest PR.
 For local use, install `flatpak`, `org.flatpak.Builder`, the Freedesktop SDK and its
-`org.freedesktop.Sdk.Extension.dotnet10//25.08` extension, then run:
+`org.freedesktop.Sdk.Extension.dotnet10//26.08` extension, then run:
 
 ```sh
 python3 tools/prepare-flathub.py --in-sdk --revision FULL_REVIEWED_COMMIT
@@ -40,7 +40,7 @@ defaults remain unchanged. Android, F-Droid and IzzyOnDroid work is deferred.
 ## 中文
 
 应用 ID 使用维护者与仓库对应的 GitHub 命名空间，支持 x86_64、aarch64。
-Flatpak 使用 Freedesktop 25.08 和 .NET 10，在沙箱内携带运行时；DEB 和 Windows
+Flatpak 使用 Freedesktop 26.08 和 .NET 10，在沙箱内携带运行时；DEB 和 Windows
 侧载包继续依赖外部运行时。运行上述命令或手动触发 **Flatpak preparation** 工作流，
 可生成固定源码提交、附 SHA-512 校验的离线 NuGet 清单和安装测试包。
 依赖解析应使用实际 Flatpak SDK，构建阶段不开放网络。

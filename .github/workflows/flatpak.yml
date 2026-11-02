@@ -41,7 +41,7 @@ jobs:
           sudo apt-get install -y flatpak flatpak-builder appstream desktop-file-utils
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-          flatpak install --user -y flathub org.freedesktop.Sdk//25.08 org.freedesktop.Sdk.Extension.dotnet10//25.08 org.flatpak.Builder
+          flatpak install --user -y flathub org.freedesktop.Sdk//26.08 org.freedesktop.Sdk.Extension.dotnet10//26.08 org.flatpak.Builder
       - name: Generate immutable sources with the actual SDK
         run: dbus-run-session -- python3 tools/prepare-flathub.py --in-sdk --revision "$(git rev-parse HEAD)"
       - name: Validate application metadata
