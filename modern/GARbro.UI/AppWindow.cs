@@ -6,6 +6,7 @@ using Avalonia.Input.Platform;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using Avalonia.Data;
 using GARbro.Domain;
 
 namespace GARbro.Desktop;
@@ -39,10 +40,14 @@ public class AppWindow : UserControl
         {
             if (UiPlatform.IsMobile) throw new PlatformNotSupportedException("Android pages do not create desktop windows.");
             if (host != null) return host;
+            var page = new Border { Child = this };
             host = new Window { Title = title, Width = desiredWidth, Height = desiredHeight,
                 MinWidth = minimumWidth, MinHeight = minimumHeight, Icon = Icon,
-                WindowDecorations = WindowDecorations.Full, ExtendClientAreaToDecorationsHint = false,
-                WindowStartupLocation = WindowStartupLocation, Content = this };
+                WindowDecorations = WindowDecorations.Full, ExtendClientAreaToDecorationsHint = !OperatingSystem.IsMacOS(),
+                ExtendClientAreaTitleBarHeightHint = 40,
+                WindowStartupLocation = WindowStartupLocation, Content = page };
+            page.Bind(MarginProperty, new Binding(nameof(Window.WindowDecorationMargin)) { Source = host });
+            SharedWindowChrome.Attach(host, UiPlatform.CurrentText);
             FitToWorkArea(false);
             host.Opened += (_, _) =>
             {

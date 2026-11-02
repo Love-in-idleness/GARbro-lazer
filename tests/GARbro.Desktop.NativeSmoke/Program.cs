@@ -37,10 +37,11 @@ public sealed class NativeSmokeApp : Avalonia.Application
     public override void OnFrameworkInitializationCompleted()
     {
         var lifetime=(IClassicDesktopStyleApplicationLifetime)ApplicationLifetime;
+        lifetime.ShutdownMode=ShutdownMode.OnExplicitShutdown;
         Directory.CreateDirectory(Program.Output);
         var store=new SettingsStore(Path.Combine(Program.Output,"legacy-settings.json"));
         var settingType=typeof(GameRes.Formats.Valkyria.OdnOpener);
-        store.Save(new AppSettings { FormatSettings=new()
+        store.Save(new AppSettings { Language=Environment.GetEnvironmentVariable("GARBRO_SMOKE_LANGUAGE")??"auto", Theme=Environment.GetEnvironmentVariable("GARBRO_SMOKE_THEME")??"system", FormatSettings=new()
         {
             [settingType.Assembly.GetName().Name+":"+settingType.FullName+"/ODNAudioSampleRate"]=JsonSerializer.SerializeToElement("44100")
         }});
@@ -60,6 +61,7 @@ public sealed class NativeSmokeApp : Avalonia.Application
                 // Let the native window complete its layout/render pass.
                 await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);
                 await Task.Delay(150);
+                SharedFrame.Check(window);
                 WindowsFrame.Check(window.DesktopHost);
                 Directory.CreateDirectory(Program.Output);
                 if(Program.TestIme)
@@ -78,6 +80,9 @@ public sealed class NativeSmokeApp : Avalonia.Application
                     || !File.Exists(Path.Combine(extracted,"sub","日本語.bin")))
                     throw new InvalidDataException("Native window extraction differs.");
                 Console.WriteLine("Native desktop window rendered, listed and extracted the fixture.");
+                // Sway intentionally ignores maximize requests. Its harness checks
+                // actual protocol requests; Openbox/Windows check native states too.
+                await SharedFrame.CheckActions(window,!Program.TestIme);
                 code=0;
             }
             catch(Exception error) { Console.Error.WriteLine(error); }

@@ -302,6 +302,9 @@ DefaultOutput|Default output directory|默认输出目录
 Wrap|Wrap text|文本自动换行
 Save|Save|保存
 Close|Close|关闭
+Minimize|Minimize|最小化
+Maximize|Maximize|最大化
+Restore|Restore|还原
 Defaults|Inherit global defaults|继承全局默认值
 Play|Play|播放
 Pause|Pause|暂停

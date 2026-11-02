@@ -8,7 +8,7 @@ Open a game's resource archives, browse pictures, play audio and video, and extr
 
 ## Download and start
 
-Choose a package from the [release download page](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.0). Use **x64** for most Intel and AMD computers, or **arm64** for Windows on ARM, ARM Linux, and Apple silicon.
+Choose a package from the [release download page](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.1). Use **x64** for most Intel and AMD computers, or **arm64** for Windows on ARM, ARM Linux, and Apple silicon.
 
 | System | Package | Open it |
 | --- | --- | --- |
@@ -21,7 +21,7 @@ Choose a package from the [release download page](https://github.com/Love-in-idl
 
 Desktop downloads other than Flatpak and Store packages require the matching [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0). See the [installation guide](docs/install.md) for missing libraries or certificate prompts. Package filenames also contain the version number.
 
-This is the first stable release; some game-specific formats or encryption methods may still be unsupported. GARbro is not yet available on Flathub or the Microsoft Store, and Android development is on hold. The `store.msixupload` download is for Store submission; you do not need it to use GARbro.
+This is a stable desktop release; some game-specific formats or encryption methods may still be unsupported. GARbro is not yet available on Flathub or the Microsoft Store, and Android development is on hold. The `store.msixupload` download is for Store submission; you do not need it to use GARbro.
 
 ## Using the desktop app
 
