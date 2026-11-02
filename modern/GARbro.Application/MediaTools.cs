@@ -80,7 +80,7 @@ public static class MediaTools
     public static byte[] Poster(string path, VideoInfo info)
     {
         var size = MediaInfo.Fit(info.Width, info.Height);
-        return Run("ffmpeg", Input(path).Concat(new[] { "-map", "0:v:0", "-frames:v", "1", "-vf", $"scale={size.Width}:{size.Height}",
+        return Run("ffmpeg", Input(path).Concat(new[] { "-map", "0:V:0", "-frames:v", "1", "-vf", $"scale={size.Width}:{size.Height}",
             "-f", "image2pipe", "-c:v", "bmp", "pipe:1" }), 8L << 20);
     }
 }

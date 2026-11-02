@@ -23,7 +23,7 @@ public sealed class VideoPlayback : IVideoOutput
     readonly Stopwatch clock = new();
     CancellationTokenSource run;
     Process video, audio;
-    PcmOutput sound;
+    PcmOutput sound, device;
     double offset, volume = 1;
     bool playing, disposed;
     public string Warning { get; private set; }
@@ -67,7 +67,7 @@ public sealed class VideoPlayback : IVideoOutput
             try { output = new PcmOutput { Volume = volume }; }
             catch (Exception e) when (e is IOException or DllNotFoundException or TypeInitializationException) { Warning = "VideoMuted"; }
         }
-        sound = output; clock.Restart();
+        sound = device = output; clock.Restart();
         double start = offset;
         _ = Task.Run(() => Decode(cancel, output, start));
     }
@@ -84,7 +84,7 @@ public sealed class VideoPlayback : IVideoOutput
         {
             var size = MediaInfo.Fit(artifact.Info.Width, artifact.Info.Height);
             double fps = Math.Clamp(artifact.Info.FrameRate, 1, 30);
-            movie = MediaTools.Start("ffmpeg", Arguments(start).Concat(new[] { "-map", "0:v:0", "-an", "-vf",
+            movie = MediaTools.Start("ffmpeg", Arguments(start).Concat(new[] { "-map", "0:V:0", "-an", "-vf",
                 $"fps={fps.ToString(CultureInfo.InvariantCulture)}:start_time=0,scale={size.Width}:{size.Height}", "-pix_fmt", "bgra", "-f", "rawvideo", "pipe:1" }));
             movieErrors = MediaTools.ReadErrors(movie);
             if (output != null)
@@ -134,7 +134,7 @@ public sealed class VideoPlayback : IVideoOutput
             try { await Task.WhenAll(musicTask, watchdog, movieErrors, musicErrors); } catch (Exception) { }
             lock (gate)
             {
-                if (run == owner) { offset = Current(); clock.Reset(); run = null; video = audio = null; sound = null; playing = false; }
+                if (run == owner) { offset = Current(); clock.Reset(); output?.Dispose(); run = null; video = audio = null; sound = device = null; playing = false; }
             }
             output?.Dispose(); movie?.Dispose(); music?.Dispose(); owner.Dispose();
         }
@@ -203,7 +203,7 @@ public sealed class VideoPlayback : IVideoOutput
     static void Kill(Process process) { try { if (process != null && !process.HasExited) process.Kill(true); } catch (InvalidOperationException) { } catch (System.ComponentModel.Win32Exception) { } }
     void Halt()
     {
-        run?.Cancel(); run = null; playing = false; clock.Reset(); sound = null;
+        run?.Cancel(); run = null; playing = false; clock.Reset(); device?.Dispose(); sound = device = null;
         Kill(video); Kill(audio); video = audio = null;
     }
     public void Dispose() { lock (gate) { if (disposed) return; disposed = true; Halt(); } }
@@ -214,9 +214,10 @@ public sealed class VideoPlayback : IVideoOutput
         readonly uint device;
         readonly object gate = new();
         long submitted;
+        bool disposed;
         public double Volume { get; set; } = 1;
-        public uint Queued { get { lock (gate) return sdl.GetQueuedAudioSize(device); } }
-        public double Position { get { lock (gate) return Math.Max(0, submitted - sdl.GetQueuedAudioSize(device)) / 192000.0; } }
+        public uint Queued { get { lock (gate) return disposed ? 0 : sdl.GetQueuedAudioSize(device); } }
+        public double Position { get { lock (gate) return Math.Max(0, submitted - (disposed ? 0 : sdl.GetQueuedAudioSize(device))) / 192000.0; } }
         public PcmOutput()
         {
             sdl = AudioPlayback.LoadApi();
@@ -226,17 +227,18 @@ public sealed class VideoPlayback : IVideoOutput
             if (device == 0) { sdl.QuitSubSystem(0x10); sdl.Dispose(); throw new IOException("No compatible audio output is available."); }
             sdl.PauseAudioDevice(device, 0);
         }
-        public void Pause(bool paused) { lock (gate) sdl.PauseAudioDevice(device, paused ? 1 : 0); }
+        public void Pause(bool paused) { lock (gate) if (!disposed) sdl.PauseAudioDevice(device, paused ? 1 : 0); }
         public void Push(byte[] buffer, int count)
         {
             lock (gate)
             {
+                ObjectDisposedException.ThrowIf(disposed, this);
                 for (int i = 0; i + 1 < count; i += 2)
                     BinaryPrimitives.WriteInt16LittleEndian(buffer.AsSpan(i, 2), (short)(BinaryPrimitives.ReadInt16LittleEndian(buffer.AsSpan(i, 2)) * Volume));
                 fixed (byte* ptr = buffer) if (sdl.QueueAudio(device, ptr, (uint)count) != 0) throw new IOException("No compatible audio output is available.");
                 submitted += count;
             }
         }
-        public void Dispose() { lock (gate) { sdl.CloseAudioDevice(device); sdl.QuitSubSystem(0x10); sdl.Dispose(); } }
+        public void Dispose() { lock (gate) { if (disposed) return; disposed = true; sdl.CloseAudioDevice(device); sdl.QuitSubSystem(0x10); sdl.Dispose(); } }
     }
 }

@@ -7,6 +7,7 @@ using Avalonia.VisualTree;
 using GARbro.Desktop;
 using Xunit;
 
+[Collection("Native audio")]
 public sealed class SettingsTests
 {
     [Fact]

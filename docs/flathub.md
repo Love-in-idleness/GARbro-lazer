@@ -11,14 +11,14 @@ NuGet dependencies using the installed Flatpak SDK, records SHA-512 hashes and
 architecture restrictions, pins the Git source commit, then builds without network
 access in the build sandbox. Downloads happen before compilation. The output
 includes an installable `.flatpak` and the two files needed for a Flathub manifest PR.
-For local use, install `flatpak`, `flatpak-builder`, the Freedesktop SDK and its
+For local use, install `flatpak`, `org.flatpak.Builder`, the Freedesktop SDK and its
 `org.freedesktop.Sdk.Extension.dotnet10//25.08` extension, then run:
 
 ```sh
 python3 tools/prepare-flathub.py --in-sdk --revision FULL_REVIEWED_COMMIT
 python3 tools/check-flatpak.py
 appstreamcli validate --no-net packaging/flatpak/*.metainfo.xml
-flatpak-builder --user --install-deps-from=flathub --repo=artifacts/flatpak-repo build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json
+flatpak run --filesystem="$PWD" org.flatpak.Builder --user --install-deps-from=flathub --mirror-screenshots-url=https://dl.flathub.org/media/ --repo=artifacts/flatpak-repo build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json
 ```
 
 The manifest grants Wayland, fallback X11, GPU rendering, PulseAudio and network

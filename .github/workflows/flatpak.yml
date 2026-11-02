@@ -51,7 +51,7 @@ jobs:
           flatpak run --filesystem="$PWD" --command=flatpak-builder-lint org.flatpak.Builder manifest artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json
       - name: Build without network access in the build sandbox
         run: |
-          dbus-run-session -- flatpak run --filesystem="$PWD" org.flatpak.Builder --user --force-clean --mirror-screenshots-url=https://dl.flathub.org/media --repo=artifacts/flatpak-repo --install-deps-from=flathub build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json
+          dbus-run-session -- flatpak run --filesystem="$PWD" org.flatpak.Builder --user --force-clean --mirror-screenshots-url=https://dl.flathub.org/media/ --repo=artifacts/flatpak-repo --install-deps-from=flathub build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json
           flatpak build-bundle artifacts/flatpak-repo artifacts/garbro-${{ inputs.package_version || '1.0.0' }}-linux-${{ matrix.arch == 'aarch64' && 'arm64' || 'x64' }}.flatpak io.github.love_in_idleness.GARbro-no-wpf
       - name: Verify self-contained CLI and worker in the sandbox
         run: |
@@ -63,7 +63,9 @@ jobs:
           dbus-run-session -- flatpak-builder --run build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json ffmpeg -version
           dbus-run-session -- flatpak-builder --run build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json ffprobe -version
       - name: Validate the built repository with Flathub tooling
-        run: flatpak run --filesystem="$PWD" --command=flatpak-builder-lint org.flatpak.Builder repo artifacts/flatpak-repo
+        run: |
+          python3 tools/inspect-flatpak-media.py build-flatpak
+          flatpak run --filesystem="$PWD" --command=flatpak-builder-lint org.flatpak.Builder repo artifacts/flatpak-repo
       - name: Package the immutable Flathub submission
         if: matrix.arch == 'x86_64'
         run: python3 tools/package-flathub.py

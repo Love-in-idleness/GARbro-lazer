@@ -11,6 +11,10 @@ using Avalonia.VisualTree;
 using Avalonia.LogicalTree;
 using Xunit;
 
+[CollectionDefinition("Native audio", DisableParallelization = true)]
+public sealed class NativeAudioCollection { }
+
+[Collection("Native audio")]
 public sealed class VideoTests
 {
     [AvaloniaTheory]
@@ -70,6 +74,7 @@ public sealed class VideoTests
         },error=>{failure=error;ready.TrySetException(error);},1L<<30);
         Assert.False(output.Playing);Assert.Equal(0,output.Position);Assert.Equal(0,frames);
         output.Play();await ready.Task.WaitAsync(TimeSpan.FromSeconds(15));
+        output.Position=.1;Assert.Null(output.Warning);
         await Task.Delay(150,TestContext.Current.CancellationToken);output.Pause();double paused=output.Position;
         await Task.Delay(100,TestContext.Current.CancellationToken);Assert.InRange(output.Position,paused-.03,paused+.03);
         output.Position=.5;Assert.InRange(output.Position,.49,.51);output.Volume=.25;Assert.Equal(.25,output.Volume);
