@@ -21,11 +21,15 @@ namespace GARbro.Desktop
         public static AppBuilder Configure(AppBuilder builder)
         {
             InitializeServices();
+            // Avalonia 12 marks its force-CSD switches experimental. Keep this opt-in
+            // scoped to the pinned backend version and verify it with real X11/Wayland
+            // windows: our shared caption must not disappear when SSD is unavailable.
+#pragma warning disable AVALONIA_X11_FORCE_CSD, AVALONIA_WAYLAND_FORCE_CSD
             builder.UsePlatformDetect().WithInterFont()
-                .With(new X11PlatformOptions {UseDBusFilePicker=true});
+                .With(new X11PlatformOptions {UseDBusFilePicker=true, ForceDrawnDecorations=true});
             if(OperatingSystem.IsLinux())
             {
-                builder.With(new WaylandPlatformOptions {AppId=AppId});
+                builder.With(new WaylandPlatformOptions {AppId=AppId, ForceDrawnDecorations=true});
                 string backend=Environment.GetEnvironmentVariable("GARBRO_LINUX_BACKEND")??"auto";
                 switch(backend.ToLowerInvariant())
                 {
@@ -38,6 +42,7 @@ namespace GARbro.Desktop
                     default:throw new ArgumentException("GARBRO_LINUX_BACKEND must be auto, wayland or x11.");
                 }
             }
+#pragma warning restore AVALONIA_X11_FORCE_CSD, AVALONIA_WAYLAND_FORCE_CSD
             return builder;
         }
     }

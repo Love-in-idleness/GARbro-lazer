@@ -8,7 +8,7 @@
 
 ## 下载与启动
 
-到 [正式版下载页](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.0) 选择与你的系统和处理器对应的文件。普通 Intel、AMD 电脑选 **x64**；Windows on ARM、ARM Linux 和 Apple 芯片选 **arm64**。
+到 [正式版下载页](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.1) 选择与你的系统和处理器对应的文件。普通 Intel、AMD 电脑选 **x64**；Windows on ARM、ARM Linux 和 Apple 芯片选 **arm64**。
 
 | 系统 | 下载哪个 | 怎么打开 |
 | --- | --- | --- |
@@ -21,7 +21,7 @@
 
 除自带运行时的 Flatpak、商店包以外，桌面下载包需要先安装对应架构的 [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)。缺少依赖或遇到证书提示时，请看[安装说明](docs/install.md)。文件名中的版本号会随更新改变。
 
-这是首个正式版，部分游戏的特殊加密或格式变体仍可能打不开。Flathub 和微软商店尚未上架，目前可直接下载安装包。Android 开发暂缓。`store.msixupload` 是商店提交文件，普通用户无需下载。
+这是正式桌面版，部分游戏的特殊加密或格式变体仍可能打不开。Flathub 和微软商店尚未上架，目前可直接下载安装包。Android 开发暂缓。`store.msixupload` 是商店提交文件，普通用户无需下载。
 
 ## 图形界面怎么用
 

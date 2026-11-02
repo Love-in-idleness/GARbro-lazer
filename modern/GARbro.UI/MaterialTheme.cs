@@ -53,5 +53,9 @@ public static class MaterialTheme
         app.Resources["SystemControlForegroundBaseHighBrush"] = app.Resources["M3OnSurface"];
         app.Resources["SystemControlBackgroundAltHighBrush"] = app.Resources["M3Surface"];
         app.Resources["SystemControlBackgroundChromeMediumLowBrush"] = app.Resources["M3SurfaceContainer"];
+        app.Resources["TitleBarBackgroundBrush"] = app.Resources["M3Surface"];
+        app.Resources["CaptionButtonForeground"] = app.Resources["M3OnSurface"];
+        app.Resources["CaptionButtonBackground"] = app.Resources["M3PrimaryContainer"];
+        app.Resources["CaptionButtonBorderBrush"] = app.Resources["M3OutlineVariant"];
     }
 }

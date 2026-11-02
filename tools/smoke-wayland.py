@@ -77,12 +77,19 @@ def main():
                     env=environment,stdout=app_log,stderr=subprocess.STDOUT,check=True,timeout=45)
                 if helper.wait(timeout=5)!=0:raise RuntimeError('Input-method protocol probe failed.')
                 shutil.copy2(probe/'window.png',output/'window.png')
+                shutil.copy2(probe/'window-with-titlebar.png',output/'window-with-titlebar.png')
         finally:
             stop(helper);stop(compositor)
     text=(output/'application.log').read_text()
     for event in ('zwp_text_input_v3','preedit_string','commit_string','delete_surrounding_text'):
         if event not in text:raise AssertionError('Missing Wayland protocol evidence: '+event)
+    # Sway does not implement maximization, so there is no maximized state to
+    # restore. Openbox and Win32 verify maximize/restore state transitions;
+    # this compositor verifies the requests it actually accepts over Wayland.
+    for event in ('set_maximized()','set_minimized()'):
+        if event not in text:raise AssertionError('Missing Wayland caption action request: '+event)
     print('Native Wayland text-input-v3 passed: preedit, CJK commit, UTF-8 deletion and focus transfer.')
+    print('Shared Wayland caption buttons and maximize/minimize protocol requests passed.')
 
 
 if __name__=='__main__':main()

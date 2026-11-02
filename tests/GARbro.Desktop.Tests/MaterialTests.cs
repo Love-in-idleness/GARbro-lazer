@@ -71,7 +71,8 @@ public sealed class MaterialTests
     {
         var page=new MainWindow();var host=page.DesktopHost;
         Assert.Equal(WindowDecorations.Full,host.WindowDecorations);
-        Assert.False(host.ExtendClientAreaToDecorationsHint);
+        Assert.Equal(!OperatingSystem.IsMacOS(),host.ExtendClientAreaToDecorationsHint);
+        Assert.NotNull(host.WindowDecorationsTheme);
         Assert.True(host.CanMinimize);Assert.True(host.CanMaximize);Assert.True(host.CanResize);
         host.Close();
     }

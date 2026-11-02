@@ -1,4 +1,22 @@
 <Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="GARbro.Desktop.MaterialStyles">
+  <Styles.Resources>
+    <ControlTheme x:Key="GarbroWindowDecorations" TargetType="WindowDrawnDecorations"
+                  BasedOn="{StaticResource {x:Type WindowDrawnDecorations}}">
+      <Setter Property="DefaultTitleBarHeight" Value="40" />
+      <Style Selector="^ /template/ Button">
+        <Setter Property="Width" Value="46" /><Setter Property="Height" Value="40" />
+        <Setter Property="MinHeight" Value="40" /><Setter Property="Padding" Value="0" />
+        <Setter Property="CornerRadius" Value="0" />
+      </Style>
+      <Style Selector="^ /template/ Button#PART_FullScreenButton"><Setter Property="IsVisible" Value="False" /></Style>
+      <Style Selector="^ /template/ Button#PART_MinimizeButton"><Setter Property="IsVisible" Value="True" /></Style>
+      <Style Selector="^ /template/ Button#PART_MaximizeButton"><Setter Property="IsVisible" Value="True" /></Style>
+      <Style Selector="^ /template/ Panel#PART_TitleTextPanel TextBlock">
+        <Setter Property="Margin" Value="12,0,154,0" /><Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
+      </Style>
+    </ControlTheme>
+  </Styles.Resources>
   <Style Selector="Window, :is(UserControl).page">
     <Setter Property="Background" Value="{DynamicResource M3Surface}" />
     <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
