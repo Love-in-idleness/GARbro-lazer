@@ -49,12 +49,19 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -y --no-install-recommends libsdl2-2.0-0 ffmpeg
-      - name: Install Windows build tools
+      - name: Install Windows POSIX build tools
         if: runner.os == 'Windows'
-        run: choco install make --yes --no-progress
+        id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          install: make pkgconf
+          path-type: inherit
       - name: Build redistributable video helpers
         if: runner.os != 'Linux'
         run: python tools/build-media.py --rid ${{ matrix.rid }}
+        env:
+          MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
       - name: Use the packaged helpers for video regression tests
         if: runner.os != 'Linux'
         shell: bash

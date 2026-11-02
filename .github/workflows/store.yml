@@ -22,10 +22,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      - name: Install Windows build tools
-        run: choco install make --yes --no-progress
+      - name: Install Windows POSIX build tools
+        id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          install: make pkgconf
+          path-type: inherit
       - name: Verify registered identity and build self-contained Store bundle
         run: python tools/package-store.py --version ${{ inputs.package_version || '1.0.0' }}
+        env:
+          MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
       - uses: actions/upload-artifact@v4
         with:
           name: store-upload
