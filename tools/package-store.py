@@ -8,7 +8,7 @@ import shutil
 import subprocess
 import zipfile
 from pathlib import Path
-from installer_support import ROOT, msix_manifest, store_identity, store_version, windows_icon_assets
+from installer_support import ROOT, msix_manifest, store_identity, store_version, windows_icon_assets, index_windows_icons
 import importlib
 
 
@@ -39,6 +39,7 @@ def build_architecture(rid,version,output):
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);module.licenses(stage)
     windows_icon_assets(stage/'Assets')
     (stage/'AppxManifest.xml').write_text(msix_manifest(version,rid,'store'),encoding='utf-8')
+    index_windows_icons(stage)
     # Both the GUI and decoder retain package identity when launching the worker apphost.
     (stage/'desktop/store-channel.json').write_text(json.dumps(store_identity(),indent=2)+'\n')
     packages=output/'store-packages';packages.mkdir(exist_ok=True)

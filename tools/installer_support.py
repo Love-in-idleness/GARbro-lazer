@@ -2,9 +2,11 @@
 import json
 import base64
 import hashlib
+import os
 import re
 import shutil
 import subprocess
+import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -185,6 +187,7 @@ def build_msix(stage, output, version, rid='win-x64'):
     for name in ('LICENSE','third-party.md','dependencies.json','compatibility.md'): shutil.copy2(stage/name, root/name)
     windows_icon_assets(root/'Assets')
     (root/'AppxManifest.xml').write_text(msix_manifest(version, rid), encoding='utf-8')
+    index_windows_icons(root)
     subprocess.run(['powershell','-NoProfile','-ExecutionPolicy','Bypass','-File',str(ROOT/'tools/package-msix.ps1'),
         '-Stage',str(root),'-Output',str(output),'-Version',version,'-Architecture',architecture], check=True)
     return output/f'garbro-{version}-{rid}.msix'
@@ -199,3 +202,20 @@ def windows_icon_assets(assets):
         for suffix in ('', '_altform-unplated', '_altform-lightunplated'):
             shutil.copy2(ROOT/f'modern/GARbro.UI/Assets/app-icon-{size}.png',
                 assets/f'Square44x44Logo.targetsize-{size}{suffix}.png')
+
+
+def index_windows_icons(stage):
+    """Index shell qualifiers so Windows actually selects the unplated assets."""
+    sdk=Path(os.environ['ProgramFiles(x86)'])/'Windows Kits/10/bin'
+    makepri=next((version/'x64/makepri.exe' for version in sorted(sdk.iterdir(),reverse=True)
+        if (version/'x64/makepri.exe').is_file()),None)
+    if makepri is None:raise RuntimeError('Windows SDK MakePri is missing')
+    resource=stage/'resources.pri'
+    subprocess.run([str(makepri),'new','/cf',str(ROOT/'tools/installers/priconfig.xml'),'/pr',str(stage),
+        '/mn',str(stage/'AppxManifest.xml'),'/of',str(resource),'/o'],check=True)
+    with tempfile.TemporaryDirectory(prefix='garbro-icon-index-')as directory:
+        dump=Path(directory)/'resources.xml'
+        subprocess.run([str(makepri),'dump','/if',str(resource),'/of',str(dump),'/dt','detailed','/o'],check=True)
+        data=dump.read_text(encoding='utf-8-sig')
+        for variant in ('_altform-unplated.png','_altform-lightunplated.png'):
+            if variant not in data:raise RuntimeError('The Windows shell icon qualifier was not indexed: '+variant)
