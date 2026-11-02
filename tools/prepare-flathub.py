@@ -39,7 +39,7 @@ def main():
                       '--runtime=org.freedesktop.Sdk//25.08','org.freedesktop.Sdk.Extension.dotnet10//25.08',
                       '-c','export DOTNET_ROOT=/usr/lib/sdk/dotnet10/lib; exec /usr/lib/sdk/dotnet10/bin/dotnet "$@"','--']
             subprocess.run([*host,'restore',str(ROOT/f'modern/{project}/{project}.csproj'),'-r',rid,
-                '-p:SelfContained=true','-p:RuntimeFrameworkVersion=10.0.13','-p:NuGetAudit=false'],cwd=ROOT,check=True)
+                '-p:SelfContained=true','-p:RuntimeFrameworkVersion=10.0.14','-p:NuGetAudit=false'],cwd=ROOT,check=True)
             assets=json.loads((ROOT/f'modern/{project}/obj/project.assets.json').read_text())
             for identity,library in package_records(assets):
                 name,version=identity.lower().split('/');filename=f'{name}.{version}.nupkg'

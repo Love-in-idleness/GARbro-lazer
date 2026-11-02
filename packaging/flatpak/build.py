@@ -13,7 +13,7 @@ rid={'x86_64':'linux-x64','aarch64':'linux-arm64'}[platform.machine()]
 version=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.0')
 for project,folder in [('GARbro.Desktop','desktop'),('GARbro.Worker','desktop'),('GARbro.Cli','cli')]:
     path=f'modern/{project}/{project}.csproj'
-    options=['-r',rid,'-p:SelfContained=true','-p:RuntimeFrameworkVersion=10.0.13','-p:NuGetAudit=false']
+    options=['-r',rid,'-p:SelfContained=true','-p:RuntimeFrameworkVersion=10.0.14','-p:NuGetAudit=false']
     subprocess.run(['dotnet','restore',path,*options,'--source',str(root/'nuget-sources')],check=True)
     subprocess.run(['dotnet','publish',path,*options,'--no-restore','-c','Release','-o',f'/app/lib/garbro/{folder}',
                     '-p:Version='+version,'-m:1','-nr:false','-p:UseSharedCompilation=false'],check=True)

@@ -26,7 +26,7 @@ def build_architecture(rid,version,output):
     stage.mkdir(parents=True)
     for project,folder in [('GARbro.Desktop','desktop'),('GARbro.Worker','desktop'),('GARbro.Cli','cli')]:
         subprocess.run(['dotnet','publish',str(ROOT/'modern'/project/(project+'.csproj')),'-c','Release','-r',rid,
-            '--self-contained','true','-o',str(stage/folder),'-p:Version='+version,'-p:UseSharedCompilation=false','-m:1','-nr:false','--nologo'],check=True)
+            '--self-contained','true','-p:RuntimeFrameworkVersion=10.0.14','-o',str(stage/folder),'-p:Version='+version,'-p:UseSharedCompilation=false','-m:1','-nr:false','--nologo'],check=True)
     helpers=importlib.import_module('build-media').build(rid,ROOT/'artifacts/media')
     for folder in ('desktop','cli'):shutil.copytree(helpers,stage/folder/'media')
     # Each apphost, including the packaged decoder, must use the local runtime.
