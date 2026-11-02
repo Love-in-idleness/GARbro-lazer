@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using GameRes;
+using GARbro.Media;
 using Newtonsoft.Json;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
@@ -20,6 +21,7 @@ public sealed class ResourceSession : IDisposable
     public ResourceLocation Location { get; }
     public ArcFile Archive { get; }
     public bool Physical => physical;
+    public bool Synthetic => Archive?.Tag == "DAT/BOGUS";
     public ResourceSession(ResourceLocation location, IOptionsProvider options = null)
     {
         scoped = options as ScopedOptionsProvider;
@@ -44,6 +46,8 @@ public sealed class ResourceSession : IDisposable
                     var current = Location with { Archives = Location.Chain.Take(depth).ToArray(), Directory = "" };
                     scoped?.SetLocation(current);
                     VFS.FullPath = new[] { current.RootPath }.Concat(current.Chain).Append("").ToArray();
+                    if (VFS.CurrentArchive?.Tag == "DAT/BOGUS" && depth < Location.Chain.Length)
+                        throw new UnknownFormatException();
                 }
                 Archive = VFS.CurrentArchive ?? throw new UnknownFormatException();
             }
@@ -62,7 +66,7 @@ public sealed class ResourceSession : IDisposable
         if (physical)
         {
             var items = new DirectoryInfo(Location.RootPath).EnumerateFileSystemInfos().Select(f =>
-                new BrowserEntry(f.Name, f.Name, f is DirectoryInfo ? "directory" : FormatCatalog.Instance.GetTypeFromName(f.Name),
+                new BrowserEntry(f.Name, f.Name, f is DirectoryInfo ? "directory" : MediaInfo.IsVideoName(f.Name) ? "video" : FormatCatalog.Instance.GetTypeFromName(f.Name),
                     f is FileInfo file ? file.Length : 0, f is DirectoryInfo)).ToArray();
             return new(Location, "directory", true, items);
         }
@@ -83,9 +87,9 @@ public sealed class ResourceSession : IDisposable
                 string directory = prefix + rest[..slash];
                 if (dirs.Add(directory)) entries.Add(new(directory, rest[..slash], "directory", 0, true));
             }
-            else entries.Add(new(entry.Name, rest, entry.Type, entry.Size, false, id));
+            else entries.Add(new(entry.Name, rest, MediaInfo.IsVideoName(entry.Name) ? "video" : entry.Type, entry.Size, false, id));
         }
-        return new(Location with { Fingerprint = ArchiveFingerprint.Read(Location.RootPath) }, Archive.Tag, false, entries.ToArray(), FormatIdentity.Of(Archive.Format));
+        return new(Location with { Fingerprint = ArchiveFingerprint.Read(Location.RootPath) }, Synthetic ? "media" : Archive.Tag, false, entries.ToArray(), FormatIdentity.Of(Archive.Format));
     }
 
     public Stream OpenEntry(string name)
@@ -101,7 +105,7 @@ public sealed class ResourceSession : IDisposable
         if (Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar)) throw new IOException("Resource leaves its input directory.");
         return full;
     }
-    public ResourceLocation Child(string name) => physical ? new(PhysicalPath(name)) : Location.EnterArchive(name);
+    public ResourceLocation Child(string name) => Synthetic ? throw new UnknownFormatException() : physical ? new(PhysicalPath(name)) : Location.EnterArchive(name);
 
     public void Dispose()
     {
@@ -165,7 +169,17 @@ public static partial class ResourceService
         {
             string path = Path.Combine(scratch, Path.GetFileName(name));
             using (var source = session.OpenEntry(name))
-            using (var target = File.Create(path)) CopyBounded(source, target, 512L << 20);
+            using (var target = File.Create(path)) CopyBounded(source, target, MediaInfo.IsVideoName(name) ? 2L << 30 : 512L << 20);
+            if (forcedType is not ("script" or "binary" or "image" or "audio"))
+            {
+                byte[] signature = new byte[(int)Math.Min(256, new FileInfo(path).Length)];
+                using (var input = File.OpenRead(path)) input.ReadExactly(signature);
+                if (forcedType == "video" || MediaInfo.HasVideoHeader(name, signature))
+                {
+                    var info = MediaTools.Probe(path);
+                    return new("video", name, $"{info.Width} × {info.Height} · {info.VideoCodec.ToUpperInvariant()} · {TimeSpan.FromSeconds(info.Duration):hh\\:mm\\:ss}", MediaTools.Poster(path, info));
+                }
+            }
             if (forcedType != "script" && forcedType != "binary")
             {
                 using var imageInput = new BinaryStream(File.OpenRead(path), name);
@@ -214,7 +228,7 @@ public static partial class ResourceService
             string text;
             try
             {
-                int skip = offset == 0 ? bom : 0;
+                int skip = offset == 0 ? Math.Min(bom, data.Length) : 0;
                 text = encoding.GetString(data, skip, data.Length - skip);
             }
             catch (DecoderFallbackException) { text = Encodings.ResourceEncoding.GetString(data); }

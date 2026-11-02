@@ -1,6 +1,11 @@
-name: Flatpak preparation
+name: Flatpak
 on:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      package_version:
+        type: string
+        default: 1.0.0
   pull_request:
     paths:
       - 'packaging/flatpak/**'
@@ -21,6 +26,8 @@ jobs:
             arch: aarch64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
+    env:
+      GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.0' }}
     steps:
       - uses: actions/checkout@v4
       - name: Install build and validation tools
@@ -29,25 +36,35 @@ jobs:
           sudo apt-get install -y flatpak flatpak-builder appstream desktop-file-utils
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-          flatpak install --user -y flathub org.freedesktop.Sdk//25.08 org.freedesktop.Sdk.Extension.dotnet10//25.08
+          flatpak install --user -y flathub org.freedesktop.Sdk//25.08 org.freedesktop.Sdk.Extension.dotnet10//25.08 org.flatpak.Builder
       - name: Generate immutable sources with the actual SDK
         run: dbus-run-session -- python3 tools/prepare-flathub.py --in-sdk --revision "$GITHUB_SHA"
       - name: Validate application metadata
         run: |
           python3 tools/check-flatpak.py
           appstreamcli validate --no-net packaging/flatpak/*.metainfo.xml
+          flatpak run --filesystem="$PWD" --command=flatpak-builder-lint org.flatpak.Builder manifest artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json
       - name: Build without network access in the build sandbox
         run: |
           dbus-run-session -- flatpak-builder --user --force-clean --repo=artifacts/flatpak-repo --install-deps-from=flathub build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json
-          flatpak build-bundle artifacts/flatpak-repo artifacts/GARbro-${{ matrix.arch }}.flatpak io.github.love_in_idleness.GARbro-no-wpf
+          flatpak build-bundle artifacts/flatpak-repo artifacts/garbro-${{ inputs.package_version || '1.0.0' }}-linux-${{ matrix.arch == 'aarch64' && 'arm64' || 'x64' }}.flatpak io.github.love_in_idleness.GARbro-no-wpf
       - name: Verify self-contained CLI and worker in the sandbox
         run: |
           dbus-run-session -- flatpak-builder --run build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json garbro --help
           dbus-run-session -- flatpak-builder --run build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json sh -ec 'test -e /app/lib/garbro/desktop/libcoreclr.so; test -x /app/lib/garbro/desktop/GARbro.Worker'
           dbus-run-session -- flatpak-builder --run build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json env SDL_AUDIODRIVER=dummy python3 -c 'import ctypes; sdl=ctypes.CDLL("libSDL2-2.0.so.0"); assert sdl.SDL_Init(0x10)==0, "System SDL audio initialization failed"; sdl.SDL_Quit()'
+      - name: Verify video tools in the sandbox
+        run: |
+          dbus-run-session -- flatpak-builder --run build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json ffmpeg -version
+          dbus-run-session -- flatpak-builder --run build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json ffprobe -version
+      - name: Validate the built repository with Flathub tooling
+        run: flatpak run --filesystem="$PWD" --command=flatpak-builder-lint org.flatpak.Builder repo artifacts/flatpak-repo
+      - name: Package the immutable Flathub submission
+        if: matrix.arch == 'x86_64'
+        run: python3 tools/package-flathub.py
       - uses: actions/upload-artifact@v4
         with:
-          name: flatpak-preparation-${{ matrix.arch }}
+          name: flatpak-${{ matrix.arch }}
           path: |
             artifacts/*.flatpak
-            artifacts/flathub/
+            artifacts/flathub-submission.zip

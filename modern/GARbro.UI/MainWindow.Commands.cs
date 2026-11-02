@@ -38,7 +38,7 @@ public sealed partial class MainWindow
     {
         Register("Open", OpenPicker); Register("OpenFolder", FolderPicker);
         Register("Exit", () => { Close(); return Task.CompletedTask; }, () => true);
-        Register("Cancel", () => { active?.Cancel(); previewCancellation?.Cancel(); return Task.CompletedTask; }, () => busy || previewCancellation != null);
+        Register("Cancel", () => { active?.Cancel(); previewCancellation?.Cancel(); StopAudio(); return Task.CompletedTask; }, () => busy || previewCancellation != null || Playback != null);
         Register("Back", () => NavigateHistory(-1), () => !busy && historyIndex > 0);
         Register("Forward", () => NavigateHistory(1), () => !busy && historyIndex + 1 < history.Count);
         Register("Parent", NavigateParent, () => !busy && listing != null);
@@ -122,7 +122,7 @@ public sealed partial class MainWindow
     {
         var context = new ContextMenu();
         foreach (string key in selectionOnly ? new[] { "SelectAll", "Mask", "CopyNames", "Explore", "Trash" } : new[] { "OpenSelected", "ExtractSelected", "Recursive", "Create", "Convert", "SelectAll", "Mask", "CopyNames", "Explore", "Trash", "Refresh" }) context.Items.Add(Item(key));
-        var type = Group("AssignType"); foreach (var pair in new[] { ("Automatic", ""), ("Images", "image"), ("Audio", "audio"), ("Scripts", "script"), ("Binary", "binary") })
+        var type = Group("AssignType"); foreach (var pair in new[] { ("Automatic", ""), ("Images", "image"), ("Audio", "audio"), ("Video", "video"), ("Scripts", "script"), ("Binary", "binary") })
         {
             var item = Group(pair.Item1); item.Click += async (_, _) =>
             {
@@ -232,7 +232,8 @@ public sealed partial class MainWindow
                     string extension = format == "AUDIO" ? "wav" : catalog.Single(f => f.Id == format).Extensions.FirstOrDefault() ?? "png";
                     string target = ExtractionPath.Resolve(choice.Output, Path.ChangeExtension(entry.Name, extension));
                     Directory.CreateDirectory(Path.GetDirectoryName(target));
-                    await Request<ResourceConversion>(new("resource-convert", null, Location: listing.Location, Entry: entry.Name, Output: target, FormatId: format, Overwrite: choice.Overwrite), operation.Token);
+                    await Request<ResourceConversion>(new("resource-convert", null, Location: listing.Location, Entry: entry.Name, Output: target, FormatId: format, Overwrite: choice.Overwrite,
+                        ResourceOptions: new(DiscardOriginalMedia: choice.DiscardOriginalMedia)), operation.Token);
                     done++;
                 }
                 catch (WorkerOperationException e) { failures.Add(e.Message); DesktopServices.Log(e); }

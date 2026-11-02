@@ -12,6 +12,7 @@ namespace GARbro.Desktop
         {
             UiPlatform.Worker ??= new ManagedWorkerClient(GARbro.Worker.WorkerMarker.AssemblyPath);
             UiPlatform.Audio ??= path => new AudioPlayback(path);
+            UiPlatform.Video ??= (artifact, frame, error, memory) => new VideoPlayback(artifact, frame, error, memory);
             UiPlatform.Storage ??= new DesktopStorageAccess();
             if (Environment.GetEnvironmentVariable("FLATPAK_ID") != null)
                 UiPlatform.CanTrash ??= () => false;

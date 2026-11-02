@@ -232,7 +232,7 @@ internal static class Program
                         new ResourceExtractionOptions(true,checked((int)Number("--max-depth",8))),
                         new ExtractionLimits(Number("--max-entry",2L<<30),remaining,double.Parse(Get("--max-ratio","10000"),CultureInfo.InvariantCulture),entriesRemaining),
                         overwrite,null,provider,null);
-                    remaining-=report.Bytes;entriesRemaining-=report.Files.Count(f=>f.Status is "extracted" or "retained");reports.Add(report);
+                    remaining-=report.Bytes;entriesRemaining-=report.Entries;reports.Add(report);
                     if(!json)Console.WriteLine($"{source}: {report.Files.Length} files, {report.Errors.Length} errors → {root}");
                 }
                 if(json)Emit(reports);

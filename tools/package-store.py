@@ -9,6 +9,7 @@ import subprocess
 import zipfile
 from pathlib import Path
 from installer_support import ROOT, msix_manifest, store_identity, store_version
+import importlib
 
 
 def sdk_tool(name):
@@ -26,6 +27,8 @@ def build_architecture(rid,version,output):
     for project,folder in [('GARbro.Desktop','desktop'),('GARbro.Worker','desktop'),('GARbro.Cli','cli')]:
         subprocess.run(['dotnet','publish',str(ROOT/'modern'/project/(project+'.csproj')),'-c','Release','-r',rid,
             '--self-contained','true','-o',str(stage/folder),'-p:Version='+version,'-p:UseSharedCompilation=false','-m:1','-nr:false','--nologo'],check=True)
+    helpers=importlib.import_module('build-media').build(rid,ROOT/'artifacts/media')
+    for folder in ('desktop','cli'):shutil.copytree(helpers,stage/folder/'media')
     # Each apphost, including the packaged decoder, must use the local runtime.
     for folder,name in [('desktop','GARbro.Desktop'),('desktop','GARbro.Worker'),('cli','garbro')]:
         runtime=json.loads((stage/folder/(name+'.runtimeconfig.json')).read_text())['runtimeOptions']
@@ -48,7 +51,7 @@ def build_architecture(rid,version,output):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--version',default='0.3.0-preview.2')
+    parser.add_argument('--version',default='1.0.0')
     parser.add_argument('--output',type=Path,default=Path('artifacts'))
     args=parser.parse_args();output=args.output.resolve();output.mkdir(parents=True,exist_ok=True)
     identity=store_identity();number=store_version()
@@ -59,6 +62,12 @@ def main():
     with zipfile.ZipFile(upload,'w',compression=zipfile.ZIP_DEFLATED)as archive:archive.write(bundle,bundle.name)
     (output/'store-submission.json').write_text(json.dumps(dict(**identity,version=number,applicationVersion=args.version,
         architectures=['x64','arm64'],selfContained=True,submissionState='prepared'),indent=2)+'\n')
+    with zipfile.ZipFile(output/'store-listing.zip','w',compression=zipfile.ZIP_DEFLATED) as listing:
+        for path in (ROOT/'docs/store').rglob('*'):
+            if path.is_file():listing.write(path,path.relative_to(ROOT/'docs'))
+        listing.write(ROOT/'docs/privacy.md','privacy.md')
+        for language in ('en-US','zh-CN'):
+            listing.write(ROOT/f'docs/screenshots/video-{language}.png',f'screenshots/video-{language}.png')
     print(upload)
 
 

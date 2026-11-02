@@ -28,8 +28,10 @@ def prepare_assets(plan,artifacts,revision):
                ('linux-x64','.deb'),('win-x64','.msix'),('win-x64','.cer'),
                ('linux-arm64','.tar.gz'),('linux-arm64','.deb'),('win-arm64','.zip'),
                ('win-arm64','.msix'),('win-arm64','.cer'),
-               ('store','.msixupload'),('store','.msixbundle')]]
-    packages.append(artifacts/'store-submission.json')
+               ('store','.msixupload'),('store','.msixbundle'),
+               ('osx-x64','.tar.gz'),('osx-x64','.dmg'),('osx-arm64','.dmg'),
+               ('linux-x64','.flatpak'),('linux-arm64','.flatpak')]]
+    packages.extend(artifacts/name for name in ('store-submission.json','store-listing.zip','flathub-submission.zip'))
     if any(not path.is_file()or not path.stat().st_size for path in packages):
         raise ValueError('All desktop architectures, Store upload, installers and certificates must exist and be nonempty')
     shutil.copy2(ROOT/'docs/compatibility/portable-status.json',artifacts/'compatibility.json')

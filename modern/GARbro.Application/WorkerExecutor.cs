@@ -42,6 +42,7 @@ public static class WorkerExecutor
                         case "resource-list":value=ResourceService.List(request.Location,provider);break;
                         case "resource-preview":value=ResourceService.Preview(request.Location,request.Entry,request.Context??new(),request.ForcedType,request.Offset,provider);break;
                         case "resource-audio":value=ResourceService.PrepareAudio(request.Location,request.Entry,request.Output,provider);break;
+                        case "resource-video":value=ResourceService.PrepareVideo(request.Location,request.Entry,request.Output,provider);break;
                         case "resource-extract":value=ResourceService.Extract(request.Location,request.Output,request.ResourceOptions,request.Extraction,
                             request.Overwrite,request.Selection,provider,updates,request.CompletedPaths);break;
                         case "resource-create":
@@ -49,7 +50,12 @@ public static class WorkerExecutor
                             value=request.Output;break;
                         case "resource-convert":
                             using(var resource=new ResourceSession(request.Location,provider))
-                                value=ResourceService.ConvertFile(resource,request.Entry,request.Output,request.FormatId,request.Overwrite);
+                            {
+                                var converted=ResourceService.ConvertFile(resource,request.Entry,request.Output,request.FormatId,request.Overwrite);
+                                if(converted.Written && request.ResourceOptions?.DiscardOriginalMedia==false)
+                                    ResourceService.CopyOriginalMedia(resource,request.Entry,converted.Path,request.Overwrite);
+                                value=converted;
+                            }
                             break;
                         default:throw new ArgumentException("Unknown resource operation.");
                     }

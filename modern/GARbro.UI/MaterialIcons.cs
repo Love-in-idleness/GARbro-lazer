@@ -22,7 +22,7 @@ public static class MaterialIcons
         "ExtractAll" or "ExtractSelected" or "Recursive" => "unarchive", "Convert" => "transform",
         "Cancel" or "Exit" or "Close" => "close", "SelectAll" => "select_all", "CopyNames" or "Copy" => "content_copy",
         "Explore" => "open_in_new", "Trash" => "delete", "Sort" or "Name" or "Size" or "Type" or "Unsorted" => "sort",
-        "FitWindow" or "FitImage" => "fit_screen", "Images" => "image", "Audio" => "music_note", "Search" => "search",
+        "FitWindow" or "FitImage" => "fit_screen", "Images" => "image", "Audio" => "music_note", "Video" => "movie", "Search" => "search",
         "Recent" => "history", "About" => "info", "Language" => "translate", "Theme" => "dark_mode", "Color" => "palette",
         "Encoding" or "Scripts" => "text_fields", "Save" => "save", "Play" => "play_arrow", "Pause" => "pause", "Stop" => "stop",
         "PreviousPage" => "skip_previous", "NextPage" => "skip_next", "Feedback" => "bug_report", "Manual" => "menu_book",

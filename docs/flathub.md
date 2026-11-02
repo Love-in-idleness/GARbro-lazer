@@ -54,3 +54,31 @@ SDL2 使用 Freedesktop 运行时提供的库，不使用 NuGet 附带的 SDL。
 需实测文件门户、目录与拖放、文件关联、提取输出、音频、取消和资源限制、Wayland 输入法、
 中英文与深浅主题，以及无宿主 .NET 的启动和升级。工作流仅准备资产，不自动提交或发布。
 Android 开发及 F-Droid、IzzyOnDroid 的发布准备已暂缓。
+
+## Submit the release bundle
+
+The release's `flathub-submission.zip` contains the app manifest with a full source
+commit, `nuget-sources.json` with both architectures' download hashes, and
+`flathub.json`. Extract them together at the root of a branch based on Flathub's
+`new-pr` branch. Do not replace the source commit with a moving branch.
+
+1. Fork https://github.com/flathub/flathub with the `new-pr` branch included.
+2. Create a branch from `new-pr`, add these three JSON files, commit and push.
+3. Open a pull request targeting `flathub/flathub:new-pr`, titled
+   `Add io.github.love_in_idleness.GARbro-no-wpf`.
+4. Explain that this is the maintained cross-platform GARbro fork, built from source;
+   the independent FFmpeg helpers use LGPL source, and .NET uses the SDK extension.
+   Attach the matching release/CI links and describe the permissions above.
+5. Address Flathub review and any required namespace/maintainer verification.
+   An open pull request is a submission, not publication; catalog availability
+   begins only after Flathub accepts and builds the repository.
+
+The current GitHub integration returned HTTP 403 (`Resource not accessible by
+integration`) when attempting to create the required fork. It cannot submit the
+PR with its current permissions. The generated bundle is ready for an account
+with fork/push access; no repository password belongs in the manifest.
+
+正式版的 `flathub-submission.zip` 内含固定源码提交、双架构 NuGet 校验清单和
+Flathub 架构配置。将三个 JSON 文件放在从 `flathub/flathub:new-pr` 创建的分支根目录，
+提交 PR 后按平台审核意见处理。当前 GitHub 集成创建 fork 时返回 403，需有权限的
+账户执行这一步。提交、审核通过和商店可下载是三个不同状态。

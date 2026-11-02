@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using GameRes;
+using GARbro.Media;
 using Newtonsoft.Json;
 using NAudio.Wave;
 
@@ -21,7 +22,8 @@ public static partial class ResourceService
             || !double.IsFinite(limits.MaxExpansionRatio) || limits.MaxExpansionRatio <= 0) throw new ArgumentException("Invalid extraction limits.");
         var files = new List<ExtractedFile>();
         var errors = new List<string>();
-        var queue = new Queue<(ResourceLocation Location, string Output, int Depth, string[] Selection, bool Required)>();
+        var queue = new Queue<(ResourceLocation Location, string Output, int Depth, string[] Selection, bool Required, string Copy)>();
+        var removals = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         output = Path.GetFullPath(output);
         static bool Inside(string root, string path)
         {
@@ -31,7 +33,7 @@ public static partial class ResourceService
         bool inPlace = System.IO.Directory.Exists(location.RootPath) && Path.GetRelativePath(location.RootPath, output) == ".";
         bool outputWithinInput = System.IO.Directory.Exists(location.RootPath) && !inPlace && Inside(location.RootPath, output);
         var completed = new HashSet<string>(completedPaths ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
-        queue.Enqueue((location, output, 0, selection, true));
+        queue.Enqueue((location, output, 0, selection, true, null));
         long total = 0;
         foreach (string path in completed)
         {
@@ -49,6 +51,7 @@ public static partial class ResourceService
             try
             {
                 using var session = new ResourceSession(task.Location, provider);
+                if (session.Synthetic && !task.Required) continue;
                 if (session.Physical)
                 {
                     var directory = new DirectoryInfo(task.Location.RootPath);
@@ -60,9 +63,9 @@ public static partial class ResourceService
                         {
                             if (outputWithinInput && Inside(output, item.FullName) || inPlace && item.Name.EndsWith(".unpacked", StringComparison.OrdinalIgnoreCase)) continue;
                             if (options.Recursive && task.Depth < options.MaxDepth)
-                                queue.Enqueue((new(item.FullName), Path.Combine(task.Output, item.Name), task.Depth + 1, null, false));
+                                queue.Enqueue((new(item.FullName), Path.Combine(task.Output, item.Name), task.Depth + 1, null, false, null));
                         }
-                        else queue.Enqueue((new(item.FullName), Path.Combine(task.Output, item.Name + ".unpacked"), task.Depth, null, false));
+                        else queue.Enqueue((new(item.FullName), Path.Combine(task.Output, item.Name + ".unpacked"), task.Depth, null, false, null));
                     }
                     continue;
                 }
@@ -84,17 +87,22 @@ public static partial class ResourceService
                     if (!converted.Equals(raw, StringComparison.OrdinalIgnoreCase) && !targets.Add(converted))
                         throw new IOException("Conversion output collides with another resource: " + converted);
                 }
-                var children = new List<(ResourceLocation, string, int, string[], bool)>();
+                var children = new List<(ResourceLocation, string, int, string[], bool, string)>();
                 foreach (var entry in entries)
                 {
-                    bool archiveCandidate = entry.Type == "archive" || !Forced(entry) && FormatCatalog.Instance.GetTypeFromName(entry.Name) == "archive";
+                    bool video = !Forced(entry) && MediaInfo.IsVideoName(entry.Name);
+                    if (video) entry.Type = "video";
+                    bool archiveCandidate = !video && (entry.Type == "archive" || !Forced(entry) && FormatCatalog.Instance.GetTypeFromName(entry.Name) == "archive");
                     if (options.Recursive && !Forced(entry) && !archiveCandidate && entry.Size >= 4)
                     {
                         using var signatureStream = session.Archive.OpenBinaryEntry(entry);
                         uint signature = signatureStream.Signature;
-                        archiveCandidate = signature != 0 && FormatCatalog.Instance.ArcFormats.Any(f => f.Signatures.Contains(signature));
+                        signatureStream.Position = 0;
+                        video = MediaInfo.HasVideoHeader(entry.Name, signatureStream.ReadBytes((int)Math.Min(256, signatureStream.Length)));
+                        if (video) entry.Type = "video";
+                        archiveCandidate = !video && signature != 0 && FormatCatalog.Instance.ArcFormats.Any(f => f.Signatures.Contains(signature));
                     }
-                    string category = entry.Type is "image" or "audio" or "script" or "archive" ? entry.Type : "";
+                    string category = entry.Type is "image" or "audio" or "script" or "archive" or "video" ? entry.Type : "";
                     if (options.Types is { Length: > 0 } && !options.Types.Contains(category) && !(options.Recursive && archiveCandidate)) continue;
                     if (++count > limits.MaxEntries) throw new InvalidDataException("Recursive extraction has too many entries.");
                     string target = ExtractionPath.Resolve(task.Output, entry.Name);
@@ -139,7 +147,8 @@ public static partial class ResourceService
                             total += result.Bytes;
                             files.Add(new(result.Path, result.Bytes, "converted"));
                             progress?.Report(new(files.Count, Math.Max(files.Count, entries.Length), entry.Name, total, result.Path));
-                            completed.Add(result.Path);
+                            if (options.DiscardOriginalMedia && (result.Written || completed.Contains(result.Path))) removals.Add(target);
+                            if (result.Written) completed.Add(result.Path);
                         }
                     }
                     if (options.ConvertAudio && entry.Type == "audio" && !new[] { ".wav", ".mp3", ".ogg" }.Contains(Path.GetExtension(target).ToLowerInvariant()))
@@ -151,7 +160,8 @@ public static partial class ResourceService
                             total += result.Bytes;
                             files.Add(new(result.Path, result.Bytes, "converted"));
                             progress?.Report(new(files.Count, Math.Max(files.Count, entries.Length), entry.Name, total, result.Path));
-                            completed.Add(result.Path);
+                            if (options.DiscardOriginalMedia && (result.Written || completed.Contains(result.Path))) removals.Add(target);
+                            if (result.Written) completed.Add(result.Path);
                         }
                     }
                     if (options.Recursive && task.Depth < options.MaxDepth && archiveCandidate)
@@ -159,18 +169,32 @@ public static partial class ResourceService
                         string childOutput = target + ".unpacked";
                         if (targets.Any(p => p.Equals(childOutput, StringComparison.OrdinalIgnoreCase) || p.StartsWith(childOutput + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                             || !generated.Add(childOutput)) throw new IOException("Nested archive output collides with an existing entry: " + childOutput);
-                        children.Add((session.Child(entry.Name), childOutput, task.Depth + 1, null, false));
+                        children.Add((session.Child(entry.Name), childOutput, task.Depth + 1, null, false, target));
                     }
                     else if (options.Recursive && archiveCandidate) errors.Add("Depth limit: " + entry.Name);
                 }
                 foreach (var child in children) queue.Enqueue(child);
+                if (options.DiscardChildArchives && task.Copy != null) removals.Add(task.Copy);
             }
             catch (MissingOptionsException error) { error.CompletedPaths = completed.ToArray(); throw; }
             catch (UnknownFormatException) when (!task.Required) { }
             catch (Exception error) when (!task.Required && error is not ResourceParametersRequiredException)
             { errors.Add(task.Location.DisplayPath + ": " + error.Message); }
         }
-        return new(files.ToArray(), errors.ToArray(), total);
+        // Defer cleanup until every queued archive succeeds. Parameter retries,
+        // cancellation and depth/output limits retain the recoverable copies.
+        if (errors.Count == 0)
+            foreach (string path in removals)
+            {
+                ExtractionPath.RejectLinks(output, path);
+                try
+                {
+                    File.Delete(path);
+                    files.RemoveAll(f => string.Equals(f.Path, path, StringComparison.OrdinalIgnoreCase));
+                }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException) { errors.Add(path + ": " + error.Message); }
+            }
+        return new(files.ToArray(), errors.ToArray(), total, Math.Min(count, limits.MaxEntries));
     }
 
     public static void CreateArchive(string source, string[] inputs, string output, string formatId,
@@ -242,11 +266,15 @@ public static partial class ResourceService
             using var audio = formatId is "WAV" or "AUDIO" ? AudioFormat.Read(input) ?? throw new UnknownFormatException() : null;
             bool passthrough = audio != null && formatId == "AUDIO" && new[] { "wav", "mp3", "ogg" }.Contains(audio.SourceFormat);
             if (passthrough) output = Path.ChangeExtension(output, audio.SourceFormat);
+            string sourcePath = session.Physical ? session.PhysicalPath(name) : session.Location.RootPath;
+            if (Path.GetFullPath(output).Equals(Path.GetFullPath(sourcePath), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+                throw new IOException("Cannot replace a source document. Choose another destination.");
+            ExtractionPath.RejectLinks(Path.GetDirectoryName(Path.GetFullPath(output)), output);
             if (prohibited?.Contains(output) == true) throw new IOException("Conversion output collides with another resource: " + output);
-            if (completed?.Contains(output) == true && File.Exists(output)) return new(output, 0);
+            if (completed?.Contains(output) == true && File.Exists(output)) return new(output, 0, false);
             if (File.Exists(output))
             {
-                if (overwrite == OverwritePolicy.Skip) return new(output, 0);
+                if (overwrite == OverwritePolicy.Skip) return new(output, 0, false);
                 if (overwrite == OverwritePolicy.Fail) throw new IOException("Output exists: " + output);
             }
             System.IO.Directory.CreateDirectory(Path.GetDirectoryName(output));
@@ -273,6 +301,25 @@ public static partial class ResourceService
             return new(output, new FileInfo(output).Length);
         }
         finally { if (temporary != null && File.Exists(temporary)) File.Delete(temporary); System.IO.Directory.Delete(scratch, true); }
+    }
+
+    public static void CopyOriginalMedia(ResourceSession session, string name, string converted, OverwritePolicy overwrite)
+    {
+        string copy = Path.ChangeExtension(converted, Path.GetExtension(name));
+        if (Path.GetFullPath(copy).Equals(Path.GetFullPath(converted), StringComparison.OrdinalIgnoreCase)) return;
+        if (session.Physical && Path.GetFullPath(copy).Equals(session.PhysicalPath(name), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) return;
+        if (File.Exists(copy) && overwrite == OverwritePolicy.Skip) return;
+        string directory = Path.GetDirectoryName(Path.GetFullPath(copy));
+        ExtractionPath.RejectLinks(directory, copy);
+        if (File.Exists(copy) && overwrite == OverwritePolicy.Fail) throw new IOException("Output exists: " + copy);
+        string temporary = WorkerTemporaryFiles.Create(directory);
+        try
+        {
+            using (var source = session.OpenEntry(name))
+            using (var destination = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write)) CopyBounded(source, destination, 2L << 30);
+            ExtractionPath.RejectLinks(directory, copy); File.Move(temporary, copy, overwrite == OverwritePolicy.Replace);
+        }
+        finally { File.Delete(temporary); }
     }
 
     internal static ImageData AdjustOffset(ImageData image)

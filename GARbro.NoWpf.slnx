@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/modern/">
+    <Project Path="modern/GARbro.Media/GARbro.Media.fsproj" />
     <Project Path="modern/GARbro.Domain/GARbro.Domain.fsproj" />
     <Project Path="modern/GARbro.Imaging.Magick/GARbro.Imaging.Magick.csproj" />
     <Project Path="modern/GARbro.Imaging.Portable/GARbro.Imaging.Portable.csproj" />

@@ -7,7 +7,7 @@ on:
     inputs:
       package_version:
         type: string
-        default: 0.3.0-preview.2
+        default: 1.0.0
 concurrency:
   group: portable-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
@@ -27,6 +27,8 @@ jobs:
             rid: win-arm64
           - os: macos-latest
             rid: osx-arm64
+          - os: macos-15-intel
+            rid: osx-x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -45,7 +47,17 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y --no-install-recommends libsdl2-2.0-0
+          sudo apt-get install -y --no-install-recommends libsdl2-2.0-0 ffmpeg
+      - name: Install Windows build tools
+        if: runner.os == 'Windows'
+        run: choco install make --yes --no-progress
+      - name: Build redistributable video helpers
+        if: runner.os != 'Linux'
+        run: python tools/build-media.py --rid ${{ matrix.rid }}
+      - name: Use the packaged helpers for video regression tests
+        if: runner.os != 'Linux'
+        shell: bash
+        run: echo "${{ github.workspace }}/artifacts/media/${{ matrix.rid }}" >> "$GITHUB_PATH"
       - run: dotnet build GARbro.NoWpf.slnx -c Release
       - run: dotnet test GARbro.NoWpf.slnx -c Release --no-build --logger "trx;LogFilePrefix=portable"
         env:
@@ -77,23 +89,26 @@ jobs:
         shell: bash
         run: |
           flags=()
-          if [[ "${{ matrix.rid }}" == linux-* || "${{ matrix.rid }}" == win-* ]]; then flags+=(--installer); fi
+          flags+=(--installer)
           python tools/package-release.py --rid ${{ matrix.rid }} "${flags[@]}"
         env:
-          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '0.3.0-preview.2' }}
+          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.0' }}
       - run: python tools/smoke-package.py --rid ${{ matrix.rid }}
         env:
-          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '0.3.0-preview.2' }}
+          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.0' }}
+      - name: Mount and launch the macOS disk image
+        if: runner.os == 'macOS'
+        run: python tools/smoke-macos.py artifacts/garbro-${{ inputs.package_version || '1.0.0' }}-${{ matrix.rid }}.dmg
       - name: Install and launch DEB on both supported distributions
         if: runner.os == 'Linux'
         timeout-minutes: 12
         shell: bash
-        run: python tools/smoke-deb.py artifacts/garbro-${{ inputs.package_version || '0.3.0-preview.2' }}-${{ matrix.rid }}.deb
+        run: python tools/smoke-deb.py artifacts/garbro-${{ inputs.package_version || '1.0.0' }}-${{ matrix.rid }}.deb
       - name: Verify MSIX install, activation, upgrade and removal
         if: runner.os == 'Windows'
         timeout-minutes: 5
         shell: pwsh
-        run: tools/smoke-msix.ps1 -Output artifacts -Architecture ${{ matrix.rid == 'win-arm64' && 'arm64' || 'x64' }} -Version "${{ inputs.package_version || '0.3.0-preview.2' }}"
+        run: tools/smoke-msix.ps1 -Output artifacts -Architecture ${{ matrix.rid == 'win-arm64' && 'arm64' || 'x64' }} -Version "${{ inputs.package_version || '1.0.0' }}"
       - uses: actions/upload-artifact@v4
         with:
           name: preview-${{ matrix.rid }}
@@ -103,6 +118,7 @@ jobs:
             artifacts/*.deb
             artifacts/*.msix
             artifacts/*.cer
+            artifacts/*.dmg
       - uses: actions/upload-artifact@v4
         if: always()
         with:

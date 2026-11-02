@@ -29,6 +29,8 @@ The shared `DeskCommand` supplies menu, toolbar, context-menu and keyboard actio
 | Troubleshooting / update check | Help / ? pages | Idle; update only on explicit click | Version ordering tests, checksum verification, bounded worker database validation and fallback |
 | New guide / feedback / license / diagnostics | Help / ? pages | Idle | Offline bilingual manuals, Issues chooser, redacted diagnostic ZIP; no automatic upload |
 | Audio preview | Preview: Play / Pause / Stop / seek / volume | Audio selected; Play starts decoding | WAV, MP3, Vorbis, Opus and AIFF decoder fixtures; SDL dummy-device playback state test |
+| Video preview and media wrapper handling | Preview: manual Play / Pause / Stop / seek / volume | Video selected | MediaWorkflowTests, VideoTests; isolated FFmpeg processes, bounded frames/cache, no repeated DAT/BOGUS navigation |
+| Optional archive/media output cleanup | Extraction/conversion checkboxes | Conversion/recursion enabled | Multi-level success, depth/output failure, skipped conversion, source preservation tests |
 | Text / scripts / hex preview | Preview; paging / copy / encoding / wrap | Ordinary resource selected | NScripter XOR decoding test, hex paging, Unicode BOM across pages and selectable code page |
 
 Format verification is limited to named synthetic fixtures and the pinned public
@@ -38,6 +40,6 @@ Physical Trash, native file-manager drag/drop and real audio devices still need
 desktop acceptance on each supported desktop; CI uses disposable displays and
 SDL's dummy device. Native Wayland text-input-v3 has a separate regression probe.
 
-Deliberately deferred: task thread count and video preview. No placeholder commands
+Deliberately deferred: task thread count. Android remains paused. No placeholder commands
 are counted as migrated. Installation checks and remaining platform limitations
 are documented separately in install.md and release notes.

@@ -44,15 +44,16 @@ class ReleaseTests(unittest.TestCase):
 
     def test_all_assets_are_bound_to_the_source_commit_and_checksums(self):
         plan=release.release_plan('v1.2.3')
-        for suffix in ('linux-x64.tar.gz','win-x64.zip','osx-arm64.tar.gz','linux-x64.deb','win-x64.msix','win-x64.cer','linux-arm64.tar.gz','linux-arm64.deb','win-arm64.zip','win-arm64.msix','win-arm64.cer','store.msixupload','store.msixbundle'):
+        for suffix in ('linux-x64.tar.gz','win-x64.zip','osx-arm64.tar.gz','linux-x64.deb','win-x64.msix','win-x64.cer','linux-arm64.tar.gz','linux-arm64.deb','win-arm64.zip','win-arm64.msix','win-arm64.cer','store.msixupload','store.msixbundle','osx-x64.tar.gz','osx-x64.dmg','osx-arm64.dmg','linux-x64.flatpak','linux-arm64.flatpak'):
             (self.artifacts/('garbro-1.2.3-'+suffix)).write_bytes(suffix.encode())
+        for name in ('store-listing.zip','flathub-submission.zip'):(self.artifacts/name).write_bytes(b'submission')
         (self.artifacts/'store-submission.json').write_text('{"state":"prepared"}')
         release.prepare_assets(plan,self.artifacts,'a'*40)
         manifest=json.loads((self.artifacts/'release.json').read_text())
         self.assertEqual('a'*40,manifest['commit'])
-        self.assertEqual(17,len(manifest['assets']))
+        self.assertEqual(24,len(manifest['assets']))
         checksums=(self.artifacts/'SHA256SUMS').read_text().splitlines()
-        self.assertEqual(18,len(checksums))
+        self.assertEqual(25,len(checksums))
         for line in checksums:
             digest,name=line.split('  ')
             self.assertEqual(digest,hashlib.sha256((self.artifacts/name).read_bytes()).hexdigest())

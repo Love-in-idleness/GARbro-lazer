@@ -16,7 +16,7 @@ namespace GARbro.Desktop;
 
 public sealed record ExtractionChoice(string Output, ResourceExtractionOptions Options, OverwritePolicy Overwrite);
 public sealed record CreationChoice(string Output, string FormatId, string OptionsJson, OverwritePolicy Overwrite);
-public sealed record ConversionChoice(string Output, string FormatId, OverwritePolicy Overwrite);
+public sealed record ConversionChoice(string Output, string FormatId, OverwritePolicy Overwrite, bool DiscardOriginalMedia);
 
 public static class Dialogs
 {
@@ -91,10 +91,17 @@ public static class Dialogs
         body.Children.Add(Output(owner, text, initial, out var path)); body.Children.Add(Label(text, "Overwrite")); var overwrite = Overwrite(text); body.Children.Add(overwrite);
         var recurse = new CheckBox { Content = text["Recursive"], IsChecked = recursive }; body.Children.Add(recurse);
         body.Children.Add(Label(text, "MaxDepth")); var depth = new NumericUpDown { Minimum = 0, Maximum = 64, Value = 8 }; body.Children.Add(depth);
-        var types = new[] { ("Images", "image"), ("Audio", "audio"), ("Scripts", "script"), ("Archives", "archive"), ("Other", "") };
+        var types = new[] { ("Images", "image"), ("Audio", "audio"), ("Video", "video"), ("Scripts", "script"), ("Archives", "archive"), ("Other", "") };
         var checks = new List<CheckBox>(); var row = new WrapPanel(); foreach (var t in types) { var check = new CheckBox { Content = text[t.Item1], IsChecked = true, Margin = new Avalonia.Thickness(0, 0, 14, 0) }; checks.Add(check); row.Children.Add(check); } body.Children.Add(row);
         body.Children.Add(Label(text, "ImageFormat")); var image = new ComboBox { ItemsSource = new[] { "", "PNG", "BMP", "JPEG", "TIFF", "TGA" }, SelectedIndex = 0 }; body.Children.Add(image);
         var audio = new CheckBox { Content = text["AudioConvert"], IsChecked = false }; body.Children.Add(audio);
+        var discardArchives = new CheckBox { Content = new TextBlock { Text = text["DiscardChildArchives"], TextWrapping = Avalonia.Media.TextWrapping.Wrap }, IsChecked = false, IsEnabled = recurse.IsChecked == true };
+        recurse.IsCheckedChanged += (_, _) => discardArchives.IsEnabled = recurse.IsChecked == true;
+        body.Children.Add(discardArchives);
+        var discardMedia = new CheckBox { Content = new TextBlock { Text = text["DiscardOriginalMedia"], TextWrapping = Avalonia.Media.TextWrapping.Wrap }, IsChecked = false, IsEnabled = false };
+        void UpdateConversion() => discardMedia.IsEnabled = image.SelectedIndex > 0 || audio.IsChecked == true;
+        image.SelectionChanged += (_, _) => UpdateConversion(); audio.IsCheckedChanged += (_, _) => UpdateConversion();
+        body.Children.Add(discardMedia);
         var offset = new CheckBox { Content = text["AdjustOffset"], IsChecked = false }; body.Children.Add(offset);
         var error = new TextBlock(); body.Children.Add(error);
         window.Content = Frame(window, body, Button(text, "Start", () =>
@@ -105,7 +112,9 @@ public static class Dialogs
                 string[] selected = types.Where((t, i) => checks[i].IsChecked == true).Select(t => t.Item2).ToArray();
                 if (selected.Length == 0) throw new ArgumentException(text["SelectFiles"]);
                 window.Close(new ExtractionChoice(Path.GetFullPath(PathValue(path)), new(recurse.IsChecked == true, (int)(depth.Value ?? 8), selected,
-                    image.SelectedIndex == 0 ? null : image.SelectedItem as string, audio.IsChecked == true, offset.IsChecked == true), (OverwritePolicy)overwrite.SelectedIndex));
+                    image.SelectedIndex == 0 ? null : image.SelectedItem as string, audio.IsChecked == true, offset.IsChecked == true,
+                    DiscardChildArchives: recurse.IsChecked == true && discardArchives.IsChecked == true,
+                    DiscardOriginalMedia: discardMedia.IsChecked == true), (OverwritePolicy)overwrite.SelectedIndex));
             }
             catch (Exception e) { error.Text = e.Message; }
         }), Button(text, "Cancel", () => window.Close()));
@@ -131,9 +140,11 @@ public static class Dialogs
     {
         var window = Window(text, "Convert"); var body = Panel(); body.Children.Add(Output(owner, text, initial, out var path));
         body.Children.Add(Label(text, "Format")); var format = FormatPicker(formats); body.Children.Add(format);
+        var discard = new CheckBox { Content = new TextBlock { Text = text["DiscardOriginalMedia"], TextWrapping = Avalonia.Media.TextWrapping.Wrap }, IsChecked = true }; body.Children.Add(discard);
+        body.Children.Add(new TextBlock { Text = text["SourceMediaPreserved"], TextWrapping = Avalonia.Media.TextWrapping.Wrap, Classes = { "muted" } });
         body.Children.Add(Label(text, "Overwrite")); var overwrite = Overwrite(text); body.Children.Add(overwrite); var error = new TextBlock(); body.Children.Add(error);
         window.Content = Frame(window, body, Button(text, "Start", () =>
-        { if (!Path.IsPathFullyQualified(PathValue(path) ?? "")) { error.Text = text["SelectOutput"]; return; } window.Close(new ConversionChoice(PathValue(path), ((ResourceFormatInfo)format.SelectedItem).Id, (OverwritePolicy)overwrite.SelectedIndex)); }), Button(text, "Cancel", () => window.Close()));
+        { if (!Path.IsPathFullyQualified(PathValue(path) ?? "")) { error.Text = text["SelectOutput"]; return; } window.Close(new ConversionChoice(PathValue(path), ((ResourceFormatInfo)format.SelectedItem).Id, (OverwritePolicy)overwrite.SelectedIndex, discard.IsChecked == true)); }), Button(text, "Cancel", () => window.Close()));
         return await window.ShowDialog<ConversionChoice>(owner);
     }
 }

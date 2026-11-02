@@ -10,6 +10,7 @@ public static class UiPlatform
     public static IWorkerClient Worker { get; set; }
     public static IStorageAccess Storage { get; set; }
     public static Func<string, IAudioOutput> Audio { get; set; }
+    public static Func<VideoArtifact, Func<byte[], int, int, Task>, Action<Exception>, long, IVideoOutput> Video { get; set; }
     public static Action<string> OpenUrl { get; set; }
     public static Action<string> Explore { get; set; }
     public static Func<string, Task> Trash { get; set; }

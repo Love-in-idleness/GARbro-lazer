@@ -21,8 +21,11 @@ help. Show in file manager locates the outer physical file.
 ## Extract and convert
 
 Extract all and Extract selected open an output dialog. Recursive extraction
-also scans child directories and nested archives. Child archive copies remain
-beside their filename.unpacked directories. Input files are never modified.
+also scans child directories and nested archives. Child archive copies normally remain
+beside their filename.unpacked directories. Select “Do not keep extracted child archives”
+to remove these copies after the whole job succeeds. Conversion can also omit original
+media copies in the output. Failures, depth limits and skipped conversions retain their copies.
+Input game files are never deleted by these options.
 Choose conflict handling, resource types and optional conversion in the dialog.
 Cancellation keeps completed files and removes unfinished temporary output.
 Limits cover the whole recursive operation; increase them in Settings when needed.
@@ -38,7 +41,11 @@ Images support original size and fit mode. Text and hexadecimal views have pagin
 and copy controls. Select GBK, Shift-JIS or another encoding in Settings if names
 or text are garbled. Format-defined Unicode fields keep their defined encoding.
 Audio selection shows metadata; click Play to prepare and play the audio.
-Pause, Stop, position and volume controls are available. Switching files stops it.
+Video selection shows a still preview. Click Play to watch MPEG, MP4, AVI, WMV,
+Matroska/WebM or other supported containers. Pause, Stop, position and volume controls
+are available for both audio and video. Switching files stops playback and clears its cache.
+Linux uses system FFmpeg and SDL2; install `ffmpeg` if video tools are missing.
+Windows and macOS packages include the video tools. No audio device means video plays muted.
 Unsupported codecs report an error; registered formats do not imply every game
 variant has been verified.
 

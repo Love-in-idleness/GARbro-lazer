@@ -60,8 +60,9 @@ def main():
                 if arch not in sources[key]['only-arches']:sources[key]['only-arches'].append(arch)
     (args.output/'nuget-sources.json').write_text(json.dumps(sorted(sources.values(),key=lambda s:s['dest-filename']),indent=2)+'\n')
     manifest=json.loads((ROOT/f'packaging/flatpak/{APP}.json').read_text())
-    manifest['modules'][0]['sources'][0]={'type':'git','url':'https://github.com/Love-in-idleness/GARbro-no-wpf.git','commit':args.revision}
+    next(module for module in manifest['modules'] if module['name']=='garbro')['sources'][0]={'type':'git','url':'https://github.com/Love-in-idleness/GARbro-no-wpf.git','commit':args.revision}
     (args.output/(APP+'.json')).write_text(json.dumps(manifest,indent=2)+'\n')
+    (args.output/'flathub.json').write_bytes((ROOT/'packaging/flatpak/flathub.json').read_bytes())
     print(f'Prepared {len(sources)} pinned NuGet sources; run Flatpak validation before submission.')
 
 if __name__=='__main__':main()

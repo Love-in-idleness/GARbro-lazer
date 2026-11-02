@@ -16,6 +16,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using GARbro.Application;
+using GARbro.Media;
 
 namespace GARbro.Desktop;
 
@@ -34,7 +35,7 @@ public sealed partial class MainWindow : AppWindow
     readonly TextBox path = new() { Name = "Location", HorizontalAlignment = HorizontalAlignment.Stretch };
     readonly TreeView folders = new() { Name = "Folders" };
     readonly ListBox files = new() { Name = "Files", SelectionMode = SelectionMode.Multiple };
-    readonly Image image = new() { Stretch = Stretch.Uniform };
+    readonly Image image = new() { Name = "PreviewImage", Stretch = Stretch.Uniform };
     readonly ScrollViewer imageScroll = new();
     readonly ComboBox previewEncoding = new() { ItemsSource = new[] { "auto", "gbk", "shift_jis", "utf-8", "utf-16", "gb18030", "big5" }, SelectedIndex = 0, MinWidth = 115 };
     readonly Grid browser = new() { ColumnDefinitions = new("180,*,350"), ColumnSpacing = 14 };
@@ -59,6 +60,7 @@ public sealed partial class MainWindow : AppWindow
     ResourceFormatInfo[] catalog;
     Bitmap bitmap;
     IAudioOutput player;
+    IVideoOutput videoPlayer;
     string audioDirectory;
     ResourcePreview preview;
     BrowserEntry previewEntry;
@@ -129,7 +131,7 @@ public sealed partial class MainWindow : AppWindow
             if (entry == null) return new Control();
             var row = new Grid { ColumnDefinitions = new("*,80,90"), Margin = new Thickness(8, 6) };
             var name = new Grid { ColumnDefinitions = new("Auto,*"), ColumnSpacing = 10 };
-            name.Children.Add(MaterialIcons.Create(entry.IsDirectory ? "Folders" : entry.Type switch { "image" => "Images", "audio" => "Audio", "script" => "Text", "archive" => "Process", _ => "Other" }, 20));
+            name.Children.Add(MaterialIcons.Create(entry.IsDirectory ? "Folders" : entry.Type switch { "image" => "Images", "audio" => "Audio", "video" => "Video", "script" => "Text", "archive" => "Process", _ => "Other" }, 20));
             var filename = new TextBlock { Text = entry.DisplayName, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center }; Grid.SetColumn(filename, 1); name.Children.Add(filename); row.Children.Add(name);
             var kind = new TextBlock { Text = entry.IsDirectory ? Text["Folder"] : ResourceType(entry), Opacity = .65, FontSize = 12 };
             Grid.SetColumn(kind, 1); row.Children.Add(kind);
@@ -145,8 +147,9 @@ public sealed partial class MainWindow : AppWindow
         var previewPanel = new Grid { RowDefinitions = new("Auto,Auto,*"), RowSpacing = 8 };
         previewPanel.Classes.Add("surface"); previewPanel.Children.Add(Label("Preview")); Grid.SetRow(previewInfo, 1); previewPanel.Children.Add(previewInfo);
         var content = new Grid(); imageScroll.Content = image; content.Children.Add(imageScroll); content.Children.Add(text); previewPrompt.Bind(TextBlock.TextProperty, Bind("SelectPreview")); content.Children.Add(previewPrompt);
-        BuildPlayback(); content.Children.Add(audioControls);
+        BuildPlayback(); DockPanel.SetDock(audioControls, Dock.Bottom);
         var previewStack = new DockPanel(); DockPanel.SetDock(pageControls, Dock.Bottom); previewStack.Children.Add(pageControls); previewStack.Children.Add(content);
+        previewStack.Children.Insert(0, audioControls);
         Grid.SetRow(previewStack, 2); previewPanel.Children.Add(previewStack); Grid.SetColumn(previewPanel, 2); browser.Children.Add(previewPanel);
         for (int i = 0; i < browser.Children.Count; i++)
         {
@@ -230,7 +233,7 @@ public sealed partial class MainWindow : AppWindow
     }
     static Control GearIcon() => new PathIcon { Width = 20, Height = 20, Data = Geometry.Parse("M10,0 L14,0 L15,3 L18,4 L21,3 L24,7 L22,10 L22,13 L24,16 L21,20 L18,19 L15,21 L14,24 L10,24 L9,21 L6,19 L3,20 L0,16 L2,13 L2,10 L0,7 L3,3 L6,4 L9,3 Z M12,7 A5,5 0 1 0 12,17 A5,5 0 1 0 12,7") };
     static string FormatSize(long n) => n < 1024 ? n + " B" : n < 1048576 ? (n / 1024d).ToString("F1") + " KiB" : (n / 1048576d).ToString("F1") + " MiB";
-    string ResourceType(BrowserEntry e) => typeOverrides.GetValueOrDefault(e.Name, e.Type) switch { "image" => Text["Images"], "audio" => Text["Audio"], "script" => Text["Scripts"], "archive" => Text["Archives"], "binary" => Text["Binary"], _ => Text["OtherType"] };
+    string ResourceType(BrowserEntry e) => typeOverrides.GetValueOrDefault(e.Name, e.Type) switch { "image" => Text["Images"], "audio" => Text["Audio"], "video" => Text["Video"], "script" => Text["Scripts"], "archive" => Text["Archives"], "binary" => Text["Binary"], _ => Text["OtherType"] };
 
     internal async Task<T> Request<T>(WorkerRequest request, CancellationToken cancellation = default, IProgress<ExtractionProgress> updates = null)
     {
@@ -275,7 +278,15 @@ public sealed partial class MainWindow : AppWindow
             if (source == null) continue;
             string full = source.LocalPath;
             var location = new ResourceLocation(full);
-            try { await LoadLocationAsync(location); }
+            try
+            {
+                if (File.Exists(full) && MediaInfo.IsVideoName(full))
+                {
+                    await LoadLocationAsync(new(Path.GetDirectoryName(full)));
+                    files.SelectedItem = listing.Entries.FirstOrDefault(f => f.Name == Path.GetFileName(full));
+                }
+                else await LoadLocationAsync(location);
+            }
             catch (WorkerOperationException e) when (e.RemoteType == "UnknownFormatException" && File.Exists(full))
             {
                 await LoadLocationAsync(new(Path.GetDirectoryName(full)));
@@ -332,6 +343,8 @@ public sealed partial class MainWindow : AppWindow
     async Task OpenSelected()
     {
         if (files.SelectedItem is not BrowserEntry entry) return;
+        if (!entry.IsDirectory && (typeOverrides.GetValueOrDefault(entry.Name, entry.Type) == "video" || listing.Tag == "media"))
+        { await PreviewSelection(); return; }
         ResourceLocation location = listing.Physical ? new(Path.Combine(listing.Location.RootPath, entry.Name)) :
             entry.IsDirectory ? listing.Location.EnterDirectory(entry.Name) : listing.Location.EnterArchive(entry.Name);
         try { await LoadLocationAsync(location); }
@@ -339,8 +352,9 @@ public sealed partial class MainWindow : AppWindow
     }
     async Task PreviewSelection()
     {
-        previewCancellation?.Cancel(); StopAudio();
-        if (files.SelectedItem is not BrowserEntry { IsDirectory: false } entry || listing == null) { ClearPreview(); return; }
+        ClearPreview();
+        if (files.SelectedItem is not BrowserEntry { IsDirectory: false } entry || listing == null) return;
+        previewPrompt.IsVisible = false; previewInfo.Text = Text["Preparing"];
         previewEntry = entry; await ShowPreviewPage(0);
     }
     void ClearPreview()
@@ -364,7 +378,7 @@ public sealed partial class MainWindow : AppWindow
                 ForcedType: typeOverrides.GetValueOrDefault(previewEntry.Name), Offset: offset), cancel.Token);
             if (ticket != generation || isClosed) return;
             preview = result; previewPrompt.IsVisible = false; bitmap?.Dispose(); bitmap = null; image.Source = null;
-            imageScroll.IsVisible = result.Kind == "image"; audioControls.IsVisible = result.Kind == "audio";
+            imageScroll.IsVisible = result.Kind is "image" or "video"; audioControls.IsVisible = result.Kind is "audio" or "video";
             text.IsVisible = result.Kind is "text" or "binary"; pageControls.IsVisible = text.IsVisible;
             previewInfo.Text = result.Kind is "text" or "binary" ? result.Title : result.Text;
             if (result.Image != null) { using var input = new MemoryStream(result.Image); bitmap = new Bitmap(input); image.Source = bitmap; }
@@ -372,7 +386,7 @@ public sealed partial class MainWindow : AppWindow
             UpdateCommands();
         }
         catch (OperationCanceledException) when (cancel.IsCancellationRequested) { }
-        catch (Exception e) { if (ticket == generation) previewInfo.Text = Text["Error"] + ": " + Text.ErrorMessage(e.Message); }
+        catch (Exception e) { if (ticket == generation) { previewPrompt.IsVisible = false; previewInfo.Text = Text["Error"] + ": " + Text.ErrorMessage(e.Message); } }
         finally { if (ReferenceEquals(previewCancellation, cancel)) previewCancellation = null; UpdateCommands(); }
     }
     void ApplySettings(bool save = true)

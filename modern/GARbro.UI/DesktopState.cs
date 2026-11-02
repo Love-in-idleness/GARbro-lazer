@@ -130,6 +130,12 @@ public sealed partial class DesktopText : INotifyPropertyChanged
     public string ParameterName(string name, string fallback = null) => strings.ContainsKey("Parameter." + name) ? this["Parameter." + name] : fallback ?? name;
     public IEnumerable<string> Keys => strings.Keys;
     const string Data = """
+Video|Video|视频
+NoVideo|Video playback is unavailable.|视频播放不可用。
+VideoMuted|Audio output is unavailable; playing video muted.|音频设备不可用，正在静音播放视频。
+DiscardChildArchives|Do not keep extracted child archives after successful recursive extraction|递归解包成功后不保留子归档文件
+DiscardOriginalMedia|Do not keep original media copies in the output after conversion|转换成功后不保留输出中的原始多媒体格式
+SourceMediaPreserved|Source game files are always preserved. Clear this option to also copy the original format into the output folder.|始终保留来源游戏文件。取消勾选可将原始格式也复制到输出文件夹。
 InvalidFormatValue|Enter a valid numeric value for {0}.|请为“{0}”输入有效数值。
 ClearCache|Clear downloaded source cache|清理下载的来源缓存
 CacheCleared|Source cache cleared|来源缓存已清理
@@ -299,7 +305,8 @@ Play|Play|播放
 Pause|Pause|暂停
 Stop|Stop|停止
 Volume|Volume|音量
-Preparing|Preparing audio…|正在准备音频…
+Preparing|Preparing preview…|正在准备预览…
+VideoFormatsInfo|Video preview uses FFmpeg. Common containers: MPEG, MP4/MOV, AVI, WMV/ASF, Matroska/WebM, Ogg video, FLV and IVF. Read-only; encoding support depends on the installed decoder. Regression samples cover MPEG-2 video with MP2 audio and silent MPEG-4 video. Windows/macOS packages include LGPL FFmpeg tools and corresponding source. Linux uses distribution FFmpeg.|视频预览使用 FFmpeg，支持 MPEG、MP4/MOV、AVI、WMV/ASF、Matroska/WebM、Ogg 视频、FLV、IVF 等常用容器。仅支持读取；具体编码取决于已安装的解码器。回归样本覆盖 MPEG-2 视频及 MP2 音频、无声 MPEG-4 视频。Windows/macOS 附 LGPL FFmpeg 工具及对应源码，Linux 使用系统 FFmpeg。
 NextPage|Next page|下一页
 PreviousPage|Previous page|上一页
 Copy|Copy|复制

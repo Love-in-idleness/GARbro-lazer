@@ -32,6 +32,11 @@ jobs:
     uses: ./.github/workflows/portable.yml
     with:
       package_version: ${{ needs.plan.outputs.version }}
+  flatpak:
+    needs: plan
+    uses: ./.github/workflows/flatpak.yml
+    with:
+      package_version: ${{ needs.plan.outputs.version }}
   store:
     needs: plan
     uses: ./.github/workflows/store.yml
@@ -60,7 +65,7 @@ jobs:
           if(-not $manifest){throw 'Creation validation manifest is missing.'}
           ./tools/test-created-archives.ps1 -Directory artifacts/legacy -Manifest $manifest.FullName
   publish:
-    needs: [plan, portable, store, legacy, legacy-readback]
+    needs: [plan, portable, store, flatpak, legacy, legacy-readback]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -78,6 +83,11 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: store-upload
+          path: artifacts/release
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: flatpak-*
+          merge-multiple: true
           path: artifacts/release
       - run: python3 tools/release.py --artifacts artifacts/release --revision "$GITHUB_SHA"
       - name: Publish verified packages

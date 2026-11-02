@@ -1,5 +1,5 @@
 <Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="GARbro.Desktop.MaterialStyles">
-  <Style Selector="Window, UserControl.page">
+  <Style Selector="Window, :is(UserControl).page">
     <Setter Property="Background" Value="{DynamicResource M3Surface}" />
     <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
   </Style>
@@ -19,6 +19,11 @@
   <Style Selector="Button:pointerover, Button.iconMenu:pointerover">
     <Setter Property="Background" Value="{DynamicResource M3PrimaryContainer}" />
     <Setter Property="Foreground" Value="{DynamicResource M3OnPrimaryContainer}" />
+  </Style>
+  <Style Selector="Button.iconMenu:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceVariant}" />
+    <Setter Property="Opacity" Value="0.38" />
   </Style>
   <Style Selector="Button.primary">
     <Setter Property="Background" Value="{DynamicResource M3Primary}" />

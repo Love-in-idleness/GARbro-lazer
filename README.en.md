@@ -2,13 +2,13 @@
 
 [简体中文](README.md) · **English** · [Русский](README.ru.md)
 
-Open a game's resource archives, browse pictures, listen to audio, and extract the files you need. GARbro has a desktop interface and a command-line tool.
+Open a game's resource archives, browse pictures, play audio and video, and extract the files you need. GARbro has a desktop interface and a command-line tool.
 
 ![The current GARbro desktop interface in the light theme](docs/screenshots/desktop-en-light.png)
 
 ## Download and start
 
-Choose a package from the [preview download page](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v0.3.0-preview.2). Use **x64** for most Intel and AMD computers, or **arm64** for Windows on ARM, ARM Linux, and Apple silicon.
+Choose a package from the [release download page](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.0). Use **x64** for most Intel and AMD computers, or **arm64** for Windows on ARM, ARM Linux, and Apple silicon.
 
 | System | Package | Open it |
 | --- | --- | --- |
@@ -16,20 +16,23 @@ Choose a package from the [preview download page](https://github.com/Love-in-idl
 | Windows installer | Matching `.msix` and `.cer` | Follow the [installation guide](docs/install.md) to trust the test certificate, then install the MSIX |
 | Debian 13 / Ubuntu 24.04 | Matching `.deb` | Install it, then open GARbro from your application menu |
 | Other Linux distributions | `linux-x64.tar.gz` or `linux-arm64.tar.gz` | Extract it and run `desktop/GARbro.Desktop` |
-| macOS on Apple silicon | `osx-arm64.tar.gz` | Extract it and open `GARbro.app` |
+| macOS 14 or later | `osx-arm64.dmg` for Apple silicon, `osx-x64.dmg` for Intel | Open the disk image, copy the whole GARbro folder to your Mac, then open `GARbro.app` |
+| Flatpak | Matching `.flatpak` | Open with your software center, or run `flatpak install --user filename.flatpak` |
 
-These desktop downloads require the matching [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0). See the [installation guide](docs/install.md) for missing libraries or certificate prompts. Package filenames also contain the version number.
+Desktop downloads other than Flatpak and Store packages require the matching [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0). See the [installation guide](docs/install.md) for missing libraries or certificate prompts. Package filenames also contain the version number.
 
-This is a preview: some games may not work yet. GARbro is not yet available on Flathub or the Microsoft Store, and Android development is on hold. The `store.msixupload` download is for Store submission; you do not need it to use GARbro.
+This is the first stable release; some game-specific formats or encryption methods may still be unsupported. GARbro is not yet available on Flathub or the Microsoft Store, and Android development is on hold. The `store.msixupload` download is for Store submission; you do not need it to use GARbro.
 
 ## Using the desktop app
 
 1. **Open a resource.** Drop files or a folder into the window, or use the **File** icon menu at the top right. Hover over an icon to see its menu name.
 2. **Browse an archive.** Double-click a folder or recognized archive to enter it. Use Back, Forward, and Up in **View** to navigate.
-3. **Preview files.** Select an image, text file, or audio file. Audio starts only when you press Play.
+3. **Preview files.** Select an image, text file, audio file, or video. Playback starts only when you press Play.
 4. **Extract files.** Select files and press **F4**, or choose **Extract all** from **Process**. Pick an output folder, choose any image/audio conversion and existing-file options, then start.
 
 Use **Process → Recursive extraction** to expand child directories and archives too. Archive creation and batch media conversion are also in **Process**.
+
+Recursive extraction can discard child archive copies after success. Conversion can omit original media copies from the output. These options preserve your source game files.
 
 If filenames or text look garbled, try GBK, Shift-JIS, or another encoding under **Settings → Decoding**. Settings also contains language, light/dark theme, and the default output folder. If an archive asks for a password or game scheme, supply the parameters for that game; some encryption methods are unsupported.
 

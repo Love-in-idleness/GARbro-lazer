@@ -30,13 +30,14 @@ round-trip. The source-version-148 database imports for all 77 consumed scheme g
 including more than 500 XP3 definitions; that data is bundled in a deterministic
 compressed JSON file. Import success does not verify all game-specific decryption.
 Bundled file-name lists are retained. User-supplied auxiliary game files, remaining
-native backends and actual-game baseline comparisons remain release blockers. The application is a migration preview, not the 1.0 parity release.
+native backends and actual-game baseline comparisons retain the documented compatibility limits.
+The first stable desktop release does not claim that every registered game variant is verified.
 
 XP3 requests encryption options even for archives with clear encryption flags,
 matching the old decoder's behavior. Use `--scheme none` explicitly for unencrypted
 XP3 fixtures. A missing key is reported; it is never silently guessed as no encryption.
 
-The CI matrix builds and tests Linux x64, Windows x64 and macOS arm64, including
+The CI matrix builds and tests Linux x64/ARM64, Windows x64/ARM64 and macOS Intel/Apple silicon, including
 archive, image, audio, safety and headless GUI checks. Preview archives are unpacked
 and their published CLI, codecs and bundled scheme data are exercised separately. All 31 shared positive archive fixtures also
 are checked against the historical Windows decoders in CI, alongside MBP/CBF, AGF and BBM pixels and metadata. Headless GUI tests do not replace native
@@ -103,3 +104,5 @@ Invalid placements, invalid PKCS7 padding and active journals are rejected.
 Mixed plaintext-page-1 databases and actual-game indexes remain unverified.
 The historical SEE-dependent provider is not used as a fixture oracle; Python's
 SQLite/RC4 and OpenSSL independently generate these fixtures.
+
+Video preview uses separate FFmpeg processes. Synthetic MPEG-2/MP2 and silent MPEG-4 clips verify metadata, poster decoding and playback/pause/seek/stop. The GUI bounds frames to 960×540 at 30 fps and inputs to 2 GiB. Codec availability beyond those samples is not a per-game verification claim.

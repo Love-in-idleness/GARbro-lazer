@@ -98,7 +98,7 @@ def build_deb(stage, output, version, rid='linux-x64'):
     depends = ('dotnet-runtime-10.0 (>= 10.0), libc6 (>= 2.35), libstdc++6, libfontconfig1, libfreetype6, '
                'libx11-6, libx11-xcb1, libxcb1, libxcb-render0, libxcb-shm0, libxcb-xfixes0, '
                'libice6, libsm6, libegl1, libgles2, libwayland-client0, libwayland-egl1, libxkbcommon0, '
-               'libgomp1, libpulse0, libsdl2-2.0-0 (>= 2.0.22), libglib2.0-bin, desktop-file-utils, shared-mime-info, xdg-utils')
+               'libgomp1, libpulse0, libsdl2-2.0-0 (>= 2.0.22), ffmpeg, libglib2.0-bin, desktop-file-utils, shared-mime-info, xdg-utils')
     (control/'control').write_text(f'Package: garbro\nVersion: {deb_version}\nArchitecture: {architecture}\n'
         'Section: graphics\nPriority: optional\nMaintainer: GARbro-no-wpf contributors\n'
         f'Depends: {depends}\nRecommends: xdg-desktop-portal\n'
@@ -153,7 +153,7 @@ def msix_manifest(version, rid='win-x64', channel='preview'):
     root = ET.Element(tag('', 'Package'), IgnorableNamespaces='uap uap2 uap3 rescap')
     ET.SubElement(root, tag('', 'Identity'), Name=identity['name'], Publisher=identity['publisher'], Version=number, ProcessorArchitecture=architecture)
     properties = ET.SubElement(root, tag('', 'Properties'))
-    for key, value in [('DisplayName','GARbro' if channel == 'store' else 'GARbro Preview'),('PublisherDisplayName',identity['publisherDisplayName']),('Logo','Assets/StoreLogo.png')]: ET.SubElement(properties, tag('', key)).text = value
+    for key, value in [('DisplayName','GARbro' if channel == 'store' or '-' not in version else 'GARbro Preview'),('PublisherDisplayName',identity['publisherDisplayName']),('Logo','Assets/StoreLogo.png')]: ET.SubElement(properties, tag('', key)).text = value
     resources = ET.SubElement(root, tag('', 'Resources'))
     for language in ('en-us','zh-cn'): ET.SubElement(resources, tag('', 'Resource'), Language=language)
     dependencies = ET.SubElement(root, tag('', 'Dependencies'))

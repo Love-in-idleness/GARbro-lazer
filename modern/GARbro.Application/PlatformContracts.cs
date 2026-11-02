@@ -30,6 +30,11 @@ public interface IAudioOutput : IDisposable
     void Stop();
 }
 
+public interface IVideoOutput : IAudioOutput
+{
+    string Warning { get; }
+}
+
 public sealed record ResourceSource(string Id, string DisplayName, string LocalPath);
 
 /// <summary>External identifiers remain outside the path-based decoding engine.</summary>

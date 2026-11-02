@@ -1,4 +1,4 @@
-# Install GARbro 0.3 preview
+# Install GARbro 1.0
 
 Portable downloads, DEB and side-loaded MSIX require the external **.NET 10 Runtime**
 (not the Windows Desktop Runtime or SDK), matching the package architecture. Linux
@@ -11,7 +11,7 @@ Enable a .NET 10 package source for your distribution using Microsoft's official
 instructions (Ubuntu's distribution archive may also supply it). Then install:
 
 ```sh
-sudo apt install ./garbro-0.3.0-preview.2-linux-x64.deb
+sudo apt install ./garbro-1.0.0-linux-x64.deb
 ```
 
 The examples use x64; replace `linux-x64` with `linux-arm64` for ARM64.
@@ -24,7 +24,7 @@ Uninstall with `sudo apt remove garbro`. User settings stay in your user profile
 
 Linux audio uses the distribution SDL2 library (`libsdl2-2.0-0`, version 2.0.22
 or later). The tarball also uses this system dependency; it does not bundle SDL.
-Windows and macOS packages include their native SDL library.
+Video preview also requires the system `ffmpeg` package (installed automatically by DEB). Windows and macOS packages include their native SDL library and FFmpeg tools.
 
 The Linux tarball can also be unpacked and run without installation. See
 [linux-desktop.md](linux-desktop.md) for native libraries and input-method diagnostics.
@@ -38,8 +38,8 @@ The MSIX uses a self-signed preview certificate. Review its subject
 PowerShell, explicitly trust the downloaded public certificate:
 
 ```powershell
-Import-Certificate -FilePath .\garbro-0.3.0-preview.2-win-x64.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
-Add-AppxPackage .\garbro-0.3.0-preview.2-win-x64.msix
+Import-Certificate -FilePath .\garbro-1.0.0-win-x64.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
+Add-AppxPackage .\garbro-1.0.0-win-x64.msix
 ```
 
 For ARM64, replace `win-x64` with `win-arm64` in both commands.
@@ -59,8 +59,16 @@ run `desktop\GARbro.Desktop.exe`; the CLI is `cli\garbro.exe`.
 
 ## macOS
 
-The unsigned ARM64 tarball contains GARbro.app and a separate CLI. Install .NET
-10 ARM64 and retain the whole unpacked directory. This preview is not notarized.
+macOS 14 or later is supported on Intel (`osx-x64`) and Apple silicon (`osx-arm64`).
+Install the matching .NET 10 Runtime, open the DMG and copy its whole GARbro folder
+to your Mac. Open `GARbro.app`; the `cli` directory contains the command-line tool.
+Tarballs are also available. Keep the accompanying files together.
+
+The app has an ad-hoc signature for local integrity; it is not Apple Developer ID
+signed or notarized. If macOS blocks the download, review it and use the specific
+app's Open Anyway action in System Settings → Privacy & Security. Do not disable
+Gatekeeper globally. The package registers game-specific Open With handlers without
+replacing your defaults. Click Play for audio/video; files never autoplay.
 
 ## Settings and diagnostics
 
@@ -71,6 +79,18 @@ automatically. See the bundled English/Chinese manuals and compatibility ledger.
 
 ## Flatpak / Flathub
 
-Flatpak packaging is being prepared for x86_64 and aarch64. See [Flathub preparation](flathub.md) for build commands, sandbox permissions and outstanding submission checks. It is not yet published on Flathub.
+Release downloads include `.flatpak` bundles for x64 and ARM64. Install the Flathub
+remote for their Freedesktop runtime, then install your downloaded bundle:
 
-正在为 x86_64、aarch64 准备 Flatpak。构建命令、沙箱权限和提交前验证见 [Flathub 发布准备](flathub.md)，目前尚未在 Flathub 上架。Android 开发及 Android 仓库准备已暂缓。
+```sh
+flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+flatpak install --user ./garbro-1.0.0-linux-x64.flatpak
+flatpak run io.github.love_in_idleness.GARbro-no-wpf
+```
+
+These bundles include .NET and video tools. Flathub catalog publication is pending;
+see [submission instructions](flathub.md) for the exact immutable manifest bundle.
+The Microsoft Store submission package is also downloadable; Store publication
+requires Partner Center access. These are separate from the ready-to-install bundles.
+
+Flatpak 安装包支持 x64、ARM64，自带运行时及视频工具，可按上述命令直接安装。Flathub 和微软商店尚未上架，提交资料与权限要求见对应文档。Android 开发继续暂缓。

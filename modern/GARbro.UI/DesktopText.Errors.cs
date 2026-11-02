@@ -55,5 +55,15 @@ Format database exceeds the size limit.|格式数据库超过大小限制。
 Format database contains incompatible schemes.|格式数据库包含不兼容的方案。
 Unknown resource operation.|未知资源操作。
 Unknown worker operation.|未知解码器操作。
+FFmpeg video tools are unavailable.|找不到视频解码工具 FFmpeg。Linux 请安装 ffmpeg 软件包；Windows 和 macOS 请重新安装完整程序包。
+Cannot start the video decoder.|无法启动视频解码器。
+Video probing exceeded its time limit.|读取视频信息超时。
+The video decoder could not read this media.|视频解码器无法读取此文件，文件可能损坏或编码尚不受支持。
+Video decoder memory limit exceeded.|视频解码器内存用量超过限制。
+Incomplete video frame.|视频帧数据不完整。
+Invalid video dimensions.|视频尺寸无效。
+No video stream was found.|文件中没有可预览的视频流。
+Video duration exceeds the preview limit.|视频时长超过预览限制。
+Invalid preview artifact.|预览缓存文件无效，请重新选择文件。
 """;
 }

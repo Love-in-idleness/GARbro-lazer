@@ -2,13 +2,13 @@
 
 **简体中文** · [English](README.en.md) · [Русский](README.ru.md)
 
-打开游戏资源包，看看里面的图片、听听音频，再把需要的文件提取出来。GARbro 提供图形界面，也可以在命令行中使用。
+打开游戏资源包，看看里面的图片、播放音视频，再把需要的文件提取出来。GARbro 提供图形界面，也可以在命令行中使用。
 
 ![GARbro 当前桌面界面：中文、深色主题](docs/screenshots/desktop-zh-dark.png)
 
 ## 下载与启动
 
-到 [预发行版下载页](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v0.3.0-preview.2) 选择与你的系统和处理器对应的文件。普通 Intel、AMD 电脑选 **x64**；Windows on ARM、ARM Linux 和 Apple 芯片选 **arm64**。
+到 [正式版下载页](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.0) 选择与你的系统和处理器对应的文件。普通 Intel、AMD 电脑选 **x64**；Windows on ARM、ARM Linux 和 Apple 芯片选 **arm64**。
 
 | 系统 | 下载哪个 | 怎么打开 |
 | --- | --- | --- |
@@ -16,20 +16,23 @@
 | Windows 安装版 | 对应架构的 `.msix` 和 `.cer` | 按[安装说明](docs/install.md)信任测试证书，再安装 MSIX |
 | Debian 13 / Ubuntu 24.04 | 对应架构的 `.deb` | 安装后从应用菜单打开 GARbro |
 | 其他 Linux | `linux-x64.tar.gz` 或 `linux-arm64.tar.gz` | 解压后运行 `desktop/GARbro.Desktop` |
-| Apple 芯片的 macOS | `osx-arm64.tar.gz` | 解压后打开 `GARbro.app` |
+| macOS 14 或更新版本 | Apple 芯片选 `osx-arm64.dmg`，Intel 选 `osx-x64.dmg` | 打开磁盘映像，将整个 GARbro 文件夹复制到本机，再打开 `GARbro.app` |
+| Flatpak | 与架构对应的 `.flatpak` | 通过软件中心打开，或使用 `flatpak install --user 文件名.flatpak` |
 
-这些桌面下载包需要先安装对应架构的 [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)。缺少依赖或遇到证书提示时，请看[安装说明](docs/install.md)。文件名中的版本号会随更新改变。
+除自带运行时的 Flatpak、商店包以外，桌面下载包需要先安装对应架构的 [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)。缺少依赖或遇到证书提示时，请看[安装说明](docs/install.md)。文件名中的版本号会随更新改变。
 
-目前是预览版，部分游戏的资源可能打不开。Flathub 和微软商店尚未上架，Android 开发暂缓。`store.msixupload` 是商店提交文件，普通用户无需下载。
+这是首个正式版，部分游戏的特殊加密或格式变体仍可能打不开。Flathub 和微软商店尚未上架，目前可直接下载安装包。Android 开发暂缓。`store.msixupload` 是商店提交文件，普通用户无需下载。
 
 ## 图形界面怎么用
 
 1. **打开资源。** 将文件或目录拖进窗口，或在右上角“文件”图标菜单中选择打开文件、打开目录。悬停在图标上可以看到菜单名称。
 2. **进入资源包。** 双击目录或识别出的归档，就像打开普通文件夹一样。用“视图”中的后退、前进、上一级返回其他位置。
-3. **预览文件。** 选中图片、文本或音频查看预览。音频需要手动点击播放，不会自动出声。
+3. **预览文件。** 选中图片、文本、音频或视频查看预览。音视频需要手动点击播放，不会自动出声。
 4. **提取文件。** 选中需要的文件，按 **F4**，或在“处理”菜单中选择“全部提取”。选择输出目录，确认是否转换图片、音频，以及如何处理已有文件，然后开始。
 
 需要连子目录、子归档一起展开时，选择**处理 → 递归解包**。创建归档和批量媒体转换也在“处理”菜单中。
+
+递归解包可勾选“不保留子归档文件”；转换可勾选“不保留原始多媒体格式”。这些选项只清理成功任务的输出副本，来源游戏文件会保留。
 
 文件名或文本乱码时，打开**设置 → 解码**，尝试 GBK、Shift-JIS 或其他编码。语言、深浅主题、默认输出目录也在设置中。若提示需要密码或游戏方案，请填写与该游戏对应的参数；并非所有加密方式都受支持。
 

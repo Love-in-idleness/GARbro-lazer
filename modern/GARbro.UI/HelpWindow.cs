@@ -44,6 +44,7 @@ public sealed class HelpWindow : AppWindow
                 .Select(f => f.Tag + "  " + (f.CanWrite ? text["ReadWrite"] : text["ReadOnly"]) + "  " + string.Join(", ", f.Extensions.Select(e => "." + e)) + "\n" + f.Description + " · MIT\n" + Details(f)).ToArray();
             search.TextChanged += (_, _) => Refresh(); Refresh(); formatTabs.Items.Add(new TabItem { Header = text[type.Item2], Content = panel });
         }
+        formatTabs.Items.Add(new TabItem { Header = text["Video"], Content = Reader(text["VideoFormatsInfo"]) });
         about.Children.Add(formatTabs); var aboutTab = new TabItem { Header = text["About"], Content = about }; tabs.Items.Add(aboutTab);
         var license = new TabItem { Header = text["License"], Content = Reader(text["LegalNotice"] + "\n\n" + DesktopServices.ReadResource("LICENSE") + "\n\n" + DesktopServices.ReadResource("third-party.md")) }; tabs.Items.Add(license);
         var diagnostics = new TabItem { Header = text["Troubleshoot"], Content = Reader("GARbro " + DesktopServices.Version + "\n" + RuntimeInformation.OSDescription + "\n" + RuntimeInformation.FrameworkDescription + "\n" + RuntimeInformation.ProcessArchitecture + "\n\n" + DesktopServices.ReadResource("troubleshoot." + text.Language + ".md")) }; tabs.Items.Add(diagnostics);
@@ -66,7 +67,7 @@ public sealed class HelpWindow : AppWindow
                     var download = new Button { Content = release.Version }; download.Click += (_, _) => DesktopServices.OpenUrl(release.Url); updates.Children.Add(download);
                 }
             }
-            catch (Exception error) { message.Text = text["Error"] + ": " + error.Message; DesktopServices.Log(error); }
+            catch (Exception error) { message.Text = text["Error"] + ": " + text.ErrorMessage(error.Message); DesktopServices.Log(error); }
             finally { check.IsEnabled = database.IsEnabled = true; }
         }
         check.Click += async (_, _) => await Check(false); database.Click += async (_, _) => await Check(true);

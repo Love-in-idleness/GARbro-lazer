@@ -12,6 +12,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
 from installer_support import build_deb, build_msix
+from installer_support import associations
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -61,7 +62,7 @@ def main():
     parser.add_argument('--rid',required=True,choices=['linux-x64','linux-arm64','win-x64','win-arm64','osx-x64','osx-arm64'])
     parser.add_argument('--output',default='artifacts')
     parser.add_argument('--dotnet',default='dotnet')
-    parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','0.3.0-preview.2'))
+    parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.0'))
     parser.add_argument('--installer',action='store_true',help='Also build DEB or signed test MSIX for the selected architecture')
     args=parser.parse_args()
     if not re.fullmatch(r'\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?',args.version):parser.error('Invalid package version')
@@ -75,6 +76,10 @@ def main():
         if args.rid.startswith('linux-'):
             # Linux follows the distribution's SDL2 ABI and security updates.
             (stage/folder/'libSDL2-2.0.so').unlink(missing_ok=True)
+        else:
+            helpers=ROOT/'artifacts/media'/args.rid
+            if not helpers.is_dir():raise RuntimeError('Build video helpers first: python tools/build-media.py --rid '+args.rid)
+            shutil.copytree(helpers,stage/folder/'media')
     if args.rid.startswith('osx-'):
         desktop=stage/'desktop';app=stage/'GARbro.app/Contents';app.mkdir(parents=True)
         shutil.move(str(desktop),app/'MacOS')
@@ -82,9 +87,13 @@ def main():
             plistlib.dump({'CFBundleIdentifier':'org.garbro.desktop','CFBundleName':'GARbro',
                 'CFBundleDisplayName':'GARbro','CFBundleExecutable':'GARbro.Desktop','CFBundlePackageType':'APPL',
                 'CFBundleIconFile':'app-icon.icns',
-                'CFBundleVersion':args.version.split('-')[0],'CFBundleShortVersionString':args.version.split('-')[0],'NSHighResolutionCapable':True},stream)
+                'CFBundleVersion':args.version.split('-')[0],'CFBundleShortVersionString':args.version.split('-')[0],'NSHighResolutionCapable':True,
+                'LSMinimumSystemVersion':'14.0',
+                'CFBundleDocumentTypes':[{'CFBundleTypeName':'Game resources','CFBundleTypeRole':'Viewer','LSHandlerRank':'Alternate',
+                    'CFBundleTypeExtensions':associations()}]},stream)
         resources=app/'Resources';resources.mkdir()
         shutil.copy2(ROOT/'modern/GARbro.UI/Assets/app-icon.icns',resources/'app-icon.icns')
+        subprocess.run(['codesign','--force','--deep','--sign','-',str(stage/'GARbro.app')],check=True)
     licenses(stage)
     (stage/'README.txt').write_text(f'GARbro {args.version} ({args.rid})\nRequires the .NET 10 runtime.\n'
         'This archive is unsigned. See compatibility.md for verified formats and known limits.\n'
@@ -100,6 +109,10 @@ def main():
     if args.installer:
         if args.rid.startswith('linux-'): print(build_deb(stage,output,args.version,args.rid))
         elif args.rid.startswith('win-'): print(build_msix(stage,output,args.version,args.rid))
-        else: parser.error('Installers are available for Linux and Windows')
+        elif args.rid.startswith('osx-'):
+            dmg=output/(stage.name+'.dmg')
+            dmg.unlink(missing_ok=True)
+            subprocess.run(['hdiutil','create','-volname','GARbro','-srcfolder',str(stage),'-ov','-format','UDZO',str(dmg)],check=True)
+            print(dmg)
 
 if __name__=='__main__':main()

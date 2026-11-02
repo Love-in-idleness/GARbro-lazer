@@ -17,7 +17,7 @@ parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--rid',required=True)
 parser.add_argument('--output',type=Path,default=ROOT/'artifacts')
 parser.add_argument('--dotnet',default='dotnet')
-parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','0.3.0-preview.2'))
+parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.0'))
 args=parser.parse_args()
 name='garbro-'+args.version+'-'+args.rid
 archive=args.output/(name+('.zip'if args.rid.startswith('win-')else'.tar.gz'))
@@ -51,6 +51,17 @@ with tempfile.TemporaryDirectory(prefix='garbro-package-')as folder:
         text=True,capture_output=True,check=True,timeout=45)
     opened=json.loads(worker.stdout)
     assert opened['kind']=='result' and opened['data']['tag']=='XFL' and len(opened['data']['entries'])==3
+    preview=subprocess.run([args.dotnet,str(desktop/'GARbro.Worker.dll')],
+        input=json.dumps({'operation':'resource-preview','location':{'rootPath':str(ROOT/'tests/fixtures/generated')},'entry':'movie.mpg'}),
+        text=True,capture_output=True,check=True,timeout=45)
+    result=json.loads(preview.stdout)
+    assert result['kind']=='result' and result['data']['kind']=='video',result
+    if not args.rid.startswith('linux-'):
+        helpers=desktop/'media'
+        assert (helpers/('ffmpeg.exe' if args.rid.startswith('win-')else'ffmpeg')).exists()
+        recipe=json.loads((helpers/'media-codecs.json').read_text())
+        assert hashlib.sha256((helpers/'ffmpeg-source.tar.gz').read_bytes()).hexdigest()==recipe['sha256']
+        assert (helpers/'COPYING.LGPLv2.1').exists()
     database=cli.parent/'GameData/Formats.json.gz'
     assert database.read_bytes()==(desktop/'GameData/Formats.json.gz').read_bytes()
     schemes=json.loads(gzip.decompress(database.read_bytes()))
