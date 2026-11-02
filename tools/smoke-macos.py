@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import plistlib
+import re
 import shutil
 import subprocess
 import tempfile
@@ -23,6 +24,12 @@ with tempfile.TemporaryDirectory(prefix='GARbro macOS 测试 ') as directory:
         assert 'xp3'in extensions and 'mp4'not in extensions and 'dat'not in extensions
         subprocess.run(['codesign','--verify','--deep','--strict',str(app)],check=True)
         payload=app/'Contents/Resources/app'
+        for name in ('ffmpeg','ffprobe'):
+            commands=subprocess.check_output(['otool','-l',str(payload/'media'/name)],text=True)
+            versions=re.findall(r'^\s*(?:minos|version)\s+(\d+\.\d+(?:\.\d+)?)\s*$',commands,re.M)
+            assert versions,'Video helper has no minimum-system declaration'
+            assert all(tuple(map(int,v.split('.'))) <= (14,0,0) for v in versions),f'{name} requires macOS {versions}'
+            print(name,'minimum macOS:',', '.join(versions))
         subprocess.run([str(payload/'media/ffmpeg'),'-version'],check=True)
         fixture=root/'中文 文件.xp3';shutil.copy2('tests/fixtures/generated/standard.xfl',fixture)
         runtime=['--env','DOTNET_ROOT='+os.environ['DOTNET_ROOT']] if os.environ.get('DOTNET_ROOT')else[]

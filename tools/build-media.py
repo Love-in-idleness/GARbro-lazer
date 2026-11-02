@@ -32,6 +32,9 @@ def build(rid, output):
         with tarfile.open(archive) as contents: contents.extractall(workspace, filter='data')
     options = recipe['options'] + ['--prefix='+str(target).replace('\\', '/'), '--disable-shared', '--enable-static']
     environment = os.environ.copy()
+    if rid.startswith('osx-'):
+        environment['MACOSX_DEPLOYMENT_TARGET'] = '14.0'
+        options += ['--extra-cflags=-mmacosx-version-min=14.0', '--extra-ldflags=-mmacosx-version-min=14.0']
     bash = shutil.which('bash') or '/bin/bash'
     make = shutil.which('make') or shutil.which('mingw32-make')
     if rid.startswith('win-'):
