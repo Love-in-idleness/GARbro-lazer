@@ -73,7 +73,7 @@ public sealed class VideoPlayback : IVideoOutput
     }
     string[] Arguments(double start) => MediaTools.Input(artifact.Path).Take(2)
         .Concat(new[] { "-ss", start.ToString("0.######", CultureInfo.InvariantCulture) })
-        .Concat(MediaTools.Input(artifact.Path).Skip(2)).ToArray();
+        .Concat(MediaTools.Input(artifact.Path).Skip(2)).Concat(new[] { "-threads", "2" }).ToArray();
     async Task Decode(CancellationTokenSource owner, PcmOutput output, double start)
     {
         Process movie = null, music = null;
@@ -85,11 +85,11 @@ public sealed class VideoPlayback : IVideoOutput
             var size = MediaInfo.Fit(artifact.Info.Width, artifact.Info.Height);
             double fps = Math.Clamp(artifact.Info.FrameRate, 1, 30);
             movie = MediaTools.Start("ffmpeg", Arguments(start).Concat(new[] { "-map", "0:v:0", "-an", "-vf",
-                $"fps={fps.ToString(CultureInfo.InvariantCulture)},scale={size.Width}:{size.Height}", "-pix_fmt", "bgra", "-f", "rawvideo", "pipe:1" }));
+                $"fps={fps.ToString(CultureInfo.InvariantCulture)}:start_time=0,scale={size.Width}:{size.Height}", "-pix_fmt", "bgra", "-f", "rawvideo", "pipe:1" }));
             movieErrors = MediaTools.ReadErrors(movie);
             if (output != null)
             {
-                music = MediaTools.Start("ffmpeg", Arguments(start).Concat(new[] { "-map", "0:a:0", "-vn", "-ac", "2", "-ar", "48000", "-f", "s16le", "pipe:1" }));
+                music = MediaTools.Start("ffmpeg", Arguments(start).Concat(new[] { "-map", "0:a:0", "-vn", "-ac", "2", "-ar", "48000", "-af", "aresample=async=1:first_pts=0", "-f", "s16le", "pipe:1" }));
                 musicErrors = MediaTools.ReadErrors(music);
                 musicTask = FeedAudioOrMute(music, output, owner);
             }
@@ -178,7 +178,7 @@ public sealed class VideoPlayback : IVideoOutput
     async Task FeedAudioOrMute(Process process, PcmOutput output, CancellationTokenSource owner)
     {
         try { await FeedAudio(process, output, owner); }
-        catch (Exception error) when (!owner.IsCancellationRequested && error is IOException or InvalidOperationException)
+        catch (Exception error) when (!owner.IsCancellationRequested && error is IOException or InvalidDataException or InvalidOperationException)
         {
             lock (gate)
             {

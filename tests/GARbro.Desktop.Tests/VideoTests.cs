@@ -77,6 +77,18 @@ public sealed class VideoTests
         output.Stop();Assert.False(output.Playing);Assert.Equal(0,output.Position);Assert.Null(failure);
     }
     [Fact]
+    public async Task UnavailableAudioStreamFallsBackToMutedVideo()
+    {
+        using var sdl=AudioPlayback.LoadApi();sdl.SetHint("SDL_AUDIODRIVER","dummy");
+        string path=Path.Combine(AppContext.BaseDirectory,"Fixtures","silent.mp4");
+        var info=MediaTools.Probe(path);info.HasAudio=true;
+        int frames=0;Exception failure=null;
+        using var output=new VideoPlayback(new(path,new FileInfo(path).Length,info),(_,_,_)=>{frames++;return Task.CompletedTask;},error=>failure=error,1L<<30);
+        output.Play();
+        for(int n=0;n<150&&(output.Warning==null||frames<2);n++)await Task.Delay(50,TestContext.Current.CancellationToken);
+        Assert.Equal("VideoAudioUnavailable",output.Warning);Assert.True(frames>=2);Assert.Null(failure);
+    }
+    [Fact]
     public async Task InvalidVideoStopsAndReportsFailureWithoutHanging()
     {
         var ready=new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
