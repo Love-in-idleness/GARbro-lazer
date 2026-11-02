@@ -41,6 +41,9 @@ def build(rid, output):
         command = f'chcp 65001 >nul && call "{install}\\Common7\\Tools\\VsDevCmd.bat" -arch={arch} -host_arch=x64 >nul && set'
         lines = subprocess.check_output(command, shell=True, text=True, encoding='utf-8')
         environment.update({key.upper(): value for key,value in (line.split('=', 1) for line in lines.splitlines() if '=' in line and not line.startswith('='))})
+        git = Path(bash).parents[1]
+        environment['PATH'] += os.pathsep + str(git/'usr/bin') + os.pathsep + str(git/'bin')
+        environment['SHELL'] = str(git/'bin/sh.exe').replace('\\', '/')
         # Git Bash's /usr/bin/link is not the Visual C++ linker.
         environment['MSYS2_PATH_TYPE'] = 'inherit'
         options += ['--toolchain=msvc', '--target-os=win32', '--arch='+('aarch64' if arch == 'arm64' else 'x86_64'), '--disable-asm']
