@@ -17,7 +17,7 @@ def build(rid, output):
     recipe = json.loads((ROOT/'tools/media-codecs.json').read_text())
     target = output.resolve()/rid
     suffix = '.exe' if rid.startswith('win-') else ''
-    if all((target/(name+suffix)).is_file() for name in ('ffmpeg', 'ffprobe')) and (target/'media-codecs.json').is_file() and json.loads((target/'media-codecs.json').read_text()) == recipe:
+    if all((target/(name+suffix)).is_file() for name in ('ffmpeg', 'ffprobe')) and (target/'media-codecs.json').is_file() and json.loads((target/'media-codecs.json').read_text()) == recipe and (target/'build-media.py').is_file() and (target/'build-media.py').read_bytes() == Path(__file__).read_bytes():
         return target
     workspace = output.resolve()/('build-'+rid)
     workspace.mkdir(parents=True, exist_ok=True)
