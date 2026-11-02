@@ -11,6 +11,10 @@
     <PackageVersion Include="System.Formats.Nrbf" Version="10.0.13" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageVersion Include="Magick.NET-Q8-AnyCPU" Version="15.0.0" />
+    <!-- 15.x stopped publishing the Intel macOS native library. Keep the latest
+         Intel-capable release for that target, including native-host tests. -->
+    <PackageVersion Update="Magick.NET-Q8-AnyCPU" Version="14.17.2"
+      Condition="'$(RuntimeIdentifier)' == 'osx-x64' Or ('$(RuntimeIdentifier)' == '' And $([MSBuild]::IsOSPlatform('OSX')) And '$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'X64')" />
     <PackageVersion Include="BCnEncoder.Net" Version="2.3.0" />
     <PackageVersion Include="BouncyCastle.Cryptography" Version="2.7.0" />
     <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.0" />

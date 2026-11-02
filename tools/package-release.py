@@ -82,7 +82,18 @@ def main():
             shutil.copytree(helpers,stage/folder/'media')
     if args.rid.startswith('osx-'):
         desktop=stage/'desktop';app=stage/'GARbro.app/Contents';app.mkdir(parents=True)
-        shutil.move(str(desktop),app/'MacOS')
+        resources=app/'Resources';resources.mkdir()
+        shutil.move(str(desktop),resources/'app')
+        executables=app/'MacOS';executables.mkdir()
+        project=ROOT/'modern/GARbro.Desktop/GARbro.Desktop.csproj'
+        template=subprocess.check_output([args.dotnet,'msbuild',str(project),'-t:_GetAppHostPaths','-getProperty:AppHostSourcePath',
+            '-p:RuntimeIdentifier='+args.rid,'-p:Configuration=Release','-nologo','-v:q'],text=True).strip().splitlines()[-1]
+        if not Path(template).is_file():raise RuntimeError('Cannot locate the .NET macOS apphost template')
+        subprocess.run([args.dotnet,'msbuild',str(ROOT/'tools/create-mac-host.proj'),'-t:CreateMacHost','-nologo',
+            '-p:Template='+template,'-p:Destination='+str(executables/'GARbro.Desktop'),
+            '-p:MacManagedAssembly='+str(resources/'app/GARbro.Desktop.dll'),
+            '-p:ManagedPath=../Resources/app/GARbro.Desktop.dll','-p:SignHost=true'],check=True)
+        (resources/'app/GARbro.Desktop').unlink()
         with (app/'Info.plist').open('wb')as stream:
             plistlib.dump({'CFBundleIdentifier':'org.garbro.desktop','CFBundleName':'GARbro',
                 'CFBundleDisplayName':'GARbro','CFBundleExecutable':'GARbro.Desktop','CFBundlePackageType':'APPL',
@@ -91,8 +102,14 @@ def main():
                 'LSMinimumSystemVersion':'14.0',
                 'CFBundleDocumentTypes':[{'CFBundleTypeName':'Game resources','CFBundleTypeRole':'Viewer','LSHandlerRank':'Alternate',
                     'CFBundleTypeExtensions':associations()}]},stream)
-        resources=app/'Resources';resources.mkdir()
         shutil.copy2(ROOT/'modern/GARbro.UI/Assets/app-icon.icns',resources/'app-icon.icns')
+        # Managed PE assemblies belong in Resources, not the Mach-O code directory.
+        # Sign every native helper/library before sealing the outer application.
+        magic={b'\xfe\xed\xfa\xce',b'\xce\xfa\xed\xfe',b'\xfe\xed\xfa\xcf',b'\xcf\xfa\xed\xfe',b'\xca\xfe\xba\xbe',b'\xbe\xba\xfe\xca',b'\xca\xfe\xba\xbf',b'\xbf\xba\xfe\xca'}
+        for file in sorted(app.rglob('*')):
+            if file.is_file():
+                with file.open('rb')as stream:header=stream.read(4)
+                if header in magic:subprocess.run(['codesign','--force','--sign','-',str(file)],check=True)
         subprocess.run(['codesign','--force','--deep','--sign','-',str(stage/'GARbro.app')],check=True)
     licenses(stage)
     (stage/'README.txt').write_text(f'GARbro {args.version} ({args.rid})\nRequires the .NET 10 runtime.\n'

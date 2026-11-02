@@ -106,3 +106,5 @@ The historical SEE-dependent provider is not used as a fixture oracle; Python's
 SQLite/RC4 and OpenSSL independently generate these fixtures.
 
 Video preview uses separate FFmpeg processes. Synthetic MPEG-2/MP2 and silent MPEG-4 clips verify metadata, poster decoding and playback/pause/seek/stop. The GUI bounds frames to 960×540 at 30 fps and inputs to 2 GiB. Codec availability beyond those samples is not a per-game verification claim.
+
+Intel macOS uses Magick.NET 14.17.2, the latest release with an Intel native asset; 15.0.0 no longer ships that asset. Other desktop targets retain 15.0.0. The same image/codec fixture suite runs on both macOS architectures.

@@ -2,6 +2,7 @@
 """Mount a DMG, validate game associations and launch its app through LaunchServices."""
 import argparse
 import json
+import os
 import plistlib
 import shutil
 import subprocess
@@ -21,14 +22,16 @@ with tempfile.TemporaryDirectory(prefix='GARbro macOS 测试 ') as directory:
         extensions=info['CFBundleDocumentTypes'][0]['CFBundleTypeExtensions']
         assert 'xp3'in extensions and 'mp4'not in extensions and 'dat'not in extensions
         subprocess.run(['codesign','--verify','--deep','--strict',str(app)],check=True)
-        subprocess.run([str(app/'Contents/MacOS/media/ffmpeg'),'-version'],check=True)
+        payload=app/'Contents/Resources/app'
+        subprocess.run([str(payload/'media/ffmpeg'),'-version'],check=True)
         fixture=root/'中文 文件.xp3';shutil.copy2('tests/fixtures/generated/standard.xfl',fixture)
-        subprocess.run(['open','-n','-a',str(app),'--args',str(fixture)],check=True)
+        runtime=['--env','DOTNET_ROOT='+os.environ['DOTNET_ROOT']] if os.environ.get('DOTNET_ROOT')else[]
+        subprocess.run(['open',*runtime,'-n','-a',str(app),'--args',str(fixture)],check=True)
         time.sleep(3)
         processes=subprocess.check_output(['pgrep','-f',str(app/'Contents/MacOS/GARbro.Desktop')],text=True).splitlines()
         assert processes,'Finder/LaunchServices launch did not keep the application running'
         # Verify the worker, launched from the mounted app, reads a Unicode path.
-        result=subprocess.run([str(app/'Contents/MacOS/GARbro.Worker')],input=json.dumps({'operation':'open','path':str(fixture)}),text=True,capture_output=True,check=True)
+        result=subprocess.run([str(payload/'GARbro.Worker')],input=json.dumps({'operation':'open','path':str(fixture)}),text=True,capture_output=True,check=True)
         assert json.loads(result.stdout)['data']['tag']=='XFL'
         for pid in processes:subprocess.run(['kill',pid],check=True)
     finally:subprocess.run(['hdiutil','detach',str(mount)],check=True)

@@ -38,7 +38,8 @@ with tempfile.TemporaryDirectory(prefix='garbro-package-')as folder:
                      'compatibility/portable-status.json','migration-status.md'):
         assert (package/relative).exists(),relative
     cli=package/'cli/garbro.dll'
-    desktop=package/('GARbro.app/Contents/MacOS'if args.rid.startswith('osx-')else'desktop')
+    desktop=package/('GARbro.app/Contents/Resources/app'if args.rid.startswith('osx-')else'desktop')
+    if args.rid.startswith('osx-'):assert (package/'GARbro.app/Contents/MacOS/GARbro.Desktop').exists()
     assert (desktop/'GARbro.Desktop.dll').exists()
     sdl='SDL2.dll'if args.rid.startswith('win-')else'libSDL2-2.0.dylib'if args.rid.startswith('osx-')else'libSDL2-2.0.so'
     if args.rid.startswith('linux-'):assert not (desktop/sdl).exists(),'Linux uses the distribution SDL2 library'
