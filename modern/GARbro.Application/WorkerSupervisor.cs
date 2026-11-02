@@ -77,6 +77,7 @@ namespace GARbro.Application
             foreach(string argument in arguments) start.ArgumentList.Add(argument);
             start.Environment[WorkerTemporaryFiles.ScopeVariable]=id;
             start.Environment[WorkerTemporaryFiles.RegistryVariable]=registry;
+            start.Environment[MediaTools.MemoryVariable]=limits.MaxMemoryBytes.ToString(System.Globalization.CultureInfo.InvariantCulture);
             using var process=new Process {StartInfo=start};
             Task write=null,stdout=null,stderr=null,exit=null;
             bool started=false;

@@ -131,6 +131,7 @@ public sealed partial class DesktopText : INotifyPropertyChanged
     public IEnumerable<string> Keys => strings.Keys;
     const string Data = """
 Video|Video|视频
+Media|Media|媒体
 NoVideo|Video playback is unavailable.|视频播放不可用。
 VideoMuted|Audio output is unavailable; playing video muted.|音频设备不可用，正在静音播放视频。
 VideoAudioUnavailable|Audio decoding is unavailable; playing video muted.|音频解码不可用，正在静音播放视频。

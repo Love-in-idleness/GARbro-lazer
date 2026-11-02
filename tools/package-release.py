@@ -112,7 +112,11 @@ def main():
         elif args.rid.startswith('osx-'):
             dmg=output/(stage.name+'.dmg')
             dmg.unlink(missing_ok=True)
-            subprocess.run(['hdiutil','create','-volname','GARbro','-srcfolder',str(stage),'-ov','-format','UDZO',str(dmg)],check=True)
+            disk=output/('dmg-root-'+args.rid)
+            if disk.exists():shutil.rmtree(disk)
+            shutil.copytree(stage,disk/'GARbro')
+            (disk/'Applications').symlink_to('/Applications',target_is_directory=True)
+            subprocess.run(['hdiutil','create','-volname','GARbro','-srcfolder',str(disk),'-ov','-format','UDZO',str(dmg)],check=True)
             print(dmg)
 
 if __name__=='__main__':main()

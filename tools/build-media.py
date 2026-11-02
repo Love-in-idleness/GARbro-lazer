@@ -39,7 +39,7 @@ def build(rid, output):
         install = subprocess.check_output([str(vswhere), '-latest', '-property', 'installationPath'], text=True).strip()
         arch = 'arm64' if rid == 'win-arm64' else 'x64'
         command = f'chcp 65001 >nul && call "{install}\\Common7\\Tools\\VsDevCmd.bat" -arch={arch} -host_arch=x64 >nul && set'
-        lines = subprocess.check_output(['cmd', '/d', '/c', command], text=True, encoding='utf-8')
+        lines = subprocess.check_output(command, shell=True, text=True, encoding='utf-8')
         environment.update({key.upper(): value for key,value in (line.split('=', 1) for line in lines.splitlines() if '=' in line and not line.startswith('='))})
         # Git Bash's /usr/bin/link is not the Visual C++ linker.
         environment['MSYS2_PATH_TYPE'] = 'inherit'

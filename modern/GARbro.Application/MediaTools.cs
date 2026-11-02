@@ -13,6 +13,7 @@ namespace GARbro.Application;
 /// <summary>External codec processes; no native video decoder is loaded in the GUI.</summary>
 public static class MediaTools
 {
+    public const string MemoryVariable = "GARBRO_MEDIA_MEMORY_LIMIT";
     public const string Formats = "mpeg,mpegts,mpegvideo,m4v,mov,mp4,m4a,3gp,3g2,mj2,matroska,webm,avi,asf,ogg,flv,ivf";
     public static string Resolve(string tool)
     {
@@ -53,7 +54,17 @@ public static class MediaTools
         });
         try
         {
-            if (!process.WaitForExit(timeout)) throw new IOException("Video probing exceeded its time limit.");
+            long limit = long.TryParse(Environment.GetEnvironmentVariable(MemoryVariable), out long configured) && configured >= 64L << 20 ? configured : 1L << 30;
+            using var parent = Process.GetCurrentProcess();
+            var clock = Stopwatch.StartNew();
+            while (!process.WaitForExit(50))
+            {
+                if (output.IsFaulted) output.GetAwaiter().GetResult();
+                if (clock.ElapsedMilliseconds > timeout) throw new IOException("Video probing exceeded its time limit.");
+                process.Refresh(); parent.Refresh();
+                if (!process.HasExited && process.WorkingSet64 + parent.WorkingSet64 > limit)
+                    throw new WorkerLimitException("Video decoder memory limit exceeded.", "memory");
+            }
             var bytes = output.GetAwaiter().GetResult();
             if (process.ExitCode != 0) throw new InvalidDataException("The video decoder could not read this media.");
             errors.GetAwaiter().GetResult(); return bytes;

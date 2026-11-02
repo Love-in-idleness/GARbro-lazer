@@ -39,6 +39,8 @@ type MediaInfo private () =
     static member Fit(width: int, height: int) : VideoSize =
         if width <= 0 || height <= 0 || width > 32768 || height > 32768 then
             raise (InvalidDataException("Invalid video dimensions."))
+        if int64 width * int64 height > 67108864L then
+            raise (InvalidDataException("Video exceeds the pixel limit."))
         let scale = min 1.0 (min (960.0 / float width) (540.0 / float height))
         { Width = max 2 (int (float width * scale) / 2 * 2)
           Height = max 2 (int (float height * scale) / 2 * 2) }

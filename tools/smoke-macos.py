@@ -15,7 +15,7 @@ with tempfile.TemporaryDirectory(prefix='GARbro macOS 测试 ') as directory:
     root=Path(directory);mount=root/'mounted';mount.mkdir()
     subprocess.run(['hdiutil','attach','-readonly','-nobrowse','-mountpoint',str(mount),str(args.dmg.resolve())],check=True)
     try:
-        app=next(mount.glob('GARbro.app'))
+        app=mount/'GARbro/GARbro.app'
         info=plistlib.loads((app/'Contents/Info.plist').read_bytes())
         assert info['CFBundleDocumentTypes'][0]['LSHandlerRank']=='Alternate'
         extensions=info['CFBundleDocumentTypes'][0]['CFBundleTypeExtensions']

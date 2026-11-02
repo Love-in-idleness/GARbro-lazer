@@ -314,7 +314,7 @@ public sealed partial class MainWindow : AppWindow
                 if (historyIndex + 1 < history.Count) history.RemoveRange(historyIndex + 1, history.Count - historyIndex - 1);
                 history.Add(listing.Location); historyIndex = history.Count - 1;
             }
-            status.Text = (listing.Physical ? Text["Folders"] : listing.Tag) + " · " + (listing.Entries.Length == 1 ? Text["OneEntry"] : Text.Format("EntryCount", listing.Entries.Length));
+            status.Text = (listing.Physical ? Text["Folders"] : listing.Tag == "media" ? Text["Media"] : listing.Tag) + " · " + (listing.Entries.Length == 1 ? Text["OneEntry"] : Text.Format("EntryCount", listing.Entries.Length));
         }
         finally { if (ReferenceEquals(active, operation)) active = null; SetBusy(false); }
     }

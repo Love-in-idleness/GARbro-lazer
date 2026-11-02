@@ -116,6 +116,7 @@ public sealed class MediaWorkflowTests
     {
         Assert.Equal(960,MediaInfo.Fit(3840,2160).Width);
         Assert.Throws<InvalidDataException>(()=>MediaInfo.Fit(int.MaxValue,1));
+        Assert.Throws<InvalidDataException>(()=>MediaInfo.Fit(32768,32768));
         Assert.Throws<InvalidDataException>(()=>MediaInfo.Parse("{\"streams\":[]}"));
         var info=MediaInfo.Parse("{\"streams\":[{\"codec_type\":\"video\",\"width\":160,\"height\":90,\"avg_frame_rate\":\"NaN/1\",\"duration\":\"Infinity\"}]}");
         Assert.Equal(25,info.FrameRate);Assert.Equal(0,info.Duration);
