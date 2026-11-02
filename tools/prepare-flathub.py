@@ -36,6 +36,7 @@ def main():
             host=['dotnet']
             if args.in_sdk:
                 host=['flatpak','run','--share=network','--filesystem='+str(ROOT),'--command=sh',
+                      '--env=NUGET_PACKAGES='+str(ROOT/'artifacts/flatpak-nuget-cache'),
                       '--runtime=org.freedesktop.Sdk//26.08','org.freedesktop.Sdk.Extension.dotnet10//26.08',
                       '-c','export DOTNET_ROOT=/usr/lib/sdk/dotnet10/lib; exec /usr/lib/sdk/dotnet10/bin/dotnet "$@"','--']
             subprocess.run([*host,'restore',str(ROOT/f'modern/{project}/{project}.csproj'),'-r',rid,
