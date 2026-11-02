@@ -38,6 +38,8 @@ for ext in installer.associations():
 ET.ElementTree(xml).write(mime/(app+'.xml'),encoding='utf-8',xml_declaration=True)
 meta=data/'metainfo';meta.mkdir(parents=True,exist_ok=True)
 shutil.copy2(root/'packaging/flatpak'/ (app+'.metainfo.xml'),meta)
+fonts=Path('/app/etc/fonts');fonts.mkdir(parents=True,exist_ok=True)
+shutil.copy2(root/'packaging/flatpak/fontconfig.conf',fonts/'local.conf')
 for size in (16,32,48,64,128,256,512):
     icons=data/f'icons/hicolor/{size}x{size}/apps';icons.mkdir(parents=True,exist_ok=True)
     shutil.copy2(root/f'modern/GARbro.UI/Assets/app-icon-{size}.png',icons/(app+'.png'))

@@ -27,6 +27,9 @@ D-Bus access. Open inputs and output folders using the system file picker. Selec
 the containing folder for sibling indexes and keys. The recycle-bin command is
 disabled in this sandbox because a reliable host trash operation is unavailable.
 SDL2 must come from the Freedesktop runtime; NuGet SDL binaries are removed.
+The package excludes WOFF/WOFF2 web fonts from its own font enumeration: host
+cache entries without a family can hang the bundled Skia font manager at startup.
+Desktop TTF/OTF fonts remain available; host fonts and settings are not changed.
 
 Before submitting to Flathub's `new-pr` branch, complete both architecture builds,
 run the current Flathub manifest and repository linters, validate metadata, and add
@@ -49,6 +52,8 @@ Flatpak 使用 Freedesktop 26.08 和 .NET 10，在沙箱内携带运行时；DEB
 默认不开放整个主目录、宿主文件系统或完整 D-Bus。通过系统文件选择器授权来源和输出目录；
 需要同目录索引或密钥时，选择整个文件夹。沙箱无法可靠调用宿主回收站，因此禁用该命令。
 SDL2 使用 Freedesktop 运行时提供的库，不使用 NuGet 附带的 SDL。
+包内字体配置暂时过滤 WOFF/WOFF2 网页字体，避免宿主缓存中缺少字体族的条目使
+Skia 在启动时死循环。普通 TTF/OTF 桌面字体仍可使用，不修改宿主字体或设置。
 
 提交前仍须通过双架构构建、Flathub 官方检查器和元数据验证，并提供当前版本的公开截图。
 需实测文件门户、目录与拖放、文件关联、提取输出、音频、取消和资源限制、Wayland 输入法、
