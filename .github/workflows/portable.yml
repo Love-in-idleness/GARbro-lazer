@@ -57,6 +57,16 @@ jobs:
           msystem: MSYS
           install: make pkgconf
           path-type: inherit
+      - run: dotnet build GARbro.NoWpf.slnx -c Release
+      - name: Verify Windows title bar and visible work-area bounds
+        if: runner.os == 'Windows'
+        timeout-minutes: 2
+        run: python tools/smoke-desktop.py
+      - uses: actions/upload-artifact@v4
+        if: always() && runner.os == 'Windows'
+        with:
+          name: windows-frame-${{ matrix.rid }}
+          path: artifacts/native-desktop/window-with-titlebar.png
       - name: Build redistributable video helpers
         if: runner.os != 'Linux'
         run: python tools/build-media.py --rid ${{ matrix.rid }}
@@ -66,7 +76,6 @@ jobs:
         if: runner.os != 'Linux'
         shell: bash
         run: echo "${{ github.workspace }}/artifacts/media/${{ matrix.rid }}" >> "$GITHUB_PATH"
-      - run: dotnet build GARbro.NoWpf.slnx -c Release
       - run: dotnet test GARbro.NoWpf.slnx -c Release --no-build --logger "trx;LogFilePrefix=portable"
         env:
           SDL_AUDIODRIVER: dummy
@@ -76,7 +85,7 @@ jobs:
         timeout-minutes: 2
         run: xvfb-run -a python tools/smoke-desktop.py
       - name: Exercise native desktop window
-        if: runner.os != 'Linux'
+        if: runner.os == 'macOS'
         timeout-minutes: 2
         run: python tools/smoke-desktop.py
       - name: Install headless Wayland test dependencies

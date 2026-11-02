@@ -5,6 +5,8 @@ using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
+using GARbro.Domain;
 
 namespace GARbro.Desktop;
 
@@ -20,10 +22,10 @@ public class AppWindow : UserControl
     public event EventHandler Opened;
     public event EventHandler Closed;
     public string Title { get => host?.Title ?? title; set { title = value; if (host != null) host.Title = value; } }
-    public new double Width { get => host?.Width ?? desiredWidth; set { desiredWidth = value; if (host != null) host.Width = value; } }
-    public new double Height { get => host?.Height ?? desiredHeight; set { desiredHeight = value; if (host != null) host.Height = value; } }
-    public new double MinWidth { get => minimumWidth; set { minimumWidth = value; if (host != null) host.MinWidth = value; } }
-    public new double MinHeight { get => minimumHeight; set { minimumHeight = value; if (host != null) host.MinHeight = value; } }
+    public new double Width { get => host?.Width ?? desiredWidth; set { desiredWidth = value; if (host != null) { host.Width = value; FitToWorkArea(host.IsVisible); } } }
+    public new double Height { get => host?.Height ?? desiredHeight; set { desiredHeight = value; if (host != null) { host.Height = value; FitToWorkArea(host.IsVisible); } } }
+    public new double MinWidth { get => host?.MinWidth ?? minimumWidth; set { minimumWidth = value; if (host != null) host.MinWidth = value; } }
+    public new double MinHeight { get => host?.MinHeight ?? minimumHeight; set { minimumHeight = value; if (host != null) host.MinHeight = value; } }
     public WindowStartupLocation WindowStartupLocation { get; set; } = WindowStartupLocation.CenterOwner;
     public WindowIcon Icon { get; set; }
     public IStorageProvider StorageProvider => TopLevel.GetTopLevel(this)?.StorageProvider;
@@ -39,17 +41,43 @@ public class AppWindow : UserControl
             if (host != null) return host;
             host = new Window { Title = title, Width = desiredWidth, Height = desiredHeight,
                 MinWidth = minimumWidth, MinHeight = minimumHeight, Icon = Icon,
-                WindowDecorations = WindowDecorations.None, ExtendClientAreaToDecorationsHint = false,
+                WindowDecorations = WindowDecorations.Full, ExtendClientAreaToDecorationsHint = false,
                 WindowStartupLocation = WindowStartupLocation, Content = this };
-            // Keep the native caption (including its system buttons) above page content.
-            // Apply it to the platform as well: assigning the default styled value alone
-            // does not force a refresh of an existing native frame.
-            host.WindowDecorations = WindowDecorations.Full;
-            host.Opened += (_, _) => Opened?.Invoke(this, EventArgs.Empty);
+            FitToWorkArea(false);
+            host.Opened += (_, _) =>
+            {
+                FitToWorkArea(true);
+                Dispatcher.UIThread.Post(() => FitToWorkArea(true), DispatcherPriority.Loaded);
+                Opened?.Invoke(this, EventArgs.Empty);
+            };
+            host.ScalingChanged += (_, _) => Dispatcher.UIThread.Post(() => FitToWorkArea(true));
             host.Closed += (_, _) => Finish(null);
             WaylandTextInput.Attach(host);
             return host;
         }
+    }
+    void FitToWorkArea(bool place)
+    {
+        if (closed || host.WindowState != WindowState.Normal) return;
+        var screen = host.Screens.ScreenFromWindow(host) ?? host.Screens.Primary;
+        if (screen == null || screen.WorkingArea.Width <= 0 || screen.WorkingArea.Height <= 0) return;
+        double scale = screen.Scaling;
+        var work = screen.WorkingArea;
+        // Before mapping, some platforms cannot report the frame. Reserve space for
+        // it, then use its measured size after opening. Never centre an oversized
+        // client area with the caption above the screen (common at 150% scaling).
+        var frame = host.FrameSize;
+        double frameWidth = frame.HasValue ? Math.Max(0, frame.Value.Width - host.ClientSize.Width) : 16;
+        double frameHeight = frame.HasValue ? Math.Max(0, frame.Value.Height - host.ClientSize.Height) : 48;
+        var fitted = WindowGeometry.Fit(host.Width, host.Height, minimumWidth, minimumHeight,
+            work.Width / scale, work.Height / scale, frameWidth + 2, frameHeight + 2);
+        host.MinWidth = fitted.MinimumWidth; host.MinHeight = fitted.MinimumHeight;
+        host.Width = fitted.Width; host.Height = fitted.Height;
+        if (!place) return;
+        var total = PixelSize.FromSize(new Size(fitted.Width + frameWidth, fitted.Height + frameHeight), scale);
+        var position = host.Position;
+        host.Position = new PixelPoint(WindowGeometry.ConstrainOrigin(position.X, work.X, work.Width, total.Width),
+            WindowGeometry.ConstrainOrigin(position.Y, work.Y, work.Height, total.Height));
     }
     public void Show() => DesktopHost.Show();
     public void Activate() => host?.Activate();

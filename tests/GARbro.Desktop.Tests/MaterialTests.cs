@@ -9,6 +9,22 @@ using Xunit;
 
 public sealed class MaterialTests
 {
+    [Theory]
+    [InlineData(1180,780,1200,760,1180,720)] // 1800x1200 screen at 150%, excluding taskbar
+    [InlineData(2400,1800,1024,728,1008,688)] // oversized saved preferences
+    [InlineData(1180,780,640,400,624,360)] // minimum size must also adapt
+    public void RestoredWindowLeavesRoomForItsFrame(double width,double height,double workWidth,double workHeight,double expectedWidth,double expectedHeight)
+    {
+        var fit=GARbro.Domain.WindowGeometry.Fit(width,height,850,540,workWidth,workHeight,16,40);
+        Assert.Equal(expectedWidth,fit.Width);Assert.Equal(expectedHeight,fit.Height);
+        Assert.True(fit.MinimumWidth<=fit.Width);Assert.True(fit.MinimumHeight<=fit.Height);
+    }
+    [Theory]
+    [InlineData(-120,-1080,1080,1000,-1000)]
+    [InlineData(-50,0,1920,1200,0)]
+    [InlineData(400,0,640,800,0)]
+    public void WindowOriginKeepsTheCaptionInsideNegativeAndSmallDisplays(int position,int origin,int available,int size,int expected)
+        => Assert.Equal(expected,GARbro.Domain.WindowGeometry.ConstrainOrigin(position,origin,available,size));
     [Fact]
     public void DiagnosticTranslationPreservesResourceNamesAndOriginalEnglish()
     {

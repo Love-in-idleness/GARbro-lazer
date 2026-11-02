@@ -27,6 +27,10 @@ static class WindowsFrame
             "-Height",(outer.Bottom-outer.Top).ToString(),"-Output",Path.Combine(Program.Output,"window-with-titlebar.png")})capture.ArgumentList.Add(argument);
         using var process=Process.Start(capture);
         if(!process.WaitForExit(10000)||process.ExitCode!=0)throw new InvalidDataException("Cannot capture the native window title bar.");
+        var work=window.Screens.ScreenFromWindow(window).WorkingArea;
+        Console.WriteLine($"Native window bounds: {outer.Left},{outer.Top}–{outer.Right},{outer.Bottom}; work area: {work}; scaling: {window.RenderScaling}.");
+        if(outer.Top<work.Y||outer.Left<work.X||outer.Right>work.Right||outer.Bottom>work.Bottom)
+            throw new InvalidDataException("The window frame or caption is outside the screen work area.");
         Console.WriteLine("Native Windows minimize/maximize/close controls and separate title bar passed.");
     }
     [StructLayout(LayoutKind.Sequential)]struct Rect{public int Left,Top,Right,Bottom;}
