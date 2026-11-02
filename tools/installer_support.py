@@ -183,10 +183,19 @@ def build_msix(stage, output, version, rid='win-x64'):
     root.mkdir()
     for folder in ('desktop', 'cli', 'licenses', 'compatibility'): shutil.copytree(stage/folder, root/folder)
     for name in ('LICENSE','third-party.md','dependencies.json','compatibility.md'): shutil.copy2(stage/name, root/name)
-    assets = root/'Assets'; assets.mkdir()
-    for name, size in [('StoreLogo',50),('Square150x150Logo',150),('Square44x44Logo',44)]:
-        shutil.copy2(ROOT/f'modern/GARbro.UI/Assets/app-icon-{size}.png', assets/(name+'.png'))
+    windows_icon_assets(root/'Assets')
     (root/'AppxManifest.xml').write_text(msix_manifest(version, rid), encoding='utf-8')
     subprocess.run(['powershell','-NoProfile','-ExecutionPolicy','Bypass','-File',str(ROOT/'tools/package-msix.ps1'),
         '-Stage',str(root),'-Output',str(output),'-Version',version,'-Architecture',architecture], check=True)
     return output/f'garbro-{version}-{rid}.msix'
+
+
+def windows_icon_assets(assets):
+    """Provide shell icons without Windows' coloured application plate, at native sizes."""
+    assets.mkdir()
+    for name, size in [('StoreLogo',50),('Square150x150Logo',150),('Square44x44Logo',44)]:
+        shutil.copy2(ROOT/f'modern/GARbro.UI/Assets/app-icon-{size}.png', assets/(name+'.png'))
+    for size in (16,24,32,48,64,256):
+        for suffix in ('', '_altform-unplated', '_altform-lightunplated'):
+            shutil.copy2(ROOT/f'modern/GARbro.UI/Assets/app-icon-{size}.png',
+                assets/f'Square44x44Logo.targetsize-{size}{suffix}.png')

@@ -60,6 +60,7 @@ public sealed class NativeSmokeApp : Avalonia.Application
                 // Let the native window complete its layout/render pass.
                 await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);
                 await Task.Delay(150);
+                WindowsFrame.Check(window.DesktopHost);
                 Directory.CreateDirectory(Program.Output);
                 if(Program.TestIme)
                 {

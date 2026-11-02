@@ -39,7 +39,12 @@ public class AppWindow : UserControl
             if (host != null) return host;
             host = new Window { Title = title, Width = desiredWidth, Height = desiredHeight,
                 MinWidth = minimumWidth, MinHeight = minimumHeight, Icon = Icon,
+                WindowDecorations = WindowDecorations.None, ExtendClientAreaToDecorationsHint = false,
                 WindowStartupLocation = WindowStartupLocation, Content = this };
+            // Keep the native caption (including its system buttons) above page content.
+            // Apply it to the platform as well: assigning the default styled value alone
+            // does not force a refresh of an existing native frame.
+            host.WindowDecorations = WindowDecorations.Full;
             host.Opened += (_, _) => Opened?.Invoke(this, EventArgs.Empty);
             host.Closed += (_, _) => Finish(null);
             WaylandTextInput.Attach(host);

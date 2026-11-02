@@ -51,6 +51,15 @@ public sealed class MaterialTests
         double x=L(a),y=L(b);return (Math.Max(x,y)+.05)/(Math.Min(x,y)+.05);
     }
     [AvaloniaFact]
+    public void DesktopPagesKeepFullWindowControlsOutsideTheApplicationHeader()
+    {
+        var page=new MainWindow();var host=page.DesktopHost;
+        Assert.Equal(WindowDecorations.Full,host.WindowDecorations);
+        Assert.False(host.ExtendClientAreaToDecorationsHint);
+        Assert.True(host.CanMinimize);Assert.True(host.CanMaximize);Assert.True(host.CanResize);
+        host.Close();
+    }
+    [AvaloniaFact]
     public async Task MobileDialogUsesPagesAndCanReturnItsResultWithoutCreatingAWindow()
     {
         bool mobile=UiPlatform.IsMobile;var previous=UiPlatform.Navigation;

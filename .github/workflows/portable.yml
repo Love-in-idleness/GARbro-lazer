@@ -134,6 +134,7 @@ jobs:
           path: |
             tests/**/TestResults/*.trx
             artifacts/native-desktop/window.png
+            artifacts/native-desktop/window-with-titlebar.png
             artifacts/wayland-ime/
             artifacts/public-corpus.json
             artifacts/created-archives/

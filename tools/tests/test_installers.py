@@ -1,5 +1,7 @@
 import importlib.util
 import unittest
+import tempfile
+import struct
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -39,6 +41,29 @@ class InstallerTests(unittest.TestCase):
 
 
 class ArchitectureAndStoreTests(unittest.TestCase):
+    def test_small_ico_entries_include_transparent_alpha_and_an_and_mask(self):
+        data=(installer.ROOT/'modern/GARbro.UI/Assets/app-icon.ico').read_bytes()
+        self.assertEqual((0,1),struct.unpack_from('<HH',data))
+        for index in range(struct.unpack_from('<H',data,4)[0]):
+            width,height,_,_,_,_,length,offset=struct.unpack_from('<BBBBHHII',data,6+16*index)
+            if width==0:continue  # 256px PNG
+            self.assertEqual(40,struct.unpack_from('<I',data,offset)[0])
+            self.assertEqual(0,data[offset+40+3])  # transparent corner
+            mask=data[offset+40+width*height*4:offset+length]
+            self.assertTrue(mask[0]&0x80)
+            self.assertTrue(any(value!=255 for value in mask))
+
+    def test_taskbar_icons_have_unplated_variants_in_both_shell_themes(self):
+        with tempfile.TemporaryDirectory()as directory:
+            assets=Path(directory)/'Assets';installer.windows_icon_assets(assets)
+            for size in (16,24,32,48,64,256):
+                source=installer.ROOT/f'modern/GARbro.UI/Assets/app-icon-{size}.png'
+                for suffix in ('','_altform-unplated','_altform-lightunplated'):
+                    self.assertEqual(source.read_bytes(),(assets/f'Square44x44Logo.targetsize-{size}{suffix}.png').read_bytes())
+            for channel in ('preview','store'):
+                manifest=ET.fromstring(installer.msix_manifest('1.0.0','win-x64',channel))
+                self.assertEqual('transparent',manifest.find('.//{*}VisualElements').get('BackgroundColor'))
+
     def test_both_windows_architectures_keep_the_preview_identity(self):
         for rid,architecture in [('win-x64','x64'),('win-arm64','arm64')]:
             root=ET.fromstring(installer.msix_manifest('0.3.0-preview.1',rid))

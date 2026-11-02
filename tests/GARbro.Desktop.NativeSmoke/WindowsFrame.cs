@@ -1,0 +1,37 @@
+using System;
+using System.IO;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using Avalonia.Controls;
+using Avalonia.Platform;
+
+// Check the real HWND, rather than only the managed decoration preference.
+static class WindowsFrame
+{
+    public static void Check(Window window)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        var hwnd=window.TryGetPlatformHandle()?.Handle??IntPtr.Zero;
+        if(hwnd==IntPtr.Zero)throw new InvalidDataException("The desktop HWND is missing.");
+        long style=GetWindowLongW(hwnd,-16);
+        const long caption=0x00C00000,systemMenu=0x00080000,minimize=0x00020000,maximize=0x00010000;
+        long expected=caption|systemMenu|minimize|maximize;
+        if((style&expected)!=expected)throw new InvalidDataException("The native title bar is missing window controls.");
+        Point origin=default;
+        if(!GetWindowRect(hwnd,out var outer)||!ClientToScreen(hwnd,ref origin))throw new InvalidDataException("Cannot inspect the native window frame.");
+        // A normal Windows title bar keeps the content at least 20 logical pixels below its top.
+        if(origin.Y-outer.Top<20*window.RenderScaling)throw new InvalidDataException("Application content overlaps the native title bar.");
+        var capture=new ProcessStartInfo("powershell.exe"){UseShellExecute=false,CreateNoWindow=true};
+        foreach(string argument in new[]{"-NoProfile","-NonInteractive","-File",Path.GetFullPath("tools/capture-window.ps1"),
+            "-X",outer.Left.ToString(),"-Y",outer.Top.ToString(),"-Width",(outer.Right-outer.Left).ToString(),
+            "-Height",(outer.Bottom-outer.Top).ToString(),"-Output",Path.Combine(Program.Output,"window-with-titlebar.png")})capture.ArgumentList.Add(argument);
+        using var process=Process.Start(capture);
+        if(!process.WaitForExit(10000)||process.ExitCode!=0)throw new InvalidDataException("Cannot capture the native window title bar.");
+        Console.WriteLine("Native Windows minimize/maximize/close controls and separate title bar passed.");
+    }
+    [StructLayout(LayoutKind.Sequential)]struct Rect{public int Left,Top,Right,Bottom;}
+    [StructLayout(LayoutKind.Sequential)]struct Point{public int X,Y;}
+    [DllImport("user32.dll")]static extern int GetWindowLongW(IntPtr window,int index);
+    [DllImport("user32.dll")]static extern bool GetWindowRect(IntPtr window,out Rect rect);
+    [DllImport("user32.dll")]static extern bool ClientToScreen(IntPtr window,ref Point point);
+}

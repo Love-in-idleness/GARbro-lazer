@@ -4,12 +4,12 @@ import argparse
 import json
 import os
 import plistlib
-import re
 import shutil
 import subprocess
 import tempfile
 import time
 from pathlib import Path
+from macos_support import minimum_system_versions
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('dmg',type=Path)
 args=parser.parse_args()
@@ -26,8 +26,7 @@ with tempfile.TemporaryDirectory(prefix='GARbro macOS 测试 ') as directory:
         payload=app/'Contents/Resources/app'
         for name in ('ffmpeg','ffprobe'):
             commands=subprocess.check_output(['otool','-l',str(payload/'media'/name)],text=True)
-            sections=re.findall(r'cmd LC_(?:BUILD_VERSION|VERSION_MIN_MACOSX)\b.*?(?=Load command|\Z)',commands,re.S)
-            versions=[v for section in sections for v in re.findall(r'^\s*(?:minos|version)\s+(\d+\.\d+(?:\.\d+)?)\s*$',section,re.M)]
+            versions=minimum_system_versions(commands)
             assert versions,'Video helper has no minimum-system declaration'
             assert all(tuple(map(int,v.split('.'))) <= (14,0,0) for v in versions),f'{name} requires macOS {versions}'
             print(name,'minimum macOS:',', '.join(versions))

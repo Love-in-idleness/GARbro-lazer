@@ -8,7 +8,7 @@ import shutil
 import subprocess
 import zipfile
 from pathlib import Path
-from installer_support import ROOT, msix_manifest, store_identity, store_version
+from installer_support import ROOT, msix_manifest, store_identity, store_version, windows_icon_assets
 import importlib
 
 
@@ -37,9 +37,7 @@ def build_architecture(rid,version,output):
         if not (stage/folder/'coreclr.dll').is_file():raise RuntimeError('Store runtime is missing')
     spec=importlib.util.spec_from_file_location('package_release',ROOT/'tools/package-release.py')
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);module.licenses(stage)
-    assets=stage/'Assets';assets.mkdir()
-    for name,size in [('StoreLogo',50),('Square150x150Logo',150),('Square44x44Logo',44)]:
-        shutil.copy2(ROOT/f'modern/GARbro.UI/Assets/app-icon-{size}.png',assets/(name+'.png'))
+    windows_icon_assets(stage/'Assets')
     (stage/'AppxManifest.xml').write_text(msix_manifest(version,rid,'store'),encoding='utf-8')
     # Both the GUI and decoder retain package identity when launching the worker apphost.
     (stage/'desktop/store-channel.json').write_text(json.dumps(store_identity(),indent=2)+'\n')
