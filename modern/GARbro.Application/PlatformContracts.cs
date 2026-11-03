@@ -12,11 +12,16 @@ public interface IWorkerClient
         IProgress<ExtractionProgress> progress = null, CancellationToken cancellation = default);
 }
 
-public sealed class ManagedWorkerClient(string assembly) : IWorkerClient
+public sealed class ManagedWorkerClient(string assembly) : IWorkerClient, IDisposable
 {
+    readonly BrowsingWorker browser = new(assembly);
+    public WorkerTiming LastTiming=>browser.LastTiming;
     public Task<T> ExecuteAsync<T>(WorkerRequest request, WorkerLimits limits,
         IProgress<ExtractionProgress> progress = null, CancellationToken cancellation = default) =>
-        WorkerArchiveSession.RequestAsync<T>(assembly, request, limits, progress, cancellation);
+        request.Operation is "resource-list" or "resource-preview" or "resource-warm" or "resource-audio" or "resource-video"
+            ? browser.ExecuteAsync<T>(request, limits, cancellation)
+            : WorkerArchiveSession.RequestAsync<T>(assembly, request, limits, progress, cancellation);
+    public void Dispose() => browser.Dispose();
 }
 
 public interface IAudioOutput : IDisposable

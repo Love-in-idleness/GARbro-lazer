@@ -8,7 +8,7 @@ Open a game's resource archives, browse pictures, play audio and video, and extr
 
 ## Download and start
 
-Choose a package from the [release download page](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.1). Use **x64** for most Intel and AMD computers, or **arm64** for Windows on ARM, ARM Linux, and Apple silicon.
+Choose a package from the [release download page](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.2). Use **x64** for most Intel and AMD computers, or **arm64** for Windows on ARM, ARM Linux, and Apple silicon.
 
 | System | Package | Open it |
 | --- | --- | --- |
@@ -33,6 +33,8 @@ This is a stable desktop release; some game-specific formats or encryption metho
 Use **Process → Recursive extraction** to expand child directories and archives too. Archive creation and batch media conversion are also in **Process**.
 
 Recursive extraction can discard child archive copies after success. Conversion can omit original media copies from the output. These options preserve your source game files.
+
+Use **Preview encoding / HEX** to change the current text preview’s encoding or inspect any file’s bytes in paged **HEX**. You can copy a page; this choice does not change filename decoding and resets when you select another file. While loading, you can still search, cancel, or open another resource.
 
 If filenames or text look garbled, try GBK, Shift-JIS, or another encoding under **Settings → Decoding**. Settings also contains language, light/dark theme, and the default output folder. If an archive asks for a password or game scheme, supply the parameters for that game; some encryption methods are unsupported.
 

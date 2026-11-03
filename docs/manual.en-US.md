@@ -75,3 +75,5 @@ Text fields and input methods retain their normal editing shortcuts.
 Use the system file picker to authorize files and output folders. Select the whole
 source folder when a format needs sibling indexes or keys. The sandbox does not
 provide a host recycle-bin command. See flathub.md for packaging validation status.
+
+Choose **HEX (hexadecimal)** under **Preview encoding / HEX** to inspect any file, including images, audio and video. Each page contains up to 64 KiB with offsets, grouped bytes and ASCII. Pages can be copied. The choice affects only the current preview, resets on file selection and never changes filename decoding. Switching to HEX stops media playback. Loading and filtering run in the background; you can continue typing, cancel, or open another resource.

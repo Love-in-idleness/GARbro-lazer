@@ -17,6 +17,9 @@ using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using GARbro.Application;
 using GARbro.Media;
+using GARbro.Domain;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 
 namespace GARbro.Desktop;
 
@@ -33,11 +36,12 @@ public sealed partial class MainWindow : AppWindow
     readonly TextBox scheme = new() { Name = "Scheme", Text = "none", Width = 250 };
     readonly TextBox options = new() { Name = "Options", AcceptsReturn = true, MinHeight = 55, PlaceholderText = "{\"Password\": \"…\"}" };
     readonly TextBox path = new() { Name = "Location", HorizontalAlignment = HorizontalAlignment.Stretch };
-    readonly TreeView folders = new() { Name = "Folders" };
+    readonly ListBox folders = new() { Name = "Folders" };
     readonly ListBox files = new() { Name = "Files", SelectionMode = SelectionMode.Multiple };
     readonly Image image = new() { Name = "PreviewImage", Stretch = Stretch.Uniform };
-    readonly ScrollViewer imageScroll = new();
-    readonly ComboBox previewEncoding = new() { ItemsSource = new[] { "auto", "gbk", "shift_jis", "utf-8", "utf-16", "gb18030", "big5" }, SelectedIndex = 0, MinWidth = 115 };
+    readonly ScrollViewer imageScroll = new() {HorizontalContentAlignment=HorizontalAlignment.Stretch,VerticalContentAlignment=VerticalAlignment.Stretch};
+    readonly StackPanel encodingControls = new() { Spacing = 6, IsVisible = false };
+    readonly ComboBox previewEncoding = new() { Name = "PreviewEncoding", ItemsSource = new[] { "auto", "gbk", "shift_jis", "utf-8", "utf-16", "gb18030", "big5" }, SelectedIndex = 0, MinWidth = 115 };
     readonly Grid browser = new() { ColumnDefinitions = new("180,*,350"), ColumnSpacing = 14 };
     readonly TextBox text = new() { IsReadOnly = true, AcceptsReturn = true, FontFamily = FontFamily.Parse("monospace") };
     readonly TextBlock previewInfo = new() { TextWrapping = TextWrapping.Wrap, MaxHeight = 100 }, status = new() { TextTrimming = TextTrimming.CharacterEllipsis };
@@ -55,7 +59,10 @@ public sealed partial class MainWindow : AppWindow
     readonly List<ResourceLocation> history = new(), roots = new();
     readonly Dictionary<string, string> typeOverrides = new(StringComparer.Ordinal);
     readonly Dictionary<string, Dictionary<string, string>> sessionOptions = new(StringComparer.Ordinal);
-    CancellationTokenSource active, previewCancellation;
+    CancellationTokenSource active, previewCancellation, navigationCancellation, filterCancellation;
+    int navigationGeneration, filterGeneration;
+    bool loading, changingEncoding, updatingRows;
+    readonly PreviewMemoryCache previewCache = new(64L << 20);
     BrowserListing listing;
     ResourceFormatInfo[] catalog;
     Bitmap bitmap;
@@ -139,7 +146,7 @@ public sealed partial class MainWindow : AppWindow
             Grid.SetColumn(size, 2); row.Children.Add(size); return row;
         });
         files.DoubleTapped += async (_, _) => await Guard(OpenSelected);
-        files.SelectionChanged += async (_, _) => { UpdateCommands(); await PreviewSelection(); };
+        files.SelectionChanged += async (_, _) => { if(updatingRows)return; UpdateCommands(); await PreviewSelection(); };
         files.ContextMenu = BuildContextMenu(); Grid.SetRow(files, 1); list.Children.Add(files);
         fileEmpty.Children.Add(MaterialIcons.Create("OpenFolder", 48)); fileEmpty.Children.Add(emptyTitle); fileEmpty.Children.Add(emptyBody);
         foreach (string key in new[] { "Open", "OpenFolder" }) { var button = Button(key); button.Name = null; if (key == "Open") button.Classes.Add("primary"); emptyActions.Children.Add(button); }
@@ -173,19 +180,21 @@ public sealed partial class MainWindow : AppWindow
         pageControls.Children.Add(ActionButton("PreviousPage", () => ShowPreviewPage(Math.Max(0, (preview?.Offset ?? 0) - 65536))));
         pageControls.Children.Add(ActionButton("NextPage", () => ShowPreviewPage((preview?.Offset ?? 0) + 65536)));
         pageControls.Children.Add(ActionButton("Copy", async () => { if (Clipboard != null) await Clipboard.SetTextAsync(text.Text ?? ""); }));
-        var encodingControls = new StackPanel { Spacing = 6, IsVisible = false };
-        encodingControls.Children.Add(Label("Encoding")); encodingControls.Children.Add(previewEncoding);
+        var encodingRow=new Grid {ColumnDefinitions=new("*,140"),ColumnSpacing=8};
+        var encodingLabel=Label("PreviewEncoding");encodingLabel.FontSize=12;encodingLabel.VerticalAlignment=VerticalAlignment.Center;
+        encodingRow.Children.Add(encodingLabel);Grid.SetColumn(previewEncoding,1);encodingRow.Children.Add(previewEncoding);encodingControls.Children.Add(encodingRow);
         var wrap = new CheckBox { IsChecked = Settings.WrapText }; wrap.Bind(ContentControl.ContentProperty, Bind("Wrap"));
         wrap.IsCheckedChanged += (_, _) => { Settings.WrapText = wrap.IsChecked == true; text.TextWrapping = Settings.WrapText ? TextWrapping.Wrap : TextWrapping.NoWrap; };
         encodingControls.Children.Add(wrap); DockPanel.SetDock(encodingControls, Dock.Bottom); previewStack.Children.Insert(0, encodingControls);
-        previewEncoding.SelectionChanged += async (_, _) => { if (previewEntry != null) await ShowPreviewPage(0); };
-        text.PropertyChanged += (_, e) => { if (e.Property == IsVisibleProperty) encodingControls.IsVisible = text.IsVisible; };
-        search.TextChanged += (_, _) => RefreshFiles();
+        previewEncoding.SelectionChanged += async (_, _) => { if (!changingEncoding && previewEntry != null) await ShowPreviewPage(0); };
+        text.PropertyChanged += (_, e) => { if (e.Property == IsVisibleProperty) wrap.IsVisible = text.IsVisible; };
+        search.TextChanged += (_, _) => RefreshFiles(100);
         folders.SelectionChanged += async (_, _) =>
         {
-            if (folders.SelectedItem is TreeViewItem { Tag: ResourceLocation location } && location != CurrentLocation)
+            if (folders.SelectedItem is FolderNode { Location: ResourceLocation location } && location != CurrentLocation)
                 await Guard(() => LoadLocationAsync(location));
         };
+        folders.ItemTemplate = new FuncDataTemplate<FolderNode>((node, _) => new TextBlock { Text = node?.Title, Margin = new Thickness(node?.Child == true ? 16 : 0, 8, 0, 8), TextTrimming = TextTrimming.CharacterEllipsis });
         DragDrop.SetAllowDrop(this, true);
         AddHandler(DragDrop.DragOverEvent, (_, e) => e.DragEffects = !busy && e.DataTransfer.Contains(DataFormat.File) ? DragDropEffects.Copy : DragDropEffects.None);
         AddHandler(DragDrop.DropEvent, async (_, e) =>
@@ -199,11 +208,28 @@ public sealed partial class MainWindow : AppWindow
         text.IsVisible = imageScroll.IsVisible = progress.IsVisible = false;
         Closed += (_, _) =>
         {
-            isClosed = true; lifetime.Cancel(); active?.Cancel(); previewCancellation?.Cancel(); StopAudio(); bitmap?.Dispose();
+            isClosed = true; lifetime.Cancel(); active?.Cancel(); navigationCancellation?.Cancel(); previewCancellation?.Cancel(); filterCancellation?.Cancel(); previewCache.Clear(); StopAudio(); bitmap?.Dispose();
             Settings.Width = Width; Settings.Height = Height;
             try { store.Save(Settings); } catch (IOException error) { DesktopServices.Log(error); }
         };
+        Opened += (_,_) => _ = PrewarmFormats();
         UpdateCommands();
+    }
+    async Task PrewarmFormats()
+    {
+        try
+        {
+            var types=await Request<Dictionary<string,string>>(new("resource-warm",null),lifetime.Token);
+            LightweightResources.RegisterTypes(types);
+            if(listing?.Physical==true)
+            {
+                var source=listing;
+                var entries=await Task.Run(()=>source.Entries.Select(e=>e.IsDirectory?e:e with {Type=LightweightResources.Type(e.Name)}).ToArray(),lifetime.Token);
+                if(listing==source && !isClosed){listing=source with {Entries=entries};RefreshFiles();}
+            }
+        }
+        catch(OperationCanceledException){}
+        catch(Exception error){DesktopServices.Log(error);}
     }
 
     Binding Bind(string key) => new("[" + key + "]") { Source = Text };
@@ -253,7 +279,7 @@ public sealed partial class MainWindow : AppWindow
                 request = request with { Context = request.Context with { SchemesFile = null } };
                 store.Save(Settings);
             }
-            catch (WorkerOperationException e) when (e.FormatId != null && !isClosed)
+            catch (WorkerOperationException e) when (e.FormatId != null && !isClosed && !cancellation.IsCancellationRequested)
             {
                 catalog ??= await Request<ResourceFormatInfo[]>(new("resource-catalog", null), cancellation);
                 var value = await Dialogs.Parameters(this, Text, e.OptionsJson ?? "{}", e.Message, catalog.FirstOrDefault(f => f.Id == e.FormatId)?.Schemes);
@@ -280,7 +306,7 @@ public sealed partial class MainWindow : AppWindow
             var location = new ResourceLocation(full);
             try
             {
-                if (File.Exists(full) && MediaInfo.IsVideoName(full))
+                if (File.Exists(full) && LightweightResources.IsOrdinaryName(full))
                 {
                     await LoadLocationAsync(new(Path.GetDirectoryName(full)));
                     files.SelectedItem = listing.Entries.FirstOrDefault(f => f.Name == Path.GetFileName(full));
@@ -292,23 +318,28 @@ public sealed partial class MainWindow : AppWindow
                 await LoadLocationAsync(new(Path.GetDirectoryName(full)));
                 files.SelectedItem = listing.Entries.FirstOrDefault(f => f.Name == Path.GetFileName(full));
             }
+            if (CurrentLocation == null) continue;
             if (!roots.Any(r => r.RootPath == CurrentLocation.RootPath)) roots.Add(CurrentLocation);
             string recentId = UiPlatform.Storage.PersistentId(full); Settings.Recent.Remove(recentId); Settings.Recent.Insert(0, recentId); Settings.Recent = Settings.Recent.Take(20).ToList();
         }
         BuildFolders(); BuildMenus();
         SaveState();
     }
-    async Task LoadLocationAsync(ResourceLocation location, bool recordHistory = true)
+    async Task LoadLocationAsync(ResourceLocation location, bool recordHistory = true, bool refresh = false)
     {
-        ObjectDisposedException.ThrowIf(isClosed, this); StopAudio(); previewCancellation?.Cancel();
+        ObjectDisposedException.ThrowIf(isClosed, this);
+        navigationCancellation?.Cancel(); StopAudio(); previewCancellation?.Cancel();
+        int ticket = ++navigationGeneration;
         DesktopServices.Activity("load", location.DisplayPath);
-        using var operation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token); active = operation; SetBusy(true); status.Text = Text["Opening"];
+        using var operation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        navigationCancellation = operation; loading = true; progress.IsVisible = progress.IsIndeterminate = true; UpdateCommands(); status.Text = Text["Opening"];
         try
         {
-            var opened = await Request<BrowserListing>(new("resource-list", null, Location: location), operation.Token);
-            operation.Token.ThrowIfCancellationRequested(); if (isClosed) return;
+            var opened = await Request<BrowserListing>(new("resource-list", null, Location: location, Refresh: refresh), operation.Token);
+            operation.Token.ThrowIfCancellationRequested(); if (isClosed || ticket != navigationGeneration) return;
             listing = opened; path.Text = UiPlatform.Storage.DisplayPath(listing.Location.RootPath) + string.Concat(listing.Location.Chain.Select(p => " → " + p)); Title = "GARbro — " + Path.GetFileName(location.RootPath.TrimEnd(Path.DirectorySeparatorChar));
-            ClearPreview(); typeOverrides.Clear(); RefreshFiles(); BuildFolders();
+            ClearPreview(); previewCache.Clear(); typeOverrides.Clear(); await RefreshFilesAsync(); BuildFolders();
+            operation.Token.ThrowIfCancellationRequested(); if (ticket != navigationGeneration) return;
             if (recordHistory)
             {
                 if (historyIndex + 1 < history.Count) history.RemoveRange(historyIndex + 1, history.Count - historyIndex - 1);
@@ -316,34 +347,72 @@ public sealed partial class MainWindow : AppWindow
             }
             status.Text = (listing.Physical ? Text["Folders"] : listing.Tag == "media" ? Text["Media"] : listing.Tag) + " · " + (listing.Entries.Length == 1 ? Text["OneEntry"] : Text.Format("EntryCount", listing.Entries.Length));
         }
-        finally { if (ReferenceEquals(active, operation)) active = null; SetBusy(false); }
+        finally
+        {
+            if (ReferenceEquals(navigationCancellation, operation)) { navigationCancellation = null; loading = false; progress.IsVisible = progress.IsIndeterminate = busy; UpdateCommands(); }
+        }
     }
+    sealed record FolderNode(string Title, ResourceLocation Location, bool Child = false);
     void BuildFolders()
     {
         if (listing == null) return;
-        var nodes = new List<TreeViewItem>();
-        foreach (var root in roots.Where(r => r.RootPath != listing.Location.RootPath)) nodes.Add(new() { Header = Path.GetFileName(root.RootPath), Tag = root });
-        var current = new TreeViewItem { Header = Text["AllFiles"], Tag = listing.Location, IsExpanded = true };
-        current.ItemsSource = listing.Entries.Where(e => e.IsDirectory).Select(e => new TreeViewItem
-        { Header = e.DisplayName, Tag = listing.Physical ? new ResourceLocation(Path.Combine(listing.Location.RootPath, e.Name)) : listing.Location.EnterDirectory(e.Name) }).ToArray();
-        nodes.Add(current); folders.ItemsSource = nodes;
+        // Data only: ListBox virtualizes the current level instead of creating a control per directory.
+        var nodes = new List<FolderNode>();
+        foreach (var root in roots.Where(r => r.RootPath != listing.Location.RootPath)) nodes.Add(new(Path.GetFileName(root.RootPath), root));
+        nodes.Add(new(Text["AllFiles"],listing.Location));
+        foreach (var entry in listing.Entries.Where(e=>e.IsDirectory))
+            nodes.Add(new(entry.DisplayName, listing.Physical ? new(Path.Combine(listing.Location.RootPath,entry.Name)) : listing.Location.EnterDirectory(entry.Name), true));
+        folders.ItemsSource = nodes;
     }
-    void RefreshFiles()
+    void RefreshFiles(int delay = 0) => _ = Guard(() => RefreshFilesAsync(delay));
+    async Task RefreshFilesAsync(int delay = 0)
     {
-        emptyTitle.Text = listing == null ? Text["WelcomeTitle"] : string.IsNullOrEmpty(search.Text) ? Text["EmptyFolder"] : Text["NoMatches"];
-        emptyBody.Text = listing == null ? Text["WelcomeHint"] : string.IsNullOrEmpty(search.Text) ? Text["EmptyHint"] : Text["SearchHint"];
-        emptyActions.IsVisible = listing == null;
-        if (listing == null) { fileEmpty.IsVisible = true; return; }
-        IEnumerable<BrowserEntry> entries = listing.Entries.Where(e => e.DisplayName.Contains(search.Text ?? "", StringComparison.OrdinalIgnoreCase));
-        entries = Settings.Sort switch { "name" => entries.OrderBy(e => !e.IsDirectory).ThenBy(e => e.DisplayName, StringComparer.CurrentCultureIgnoreCase),
-            "type" => entries.OrderBy(e => !e.IsDirectory).ThenBy(e => e.Type).ThenBy(e => e.DisplayName), "size" => entries.OrderBy(e => !e.IsDirectory).ThenBy(e => e.Size), _ => entries };
-        if (Settings.SortDescending && Settings.Sort != "none") entries = entries.Reverse().OrderBy(e => !e.IsDirectory);
-        var rows = entries.ToArray(); files.ItemsSource = rows; fileEmpty.IsVisible = rows.Length == 0; UpdateCommands();
+        filterCancellation?.Cancel(); using var cancel = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token); filterCancellation = cancel;
+        int ticket = ++filterGeneration;
+        try
+        {
+            if (delay > 0) await Task.Delay(delay,cancel.Token);
+            emptyTitle.Text = listing == null ? Text["WelcomeTitle"] : string.IsNullOrEmpty(search.Text) ? Text["EmptyFolder"] : Text["NoMatches"];
+            emptyBody.Text = listing == null ? Text["WelcomeHint"] : string.IsNullOrEmpty(search.Text) ? Text["EmptyHint"] : Text["SearchHint"];
+            emptyActions.IsVisible = listing == null;
+            if (listing == null) { fileEmpty.IsVisible = true; return; }
+            var source=listing; string query=search.Text??"",sort=Settings.Sort,culture=Text.Language; bool descending=Settings.SortDescending;
+            var rows=await Task.Run(()=>
+            {
+                var data=source.Entries.Select((e,i)=>new BrowseRow(i,e.DisplayName,e.Type,e.Size,e.IsDirectory)).ToArray();
+                return BrowsePlanning.Visible(data,query,sort,descending,culture).Select(i=>source.Entries[i]).ToArray();
+            },cancel.Token);
+            if(cancel.IsCancellationRequested || ticket!=filterGeneration || listing!=source || isClosed)return;
+            var selected=files.SelectedItems.Cast<BrowserEntry>().Select(e=>e.Name).ToHashSet(StringComparer.Ordinal);
+            var scroll=files.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();var scrollOffset=scroll?.Offset??default;
+            updatingRows=true;
+            try
+            {
+                files.Selection.Clear();files.ItemsSource=rows;
+                files.Selection.BeginBatchUpdate();
+                try
+                {
+                files.Selection.Clear();
+                for(int i=0;i<rows.Length;i++)
+                    if(selected.Contains(rows[i].Name))
+                    {
+                        int first=i;while(i+1<rows.Length && selected.Contains(rows[i+1].Name))i++;
+                        files.Selection.SelectRange(first,i);
+                    }
+                }
+                finally {files.Selection.EndBatchUpdate();}
+            }
+            finally {updatingRows=false;}
+            if(scroll!=null)scroll.Offset=scrollOffset;
+            fileEmpty.IsVisible=rows.Length==0;UpdateCommands();
+        }
+        catch(OperationCanceledException)when(cancel.IsCancellationRequested){}
+        finally {if(ReferenceEquals(filterCancellation,cancel))filterCancellation=null;}
     }
     async Task OpenSelected()
     {
         if (files.SelectedItem is not BrowserEntry entry) return;
-        if (!entry.IsDirectory && (typeOverrides.GetValueOrDefault(entry.Name, entry.Type) == "video" || listing.Tag == "media"))
+        if (!entry.IsDirectory && (listing.Physical && LightweightResources.IsOrdinaryName(entry.Name) || typeOverrides.GetValueOrDefault(entry.Name, entry.Type) == "video" || listing.Tag == "media"))
         { await PreviewSelection(); return; }
         ResourceLocation location = listing.Physical ? new(Path.Combine(listing.Location.RootPath, entry.Name)) :
             entry.IsDirectory ? listing.Location.EnterDirectory(entry.Name) : listing.Location.EnterArchive(entry.Name);
@@ -352,16 +421,21 @@ public sealed partial class MainWindow : AppWindow
     }
     async Task PreviewSelection()
     {
+        if (updatingRows) return;
         ClearPreview();
+        changingEncoding=true; previewEncoding.SelectedIndex=0; changingEncoding=false;
         if (files.SelectedItem is not BrowserEntry { IsDirectory: false } entry || listing == null) return;
         previewPrompt.IsVisible = false; previewInfo.Text = Text["Preparing"];
-        previewEntry = entry; await ShowPreviewPage(0);
+        previewEntry = entry; encodingControls.IsVisible = true;
+        int ticket=generation;
+        try { await Task.Delay(120,lifetime.Token); } catch(OperationCanceledException) {return;}
+        if(ticket==generation)await ShowPreviewPage(0);
     }
     void ClearPreview()
     {
         ++generation; previewCancellation?.Cancel(); StopAudio();
         previewEntry = null; preview = null; previewPrompt.IsVisible = true; bitmap?.Dispose(); bitmap = null; image.Source = null;
-        imageScroll.IsVisible = text.IsVisible = audioControls.IsVisible = pageControls.IsVisible = false;
+        imageScroll.IsVisible = text.IsVisible = audioControls.IsVisible = pageControls.IsVisible = encodingControls.IsVisible = false;
         text.Text = previewInfo.Text = "";
         UpdateCommands();
     }
@@ -373,15 +447,41 @@ public sealed partial class MainWindow : AppWindow
         int ticket = ++generation;
         try
         {
-            var result = await Request<ResourcePreview>(new("resource-preview", null, Location: listing.Location, Entry: previewEntry.Name,
-                Context: Settings.Context with { TextEncoding = (previewEncoding.SelectedItem as UiChoice)?.Value is string selectedCode && selectedCode != "auto" ? selectedCode : Settings.TextEncoding },
-                ForcedType: typeOverrides.GetValueOrDefault(previewEntry.Name), Offset: offset), cancel.Token);
-            if (ticket != generation || isClosed) return;
-            preview = result; previewPrompt.IsVisible = false; bitmap?.Dispose(); bitmap = null; image.Source = null;
-            imageScroll.IsVisible = result.Kind is "image" or "video"; audioControls.IsVisible = result.Kind is "audio" or "video";
-            text.IsVisible = result.Kind is "text" or "binary"; pageControls.IsVisible = text.IsVisible;
-            previewInfo.Text = result.Kind is "text" or "binary" ? result.Title : result.Text;
-            if (result.Image != null) { using var input = new MemoryStream(result.Image); bitmap = new Bitmap(input); image.Source = bitmap; }
+            StopAudio();
+            var location=listing.Location; var entry=previewEntry;
+            string code=(previewEncoding.SelectedItem as UiChoice)?.Value??"auto";
+            string forced=typeOverrides.GetValueOrDefault(entry.Name);
+            string sourcePath=listing.Physical?Path.Combine(location.RootPath,entry.Name):location.RootPath;
+            var fingerprint=await Task.Run(()=>ArchiveFingerprint.Read(sourcePath),cancel.Token);
+            string cacheKey=WorkerProtocol.Serialize(new {location,entry.Name,fingerprint,code,forced,offset,Settings.Context,Settings.FitImage});
+            ResourcePreview result;
+            if(!previewCache.TryGet(cacheKey,out result))
+            {
+                Directory.CreateDirectory(DesktopServices.CacheDirectory);
+                string output=Path.Combine(DesktopServices.CacheDirectory,"preview-"+Guid.NewGuid().ToString("N")+".bgra");
+                using(File.Create(output)){}
+                try
+                {
+                    result=await Request<ResourcePreview>(new("resource-preview",null,Location:location,Entry:entry.Name,ForcedType:forced,Offset:offset,
+                        PreviewMode:code=="hex"?"hex":"auto",PreviewEncoding:code is "hex" or "auto"?null:code,Output:output,
+                        PreviewWidth:Settings.FitImage?Math.Max(320,(int)imageScroll.Bounds.Width*2):0,
+                        PreviewHeight:Settings.FitImage?Math.Max(320,(int)imageScroll.Bounds.Height*2):0),cancel.Token);
+                    if(result.Pixels is { } pixels)
+                    {
+                        if(pixels.Path!=output || pixels.Width<=0 || pixels.Height<=0 || (long)pixels.Width*pixels.Height*4!=pixels.Bytes || pixels.Bytes>100L<<20 || new FileInfo(output).Length!=pixels.Bytes)throw new InvalidDataException("Invalid preview artifact.");
+                        result=result with {Image=await File.ReadAllBytesAsync(output,cancel.Token)};
+                    }
+                    if(ticket==generation)previewCache.Put(cacheKey,result);
+                }
+                finally { _ = Task.Run(()=> { try {File.Delete(output);}catch(IOException){} }); }
+            }
+            Bitmap prepared=null;
+            if(result.Image!=null)prepared=await Task.Run(()=>PrepareBitmap(result),cancel.Token);
+            if(ticket!=generation || isClosed) {prepared?.Dispose();return;}
+            preview=result;previewPrompt.IsVisible=false;bitmap?.Dispose();bitmap=prepared;image.Source=bitmap;
+            imageScroll.IsVisible=result.Kind is "image" or "video";audioControls.IsVisible=result.Kind is "audio" or "video";
+            text.IsVisible=result.Kind is "text" or "binary";pageControls.IsVisible=text.IsVisible;
+            previewInfo.Text=result.Kind is "text" or "binary"?result.Title:result.Text;
             text.Text = result.Text;
             UpdateCommands();
         }
@@ -396,8 +496,8 @@ public sealed partial class MainWindow : AppWindow
         if (languageChanged || !previewEncoding.Items.OfType<UiChoice>().Any())
         {
             string code = (previewEncoding.SelectedItem as UiChoice)?.Value ?? "auto";
-            var choices = new[] { "auto", "gbk", "shift_jis", "utf-8", "utf-16", "gb18030", "big5" }.Select(c => new UiChoice(c, c == "auto" ? Text["Automatic"] : c)).ToArray();
-            previewEncoding.ItemsSource = choices; previewEncoding.SelectedItem = choices.FirstOrDefault(c => c.Value == code) ?? choices[0];
+            var choices = new[] { "auto", "hex", "gbk", "shift_jis", "utf-8", "utf-16", "gb18030", "big5" }.Select(c => new UiChoice(c, c == "auto" ? Text["Automatic"] : c == "hex" ? Text["HexPreview"] : c)).ToArray();
+            changingEncoding=true; previewEncoding.ItemsSource = choices; previewEncoding.SelectedItem = choices.FirstOrDefault(c => c.Value == code) ?? choices[0]; changingEncoding=false;
         }
         MaterialTheme.Apply(Settings);
         menu.IsVisible = true; toolbar.IsVisible = Settings.ToolbarVisible; footer.IsVisible = Settings.StatusVisible;
@@ -417,7 +517,7 @@ public sealed partial class MainWindow : AppWindow
     public async Task Guard(Func<Task> action)
     {
         try { await action(); }
-        catch (OperationCanceledException) { status.Text = Text["Cancelled"]; }
+        catch (OperationCanceledException) { if(!loading && !busy)status.Text = Text["Cancelled"]; }
         catch (Exception error) { footer.IsVisible = true; status.Classes.Add("error"); status.Text = Text["Error"] + ": " + Text.ErrorMessage(error.Message); DesktopServices.Log(error); }
     }
 }

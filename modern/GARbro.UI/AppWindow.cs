@@ -40,12 +40,16 @@ public class AppWindow : UserControl
         {
             if (UiPlatform.IsMobile) throw new PlatformNotSupportedException("Android pages do not create desktop windows.");
             if (host != null) return host;
-            var page = new Border { Child = this };
+            var page = new Border { Child = this, CornerRadius = new CornerRadius(0,0,16,16), ClipToBounds = true };
+            page.Bind(Border.BackgroundProperty, new Avalonia.Data.Binding("Background") {Source=this});
             host = new Window { Title = title, Width = desiredWidth, Height = desiredHeight,
                 MinWidth = minimumWidth, MinHeight = minimumHeight, Icon = Icon,
                 WindowDecorations = WindowDecorations.Full, ExtendClientAreaToDecorationsHint = !OperatingSystem.IsMacOS(),
                 ExtendClientAreaTitleBarHeightHint = 40,
-                WindowStartupLocation = WindowStartupLocation, Content = page };
+                WindowStartupLocation = WindowStartupLocation, Content = page, Background = Avalonia.Media.Brushes.Transparent,
+                TransparencyBackgroundFallback = Avalonia.Media.Brushes.Transparent,
+                TransparencyLevelHint = new[] {WindowTransparencyLevel.Transparent,WindowTransparencyLevel.None} };
+            host.PropertyChanged += (_,e) => {if(e.Property==Window.WindowStateProperty)page.CornerRadius=host.WindowState is WindowState.Maximized or WindowState.FullScreen?new CornerRadius(0):new CornerRadius(0,0,16,16);};
             page.Bind(MarginProperty, new Binding(nameof(Window.WindowDecorationMargin)) { Source = host });
             SharedWindowChrome.Attach(host, UiPlatform.CurrentText);
             FitToWorkArea(false);

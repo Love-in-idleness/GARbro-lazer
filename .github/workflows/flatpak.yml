@@ -5,7 +5,7 @@ on:
     inputs:
       package_version:
         type: string
-        default: 1.0.1
+        default: 1.0.2
   pull_request:
     paths:
       - 'packaging/flatpak/**'
@@ -30,7 +30,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     env:
-      GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.1' }}
+      GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.2' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -52,7 +52,7 @@ jobs:
       - name: Build without network access in the build sandbox
         run: |
           dbus-run-session -- flatpak run --filesystem="$PWD" org.flatpak.Builder --user --force-clean --compose-url-policy=full --mirror-screenshots-url=https://dl.flathub.org/media/ --repo=artifacts/flatpak-repo --install-deps-from=flathub build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json
-          flatpak build-bundle artifacts/flatpak-repo artifacts/garbro-${{ inputs.package_version || '1.0.1' }}-linux-${{ matrix.arch == 'aarch64' && 'arm64' || 'x64' }}.flatpak io.github.love_in_idleness.GARbro-no-wpf
+          flatpak build-bundle artifacts/flatpak-repo artifacts/garbro-${{ inputs.package_version || '1.0.2' }}-linux-${{ matrix.arch == 'aarch64' && 'arm64' || 'x64' }}.flatpak io.github.love_in_idleness.GARbro-no-wpf
       - name: Verify self-contained CLI and worker in the sandbox
         run: |
           dbus-run-session -- flatpak-builder --run build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json garbro --help
@@ -64,7 +64,8 @@ jobs:
           dbus-run-session -- flatpak-builder --run build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json ffprobe -version
       - name: Verify the installed desktop opens a window with host web fonts
         run: |
-          flatpak install --user --noninteractive -y artifacts/flatpak-repo io.github.love_in_idleness.GARbro-no-wpf
+          flatpak remote-add --user --no-gpg-verify --if-not-exists garbro-test "$PWD/artifacts/flatpak-repo"
+          flatpak install --user --noninteractive -y garbro-test io.github.love_in_idleness.GARbro-no-wpf
           dbus-run-session -- xvfb-run -a python3 tools/smoke-flatpak-startup.py
       - name: Validate the built repository with Flathub tooling
         run: |

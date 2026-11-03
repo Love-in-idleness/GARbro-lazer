@@ -14,17 +14,23 @@ public static class WorkerExecutor
         {
                 if(request.Operation.StartsWith("resource-",StringComparison.Ordinal))
                 {
+                    var measurement=System.Diagnostics.Stopwatch.StartNew();
+                    if (LightweightResources.TryExecute(request, out var quick))
+                    { reply(WorkerProtocol.Result(quick) with {Timing=new(OperationMs:measurement.Elapsed.TotalMilliseconds)}); return 0; }
+                    if(request.Refresh)BrowserDecoderSession.Reset();
                     var context = request.Context ?? new DecoderContext();
                     // Metadata must remain available to repair a malformed saved
                     // override, and describes defaults rather than applied values.
                     if (request.Operation is "resource-catalog" or "resource-validate-schemes")
                         context = context with { FormatSettings = null };
-                    context.Apply();
+                    BrowserDecoderSession.Apply(context);
+                    double initialization=measurement.Elapsed.TotalMilliseconds;measurement.Restart();
                     var provider=new ScopedOptionsProvider(request);
                     var updates=new ImmediateProgress<ExtractionProgress>(p=>reply(new WorkerReply("progress",Progress:p)));
                     object value;
                     switch(request.Operation)
                     {
+                        case "resource-warm":value=GameRes.FormatCatalog.Instance.RegisteredExtensions.ToDictionary(e=>e,e=>GameRes.FormatCatalog.Instance.GetTypeFromName("file."+e),StringComparer.OrdinalIgnoreCase);break;
                         case "resource-catalog": value=ResourceService.Catalog();break;
                         case "resource-validate-schemes":
                             using(var file=File.OpenRead(request.Path))
@@ -40,9 +46,9 @@ public static class WorkerExecutor
                             }
                             value=true;break;
                         case "resource-list":value=ResourceService.List(request.Location,provider);break;
-                        case "resource-preview":value=ResourceService.Preview(request.Location,request.Entry,request.Context??new(),request.ForcedType,request.Offset,provider);break;
+                        case "resource-preview":value=ResourceService.Preview(request.Location,request.Entry,request.Context??new(),request.ForcedType,request.Offset,provider,request.PreviewMode,request.PreviewEncoding,request.Output,request.PreviewWidth,request.PreviewHeight);break;
                         case "resource-audio":value=ResourceService.PrepareAudio(request.Location,request.Entry,request.Output,provider);break;
-                        case "resource-video":value=ResourceService.PrepareVideo(request.Location,request.Entry,request.Output,provider);break;
+                        case "resource-video":value=ResourceService.PrepareVideo(request.Location,request.Entry,request.Output,provider,request.PreferDirectSource);break;
                         case "resource-extract":value=ResourceService.Extract(request.Location,request.Output,request.ResourceOptions,request.Extraction,
                             request.Overwrite,request.Selection,provider,updates,request.CompletedPaths);break;
                         case "resource-create":
@@ -59,7 +65,7 @@ public static class WorkerExecutor
                             break;
                         default:throw new ArgumentException("Unknown resource operation.");
                     }
-                    reply(WorkerProtocol.Result(value));return 0;
+                    reply(WorkerProtocol.Result(value) with {Timing=new(initialization,measurement.Elapsed.TotalMilliseconds)});return 0;
                 }
                 var fingerprint=ArchiveFingerprint.Read(request.Path);
                 if(request.Fingerprint!=null && request.Fingerprint!=fingerprint)

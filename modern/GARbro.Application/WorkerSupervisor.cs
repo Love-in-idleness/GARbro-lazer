@@ -33,6 +33,13 @@ namespace GARbro.Application
             uint length=0;
             return GetCurrentPackageFullName(ref length,IntPtr.Zero)==122;
         }
+        public static long ResidentBytes(Process process)
+        {
+            try {process.Refresh();return process.HasExited?0:process.WorkingSet64;}
+            catch(InvalidOperationException)when(process.HasExited){return 0;}
+            catch(System.ComponentModel.Win32Exception)when(process.HasExited){return 0;}
+        }
+
         public static string DotnetHost()
         {
             string host=Environment.GetEnvironmentVariable("DOTNET_HOST_PATH");
@@ -50,6 +57,19 @@ namespace GARbro.Application
                 OperatingSystem.IsWindows()?"dotnet.exe":"dotnet"));
             if(File.Exists(host))return host;
             return "dotnet";
+        }
+
+        internal static ProcessStartInfo StartInfo(string assembly)
+        {
+            if(!File.Exists(assembly)) throw new FileNotFoundException("Decoder worker is missing.",assembly);
+            string full=Path.GetFullPath(assembly);
+            string apphost=OperatingSystem.IsWindows()?Path.ChangeExtension(full,".exe"):Path.ChangeExtension(full,null);
+            bool packaged=HasPackageIdentity();
+            if(packaged && !File.Exists(apphost)) throw new FileNotFoundException("Packaged decoder apphost is missing.",apphost);
+            bool native=File.Exists(apphost);
+            var start=new ProcessStartInfo(native?apphost:DotnetHost()) {UseShellExecute=false,CreateNoWindow=true,RedirectStandardInput=true,RedirectStandardOutput=true,RedirectStandardError=true,StandardInputEncoding=new UTF8Encoding(false),StandardOutputEncoding=Encoding.UTF8,StandardErrorEncoding=Encoding.UTF8};
+            if(!native)start.ArgumentList.Add(full);
+            return start;
         }
 
         public static async Task<WorkerRunResult> RunManagedAsync(string assembly,IReadOnlyList<string> arguments,

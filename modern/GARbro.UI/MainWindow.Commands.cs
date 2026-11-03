@@ -15,11 +15,11 @@ using GARbro.Application;
 
 namespace GARbro.Desktop;
 
-public sealed class DeskCommand(Func<Task> execute, Func<bool> enabled) : ICommand
+public sealed class DeskCommand(Func<Task> execute, Func<bool> enabled, bool concurrent = false) : ICommand
 {
     bool running;
     public event EventHandler CanExecuteChanged;
-    public bool CanExecute(object parameter) => !running && enabled();
+    public bool CanExecute(object parameter) => (concurrent || !running) && enabled();
     public async void Execute(object parameter)
     {
         if (!CanExecute(parameter)) return;
@@ -33,16 +33,16 @@ public sealed class DeskCommand(Func<Task> execute, Func<bool> enabled) : IComma
 public sealed partial class MainWindow
 {
     void Register(string key, Func<Task> action, Func<bool> enabled = null) =>
-        commands.Add(key, new(() => Guard(action), enabled ?? (() => !busy)));
+        commands.Add(key, new(() => Guard(action), enabled ?? (() => !busy), key is "Open" or "OpenFolder" or "Back" or "Forward" or "Parent" or "Refresh"));
     void CreateCommands()
     {
         Register("Open", OpenPicker); Register("OpenFolder", FolderPicker);
         Register("Exit", () => { Close(); return Task.CompletedTask; }, () => true);
-        Register("Cancel", () => { active?.Cancel(); previewCancellation?.Cancel(); StopAudio(); return Task.CompletedTask; }, () => busy || previewCancellation != null || Playback != null);
+        Register("Cancel", () => { active?.Cancel(); navigationCancellation?.Cancel(); previewCancellation?.Cancel(); StopAudio(); return Task.CompletedTask; }, () => busy || loading || mediaPreparation!=null || previewCancellation != null || Playback != null);
         Register("Back", () => NavigateHistory(-1), () => !busy && historyIndex > 0);
         Register("Forward", () => NavigateHistory(1), () => !busy && historyIndex + 1 < history.Count);
         Register("Parent", NavigateParent, () => !busy && listing != null);
-        Register("Refresh", () => CurrentLocation == null ? Task.CompletedTask : LoadLocationAsync(CurrentLocation with { Fingerprint = null }, false));
+        Register("Refresh", () => CurrentLocation == null ? Task.CompletedTask : LoadLocationAsync(CurrentLocation with { Fingerprint = null }, false, true));
         Register("Settings", () => ShowSettings());
         foreach (string section in new[] { "General", "Appearance", "Decoding", "Formats" })
             Register(section, () => ShowSettings(section));
@@ -159,7 +159,7 @@ public sealed partial class MainWindow
             ApplySettings(); catalog = null;
             if (listing != null)
             {
-                await LoadLocationAsync(listing.Location with { Fingerprint = null }, false);
+                await LoadLocationAsync(listing.Location with { Fingerprint = null }, false, true);
                 if (selected != null) files.SelectedItem = listing.Entries.FirstOrDefault(e => selected.Index >= 0 ? e.Index == selected.Index : e.Name == selected.Name);
             }
         }

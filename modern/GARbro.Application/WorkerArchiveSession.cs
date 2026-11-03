@@ -60,7 +60,7 @@ namespace GARbro.Application
         public static async Task<T> RequestAsync<T>(string host,WorkerRequest request,WorkerLimits limits,
             IProgress<ExtractionProgress> progress,CancellationToken cancellation)
         {
-            string input=WorkerProtocol.Serialize(request);
+            string input=await Task.Run(()=>WorkerProtocol.Serialize(request),cancellation).ConfigureAwait(false);
             if(input.Length>32<<20) throw new ArgumentException("Worker request exceeds the size limit.");
             WorkerReply result=null;
             var run=await WorkerSupervisor.RunManagedAsync(host,Array.Empty<string>(),limits,input,cancellation,line=>
@@ -74,7 +74,7 @@ namespace GARbro.Application
                     result=reply;
                 }
                 else throw new InvalidDataException("Unknown decoder worker response.");
-            });
+            }).ConfigureAwait(false);
             if(result?.Error is WorkerError error) throw new WorkerOperationException(error.Type,error.Message) { FormatId=error.FormatId, OptionsJson=error.OptionsJson, CompletedPaths=error.CompletedPaths, ContextKey=error.ContextKey };
             if(run.ExitCode!=0 || result?.Data==null)
                 throw new WorkerOperationException("WorkerExited",string.IsNullOrWhiteSpace(run.StandardError)

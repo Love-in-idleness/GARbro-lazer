@@ -296,6 +296,8 @@ System|Follow system|跟随系统
 Light|Light|浅色
 Dark|Dark|深色
 Encoding|Text / filename encoding|文本 / 文件名编码
+PreviewEncoding|Preview encoding / HEX|预览编码 / HEX
+HexPreview|HEX (hexadecimal)|HEX（十六进制）
 Time|Time limit (seconds)|时间上限（秒）
 Memory|Memory limit (MiB)|内存上限（MiB）
 DefaultOutput|Default output directory|默认输出目录

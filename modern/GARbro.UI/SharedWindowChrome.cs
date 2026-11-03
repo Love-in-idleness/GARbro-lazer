@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Avalonia.Media;
 
 namespace GARbro.Desktop;
 
@@ -23,8 +24,16 @@ public static class SharedWindowChrome
             var root = window.GetVisualAncestors().LastOrDefault() ?? window;
             var buttons = root.GetVisualDescendants().OfType<Button>()
                 .Where(b => b.Name is "PART_MinimizeButton" or "PART_MaximizeButton" or "PART_CloseButton" or "PART_PopoverCloseButton" or "PART_PopoverFullScreenButton").ToArray();
+            void Shape()
+            {
+                if(root.Bounds.Width<=0 || root.Bounds.Height<=0)return;
+                double radius=window.WindowState is WindowState.Maximized or WindowState.FullScreen?0:16;
+                root.Clip=new RectangleGeometry(new Rect(root.Bounds.Size),radius,radius);
+                NativeRoundedFrame.Apply(window,radius);
+            }
             void Update()
             {
+                Shape();
                 foreach (var button in buttons)
                 {
                     string key = button.Name switch { "PART_MinimizeButton" => "Minimize", "PART_MaximizeButton" => window.WindowState == WindowState.Maximized ? "Restore" : "Maximize", "PART_PopoverFullScreenButton" => "Restore", _ => "Close" };
@@ -33,8 +42,10 @@ public static class SharedWindowChrome
             }
             void LanguageChanged(object sender, PropertyChangedEventArgs args) => Update();
             void StateChanged(object sender, AvaloniaPropertyChangedEventArgs args) { if (args.Property == Window.WindowStateProperty) Update(); }
+            void SizeChanged(object sender,AvaloniaPropertyChangedEventArgs args) {if(args.Property==Visual.BoundsProperty)Shape();}
+            root.PropertyChanged += SizeChanged;
             text.PropertyChanged += LanguageChanged; window.PropertyChanged += StateChanged;
-            window.Closed += (_, _) => { text.PropertyChanged -= LanguageChanged; window.PropertyChanged -= StateChanged; };
+            window.Closed += (_, _) => { root.PropertyChanged -= SizeChanged;text.PropertyChanged -= LanguageChanged; window.PropertyChanged -= StateChanged; };
             Update();
         }, DispatcherPriority.Loaded);
     }

@@ -39,9 +39,11 @@ public sealed class DesktopTests
             await window.LoadArchiveAsync(Path.Combine(AppContext.BaseDirectory,"Fixtures","standard.xfl"));
             var search=window.GetVisualDescendants().OfType<TextBox>().Single(c=>c.Name=="Search");
             search.Text="no matching file";
+            for(int i=0;i<100 && window.VisibleEntryCount!=0;i++)await Task.Delay(10,TestContext.Current.CancellationToken);
             await Dispatcher.UIThread.InvokeAsync(()=>window.UpdateLayout(),DispatcherPriority.Background);
             Assert.Equal(0,window.VisibleEntryCount);
             search.Text="";
+            for(int i=0;i<100 && window.VisibleEntryCount!=3;i++)await Task.Delay(10,TestContext.Current.CancellationToken);
             await Dispatcher.UIThread.InvokeAsync(()=>window.UpdateLayout(),DispatcherPriority.Background);
             Assert.Equal(3,window.VisibleEntryCount);
         }

@@ -82,6 +82,8 @@ public sealed class NativeSmokeApp : Avalonia.Application
                 Console.WriteLine("Native desktop window rendered, listed and extracted the fixture.");
                 // Sway intentionally ignores maximize requests. Its harness checks
                 // actual protocol requests; Openbox/Windows check native states too.
+                await NativePerformance.Check(window);
+                await NativeVideo.Check(window);
                 await SharedFrame.CheckActions(window,!Program.TestIme);
                 code=0;
             }

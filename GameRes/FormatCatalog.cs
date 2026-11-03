@@ -71,6 +71,8 @@ namespace GameRes
         /// <summary> The only instance of this class.</summary>
         public static FormatCatalog       Instance      { get { return m_instance.Value; } }
 
+        public IEnumerable<string> RegisteredExtensions { get { return m_extension_map.Keys; } }
+
         public IEnumerable<ArchiveFormat> ArcFormats    { get { return m_arc_formats; } }
         public IEnumerable<ImageFormat>   ImageFormats  { get { return m_image_formats; } }
         public IEnumerable<AudioFormat>   AudioFormats  { get { return m_audio_formats; } }

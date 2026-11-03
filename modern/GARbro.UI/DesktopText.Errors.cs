@@ -65,6 +65,11 @@ Invalid video dimensions.|视频尺寸无效。
 Video exceeds the pixel limit.|视频尺寸超过预览像素上限。
 No video stream was found.|文件中没有可预览的视频流。
 Video duration exceeds the preview limit.|视频时长超过预览限制。
+Unexpected browsing request number.|浏览服务返回了过期的请求结果，请重试。
+Unsupported browsing operation.|浏览服务不支持此操作。
+Unexpected decoder worker response.|解码服务返回了意外消息。
+Invalid preview output.|预览输出文件无效。
+Resource does not exist.|资源不存在，请刷新后重试。
 Invalid preview artifact.|预览缓存文件无效，请重新选择文件。
 """;
 }

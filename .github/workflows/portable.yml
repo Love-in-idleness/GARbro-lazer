@@ -7,7 +7,7 @@ on:
     inputs:
       package_version:
         type: string
-        default: 1.0.1
+        default: 1.0.2
 concurrency:
   group: portable-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
@@ -80,10 +80,20 @@ jobs:
         env:
           SDL_AUDIODRIVER: dummy
           GARBRO_CREATED_ARCHIVES: ${{ matrix.rid == 'win-x64' && format('{0}/artifacts/created-archives', github.workspace) || '' }}
+      - name: Verify continuous native Windows video frames
+        if: runner.os == 'Windows'
+        timeout-minutes: 2
+        run: python tools/smoke-desktop.py --output artifacts/native-video
+        env:
+          GARBRO_NATIVE_VIDEO: '1'
+          SDL_AUDIODRIVER: dummy
       - name: Exercise native desktop window on X11
         if: runner.os == 'Linux'
         timeout-minutes: 2
         run: xvfb-run -a python tools/smoke-desktop.py --window-manager openbox
+        env:
+          GARBRO_BENCHMARKS: '1'
+          SDL_AUDIODRIVER: dummy
       - name: Exercise native desktop window
         if: runner.os == 'macOS'
         timeout-minutes: 2
@@ -109,23 +119,23 @@ jobs:
           flags+=(--installer)
           python tools/package-release.py --rid ${{ matrix.rid }} "${flags[@]}"
         env:
-          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.1' }}
+          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.2' }}
       - run: python tools/smoke-package.py --rid ${{ matrix.rid }}
         env:
-          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.1' }}
+          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.2' }}
       - name: Mount and launch the macOS disk image
         if: runner.os == 'macOS'
-        run: python tools/smoke-macos.py artifacts/garbro-${{ inputs.package_version || '1.0.1' }}-${{ matrix.rid }}.dmg
+        run: python tools/smoke-macos.py artifacts/garbro-${{ inputs.package_version || '1.0.2' }}-${{ matrix.rid }}.dmg
       - name: Install and launch DEB on both supported distributions
         if: runner.os == 'Linux'
         timeout-minutes: 12
         shell: bash
-        run: python tools/smoke-deb.py artifacts/garbro-${{ inputs.package_version || '1.0.1' }}-${{ matrix.rid }}.deb
+        run: python tools/smoke-deb.py artifacts/garbro-${{ inputs.package_version || '1.0.2' }}-${{ matrix.rid }}.deb
       - name: Verify MSIX install, activation, upgrade and removal
         if: runner.os == 'Windows'
         timeout-minutes: 5
         shell: pwsh
-        run: tools/smoke-msix.ps1 -Output artifacts -Architecture ${{ matrix.rid == 'win-arm64' && 'arm64' || 'x64' }} -Version "${{ inputs.package_version || '1.0.1' }}"
+        run: tools/smoke-msix.ps1 -Output artifacts -Architecture ${{ matrix.rid == 'win-arm64' && 'arm64' || 'x64' }} -Version "${{ inputs.package_version || '1.0.2' }}"
       - uses: actions/upload-artifact@v4
         with:
           name: preview-${{ matrix.rid }}
@@ -142,6 +152,10 @@ jobs:
           name: portable-tests-${{ matrix.os }}
           path: |
             tests/**/TestResults/*.trx
+            artifacts/native-video/
+            artifacts/native-desktop/video-window.png
+            artifacts/native-desktop/video-rendering.json
+            artifacts/native-desktop/performance.json
             artifacts/native-desktop/window.png
             artifacts/native-desktop/window-with-titlebar.png
             artifacts/wayland-ime/

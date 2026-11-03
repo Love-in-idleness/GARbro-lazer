@@ -6,6 +6,11 @@ using GARbro.Desktop;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Headless;
+using Avalonia;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using Avalonia.LogicalTree;
@@ -56,6 +61,36 @@ public sealed class VideoTests
             Assert.Empty(Directory.GetDirectories(DesktopServices.CacheDirectory).Except(before));
         }
         finally {window.Close();Directory.Delete(root,true);}
+    }
+    [AvaloniaFact]
+    public async Task PresentedVideoPixelsChangeWithoutRenderingTheControlManually()
+    {
+        using var sdl=AudioPlayback.LoadApi();sdl.SetHint("SDL_AUDIODRIVER","dummy");
+        var window=new MainWindow();window.Width=1440;window.Height=900;window.Show();
+        try
+        {
+            await window.LoadArchiveAsync(Path.Combine(AppContext.BaseDirectory,"Fixtures","movie.mpg"));
+            var image=window.GetLogicalDescendants().OfType<Image>().Single(i=>i.Name=="PreviewImage");
+            for(int n=0;n<200&&image.Source==null;n++)await Task.Delay(20,TestContext.Current.CancellationToken);
+            var play=window.GetVisualDescendants().OfType<Button>().Single(b=>b.Content as string==UiPlatform.CurrentText["Play"]);
+            play.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            var hashes=new HashSet<string>();
+            for(int n=0;n<30;n++)
+            {
+                await Task.Delay(60,TestContext.Current.CancellationToken);
+                using var actual=window.DesktopHost.CaptureRenderedFrame();
+                var origin=image.TranslatePoint(default,window.DesktopHost);
+                if(actual==null || origin==null || image.Source is not Avalonia.Media.Imaging.WriteableBitmap)continue;
+                // Sample only the central video pixels, excluding labels, controls and the seek slider.
+                int x=(int)(origin.Value.X+image.Bounds.Width*.3),y=(int)(origin.Value.Y+image.Bounds.Height*.3);
+                int w=Math.Max(1,(int)(image.Bounds.Width*.4)),h=Math.Max(1,(int)(image.Bounds.Height*.4));
+                var region=new PixelRect(x,y,w,h);byte[] pixels=new byte[w*h*4];var pinned=GCHandle.Alloc(pixels,GCHandleType.Pinned);
+                try{actual.CopyPixels(region,pinned.AddrOfPinnedObject(),pixels.Length,w*4);}finally{pinned.Free();}
+                hashes.Add(Convert.ToHexString(SHA256.HashData(pixels)));
+            }
+            Assert.True(hashes.Count>=4,$"Expected moving presented pixels; captured {hashes.Count} distinct video regions.");
+        }
+        finally{window.Close();}
     }
     [Theory]
     [InlineData("movie.mpg")]

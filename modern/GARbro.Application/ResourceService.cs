@@ -17,14 +17,16 @@ public sealed class ResourceSession : IDisposable
     readonly ArchiveService.DecoderScope scope;
     readonly bool physical;
     readonly bool previousNestedMode;
-    readonly ScopedOptionsProvider scoped;
-    public ResourceLocation Location { get; }
+    readonly ILocatedOptionsProvider scoped;
+    Dictionary<string, Entry[]> index;
+    internal bool Retained;
+    public ResourceLocation Location { get; internal set; }
     public ArcFile Archive { get; }
     public bool Physical => physical;
     public bool Synthetic => Archive?.Tag == "DAT/BOGUS";
     public ResourceSession(ResourceLocation location, IOptionsProvider options = null)
     {
-        scoped = options as ScopedOptionsProvider;
+        scoped = options as ILocatedOptionsProvider;
         Location = location with { RootPath = Path.GetFullPath(location.RootPath) };
         if (Location.Chain.Length > 64) throw new InvalidDataException("Archive nesting exceeds 64 levels.");
         physical = System.IO.Directory.Exists(Location.RootPath);
@@ -97,7 +99,11 @@ public sealed class ResourceSession : IDisposable
         if (!physical) return Archive.OpenEntry(Find(name));
         string path = PhysicalPath(name); scoped?.SetLocation(new(path)); return File.OpenRead(path);
     }
-    public Entry Find(string name) => Archive.Dir.Single(e => e.Name == name);
+    public Entry Find(string name)
+    {
+        index ??= Archive.Dir.GroupBy(e => e.Name, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.ToArray(), StringComparer.Ordinal);
+        return index.TryGetValue(name, out var entries) ? entries.Single() : throw new FileNotFoundException("Resource does not exist.", name);
+    }
     public string PhysicalPath(string name)
     {
         string full = Path.GetFullPath(Path.Combine(Location.RootPath, name));
@@ -109,6 +115,7 @@ public sealed class ResourceSession : IDisposable
 
     public void Dispose()
     {
+        if (Retained) return;
         try
         {
             VFS.FullPath = new[] { physical ? Location.RootPath : Path.GetDirectoryName(Location.RootPath) };
@@ -123,7 +130,7 @@ public static partial class ResourceService
     public static BrowserListing List(ResourceLocation location, IOptionsProvider options)
     {
         ArchiveService.Formats();
-        using var session = new ResourceSession(location, options);
+        using var session = BrowserDecoderSession.Open(location, options);
         return session.List();
     }
 
@@ -153,23 +160,30 @@ public static partial class ResourceService
     };
 
     public static ResourcePreview Preview(ResourceLocation location, string name, DecoderContext context,
-        string forcedType = null, long offset = 0, IOptionsProvider options = null)
+        string forcedType = null, long offset = 0, IOptionsProvider options = null, string previewMode = "auto", string previewEncoding = null, string output = null, int width = 0, int height = 0)
     {
-        using var session = new ResourceSession(location, options);
+        using var session = BrowserDecoderSession.Open(location, options);
+        if (previewMode == "hex")
+        {
+            using var input = session.OpenEntry(name);
+            return LightweightResources.ReadPage(input, name, offset, true, previewEncoding ?? context.TextEncoding);
+        }
         if (!session.Physical && (forcedType == "image" || forcedType == null && session.Find(name).Type == "image"))
         {
             using var decoder = session.Archive.OpenImage(session.Find(name));
             if ((ulong)decoder.Info.Width * decoder.Info.Height > 25000000) throw new InvalidDataException("Image is too large for a preview.");
             var image = decoder.Image;
-            using var png = new MemoryStream(); ImageFormat.Png.Write(png, image);
-            return new("image", name, $"{image.Width} × {image.Height} · {image.BPP} bit · ({image.OffsetX}, {image.OffsetY})", png.ToArray());
+            return ImagePreview(image, name, output, width, height);
         }
         string scratch = WorkerTemporaryFiles.CreateDirectory(Path.GetTempPath());
         try
         {
-            string path = Path.Combine(scratch, Path.GetFileName(name));
-            using (var source = session.OpenEntry(name))
-            using (var target = File.Create(path)) CopyBounded(source, target, MediaInfo.IsVideoName(name) ? 2L << 30 : 512L << 20);
+            string path = session.Physical ? session.PhysicalPath(name) : BrowserDecoderSession.Materialize(session, name, scratch);
+            if (forcedType == "binary" || forcedType == null && LightweightResources.IsTextName(name) && LightweightResources.IsPlainTextFile(path))
+            {
+                using var input = File.OpenRead(path);
+                return LightweightResources.ReadPage(input, name, offset, forcedType == "binary", previewEncoding ?? context.TextEncoding);
+            }
             if (forcedType is not ("script" or "binary" or "image" or "audio"))
             {
                 byte[] signature = new byte[(int)Math.Min(256, new FileInfo(path).Length)];
@@ -189,9 +203,7 @@ public static partial class ResourceService
                     if ((ulong)candidate.Item2.Width * candidate.Item2.Height > 25000000) throw new InvalidDataException("Image is too large for a preview.");
                     imageInput.Position = 0;
                     var image = candidate.Item1.Read(imageInput, candidate.Item2);
-                    using var png = new MemoryStream();
-                    ImageFormat.Png.Write(png, image);
-                    return new("image", name, $"{image.Width} × {image.Height} · {image.BPP} bit · ({image.OffsetX}, {image.OffsetY})", png.ToArray());
+                    return ImagePreview(image, name, output, width, height);
                 }
                 using var audioInput = new BinaryStream(File.OpenRead(path), name);
                 using var audio = AudioFormat.Read(audioInput);
@@ -213,41 +225,37 @@ public static partial class ResourceService
                 }
             }
             using var file = File.OpenRead(path);
-            if (offset < 0 || offset > file.Length) throw new ArgumentOutOfRangeException(nameof(offset));
-            byte[] header = new byte[Math.Min(4, file.Length)]; file.ReadExactly(header);
-            Encoding encoding = context.ResolveEncoding() ?? new UTF8Encoding(false, true);
-            int bom = 0;
-            if (header.AsSpan().StartsWith(new byte[] { 0xff, 0xfe, 0, 0 })) { encoding = Encoding.UTF32; bom = 4; }
-            else if (header.AsSpan().StartsWith(new byte[] { 0, 0, 0xfe, 0xff })) { encoding = new UTF32Encoding(true, true); bom = 4; }
-            else if (header.AsSpan().StartsWith(new byte[] { 0xff, 0xfe })) { encoding = Encoding.Unicode; bom = 2; }
-            else if (header.AsSpan().StartsWith(new byte[] { 0xfe, 0xff })) { encoding = Encoding.BigEndianUnicode; bom = 2; }
-            else if (header.AsSpan().StartsWith(new byte[] { 0xef, 0xbb, 0xbf })) { encoding = Encoding.UTF8; bom = 3; }
-            file.Position = offset;
-            byte[] data = new byte[Math.Min(65536, file.Length - offset)];
-            file.ReadExactly(data);
-            string text;
-            try
-            {
-                int skip = offset == 0 ? Math.Min(bom, data.Length) : 0;
-                text = encoding.GetString(data, skip, data.Length - skip);
-            }
-            catch (DecoderFallbackException) { text = Encodings.ResourceEncoding.GetString(data); }
-            bool binary = forcedType == "binary" || (forcedType != "script" && text.Count(c => char.IsControl(c) && c is not ('\r' or '\n' or '\t')) > Math.Max(1, text.Length / 20));
-            if (binary)
-            {
-                var hex = new StringBuilder();
-                for (int i = 0; i < data.Length; i += 16)
-                {
-                    var row = data.AsSpan(i, Math.Min(16, data.Length - i));
-                    hex.Append((offset + i).ToString("X8")).Append("  ").Append(Convert.ToHexString(row)).Append("  ");
-                    foreach (byte b in row) hex.Append(b >= 32 && b < 127 ? (char)b : '.');
-                    hex.AppendLine();
-                }
-                text = hex.ToString();
-            }
-            return new(binary ? "binary" : "text", name, text, Offset: offset, More: offset + data.Length < file.Length);
+            return LightweightResources.ReadPage(file, name, offset, forcedType == "binary", previewEncoding ?? context.TextEncoding, forcedType == "script");
         }
         finally { System.IO.Directory.Delete(scratch, true); }
+    }
+
+    static ResourcePreview ImagePreview(ImageData image, string name, string output, int width, int height)
+    {
+        string info = $"{image.Width} × {image.Height} · {image.BPP} bit · ({image.OffsetX}, {image.OffsetY})";
+        if (output == null)
+        {
+            using var png = new MemoryStream(); ImageFormat.Png.Write(png,image);
+            return new("image",name,info,png.ToArray());
+        }
+        if (!File.Exists(output) || new FileInfo(output).Length != 0) throw new IOException("Invalid preview output.");
+        byte[] pixels = image.Bitmap.ToBgra32();
+        int sourceWidth=(int)image.Width,sourceHeight=(int)image.Height;
+        double scale=width>0&&height>0?Math.Min(1,Math.Min((double)width/sourceWidth,(double)height/sourceHeight)):1;
+        int w=Math.Max(1,(int)(sourceWidth*scale)),h=Math.Max(1,(int)(sourceHeight*scale));
+        if((long)w*h*4>100L<<20)throw new InvalidDataException("Image is too large for a preview.");
+        if(w!=sourceWidth || h!=sourceHeight)
+        {
+            byte[] resized=new byte[checked(w*h*4)];
+            for(int y=0;y<h;y++)for(int x=0;x<w;x++)
+            {
+                int src=((int)((long)y*sourceHeight/h)*sourceWidth+(int)((long)x*sourceWidth/w))*4;
+                Buffer.BlockCopy(pixels,src,resized,(y*w+x)*4,4);
+            }
+            pixels=resized;
+        }
+        File.WriteAllBytes(output,pixels);
+        return new("image",name,info,Pixels:new(output,pixels.Length,w,h));
     }
 
     internal static long CopyBounded(Stream source, Stream target, long limit)

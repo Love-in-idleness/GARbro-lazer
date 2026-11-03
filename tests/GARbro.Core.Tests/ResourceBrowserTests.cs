@@ -189,7 +189,7 @@ public sealed class ResourceBrowserTests
                     Assert.Contains(listing.Entries,e=>e.DisplayName==filename);
                     var preview=await Request<ResourcePreview>(new("resource-preview",null,OptionsJson:parameters??(writer.OptionsJson=="null"?null:writer.OptionsJson),Location:new(output),Entry:filename,ForcedType:writer.Tag=="AMI"?"binary":"script"));
                     if(writer.Tag!="AMI")Assert.Contains("Hello writer!",preview.Text);
-                    else Assert.Contains("5343520001020304",preview.Text);
+                    else Assert.Contains("53 43 52 00 01 02 03 04",preview.Text);
                     if(!string.IsNullOrEmpty(export))
                     {
                         string basename=Path.GetFileName(output);File.Copy(output,Path.Combine(export,basename),true);

@@ -14,6 +14,8 @@ using Silk.NET.SDL;
 namespace GARbro.Desktop;
 
 /// <summary>Audio-device output only. Original game formats are decoded in the worker.</summary>
+internal static class AudioDeviceLease { internal static readonly SemaphoreSlim Gate=new(1,1); }
+
 public sealed unsafe class AudioPlayback : IAudioOutput
 {
     public static Sdl LoadApi()
@@ -34,6 +36,7 @@ public sealed unsafe class AudioPlayback : IAudioOutput
     readonly CancellationTokenSource cancel = new();
     readonly Task feeder;
     bool playing;
+    int disposed;
     float volume = 1;
     public double Duration => input.TotalTime.TotalSeconds;
     public bool Playing => playing;
@@ -59,6 +62,9 @@ public sealed unsafe class AudioPlayback : IAudioOutput
     {
         input = new WaveFileReader(path);
         if (input.WaveFormat.Encoding != WaveFormatEncoding.Pcm || input.WaveFormat.BitsPerSample != 16) { input.Dispose(); throw new InvalidDataException("Expected PCM16 audio."); }
+        AudioDeviceLease.Gate.Wait();
+        try
+        {
         try { sdl = LoadApi(); }
         catch { input.Dispose(); throw; }
         if (sdl.InitSubSystem(0x10) != 0) { string error = sdl.GetErrorS(); input.Dispose(); sdl.Dispose(); throw new IOException(error); }
@@ -67,6 +73,8 @@ public sealed unsafe class AudioPlayback : IAudioOutput
         device = sdl.OpenAudioDevice((byte*)null, 0, &desired, &obtained, 0);
         if (device == 0) { string error = sdl.GetErrorS(); input.Dispose(); sdl.QuitSubSystem(0x10); sdl.Dispose(); throw new IOException(error); }
         feeder = Task.Run(Feed);
+        }
+        catch {AudioDeviceLease.Gate.Release();throw;}
     }
     void Feed()
     {
@@ -96,6 +104,7 @@ public sealed unsafe class AudioPlayback : IAudioOutput
     public void Stop() { Pause(); Position = 0; }
     public void Dispose()
     {
-        cancel.Cancel(); feeder.GetAwaiter().GetResult(); sdl.CloseAudioDevice(device); sdl.QuitSubSystem(0x10); input.Dispose(); cancel.Dispose(); sdl.Dispose();
+        if(Interlocked.Exchange(ref disposed,1)!=0)return;
+        cancel.Cancel(); feeder.GetAwaiter().GetResult(); sdl.CloseAudioDevice(device); sdl.QuitSubSystem(0x10); input.Dispose(); cancel.Dispose(); sdl.Dispose();AudioDeviceLease.Gate.Release();
     }
 }

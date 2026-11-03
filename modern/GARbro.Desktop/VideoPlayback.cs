@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 using GARbro.Application;
 using GARbro.Media;
 using Silk.NET.SDL;
+using GARbro.Domain;
+using System.Collections.Concurrent;
+using System.Threading.Channels;
 
 namespace GARbro.Desktop;
 
@@ -26,6 +29,7 @@ public sealed class VideoPlayback : IVideoOutput
     PcmOutput sound, device;
     double offset, volume = 1;
     bool playing, disposed;
+    Task closing = Task.CompletedTask, decoding=Task.CompletedTask;
     public string Warning { get; private set; }
     public double Duration => artifact.Info.Duration;
     public bool Playing { get { lock (gate) return playing; } }
@@ -38,7 +42,7 @@ public sealed class VideoPlayback : IVideoOutput
             lock (gate)
             {
                 bool resume = playing; Halt(); offset = Math.Clamp(value, 0, Math.Max(0, Duration));
-                if (resume) Begin();
+                Begin(!resume);
             }
         }
     }
@@ -58,30 +62,32 @@ public sealed class VideoPlayback : IVideoOutput
     }
     public void Pause() { lock (gate) { playing = false; clock.Stop(); sound?.Pause(true); } }
     public void Stop() { lock (gate) { Halt(); offset = 0; } }
-    void Begin()
+    void Begin(bool paused = false)
     {
-        var cancel = new CancellationTokenSource(); run = cancel; playing = true; Warning = null;
-        PcmOutput output = null;
-        if (artifact.Info.HasAudio)
-        {
-            try { output = new PcmOutput { Volume = volume }; }
-            catch (Exception e) when (e is IOException or DllNotFoundException or TypeInitializationException) { Warning = "VideoMuted"; }
-        }
-        sound = device = output; clock.Restart();
-        double start = offset;
-        _ = Task.Run(() => Decode(cancel, output, start));
+        var cancel=new CancellationTokenSource();run=cancel;playing=!paused;Warning=null;clock.Reset();
+        double start=offset;
+        var previous=closing;
+        decoding=Task.Run(async()=> {await previous;await Decode(cancel,start);});
     }
     string[] Arguments(double start) => MediaTools.Input(artifact.Path).Take(2)
         .Concat(new[] { "-ss", start.ToString("0.######", CultureInfo.InvariantCulture) })
         .Concat(MediaTools.Input(artifact.Path).Skip(2)).Concat(new[] { "-threads", "2" }).ToArray();
-    async Task Decode(CancellationTokenSource owner, PcmOutput output, double start)
+    async Task Decode(CancellationTokenSource owner, double start)
     {
         Process movie = null, music = null;
+        PcmOutput output=null;bool ownsLease=false;
         Task musicTask = Task.CompletedTask, watchdog = Task.CompletedTask;
         Task<string> movieErrors = Task.FromResult(""), musicErrors = Task.FromResult("");
         var token = owner.Token;
         try
         {
+            token.ThrowIfCancellationRequested();
+            if(artifact.Info.HasAudio)
+            {
+                try {await AudioDeviceLease.Gate.WaitAsync(token);ownsLease=true;token.ThrowIfCancellationRequested();output=new PcmOutput {Volume=volume};output.Pause(true);}
+                catch(Exception e)when(e is IOException or DllNotFoundException or TypeInitializationException){Warning="VideoMuted";}
+            }
+            lock(gate) {if(run!=owner){token.ThrowIfCancellationRequested();return;}sound=device=output;}
             var size = MediaInfo.Fit(artifact.Info.Width, artifact.Info.Height);
             double fps = Math.Clamp(artifact.Info.FrameRate, 1, 30);
             movie = MediaTools.Start("ffmpeg", Arguments(start).Concat(new[] { "-map", "0:V:0", "-an", "-vf",
@@ -102,21 +108,57 @@ public sealed class VideoPlayback : IVideoOutput
             watchdog = Watch(movie, music, token);
             _ = watchdog.ContinueWith(task => { if (!token.IsCancellationRequested) { failed(task.Exception.GetBaseException()); owner.Cancel(); } },
                 CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
-            byte[] pixels = new byte[checked(size.Width * size.Height * 4)];
-            long index = 0;
-            while (await ReadFrame(movie.StandardOutput.BaseStream, pixels, token))
+            // Two pending frames, one rendering frame, no unbounded dispatcher callbacks.
+            var pending=Channel.CreateBounded<(byte[] Pixels,double Timestamp)>(new BoundedChannelOptions(2){SingleReader=true,SingleWriter=true});
+            var free=new ConcurrentQueue<byte[]>();
+            for(int i=0;i<4;i++)free.Enqueue(new byte[checked(size.Width*size.Height*4)]);
+            var producer=Task.Run(async()=>
             {
-                double timestamp = start + index++ / fps;
-                while (true)
+                Exception error=null;long index=0;
+                try
                 {
-                    token.ThrowIfCancellationRequested();
-                    bool ready;
-                    lock (gate) ready = playing && timestamp <= Current() + .015;
-                    if (ready) break;
-                    await Task.Delay(10, token);
+                    while(true)
+                    {
+                        byte[] pixels;
+                        while(!free.TryDequeue(out pixels))await Task.Delay(2,token);
+                        if(!await ReadFrame(movie.StandardOutput.BaseStream,pixels,token)){free.Enqueue(pixels);break;}
+                        double timestamp=start+index++/fps;
+                        if(index==1)lock(gate) {if(run==owner && playing && sound==null)clock.Restart();}
+                        // Decode at most two frames ahead, including while paused.
+                        while(index>1)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            bool ready;lock(gate)ready=playing && timestamp<=Current()+2/fps;
+                            if(ready)break;await Task.Delay(5,token);
+                        }
+                        await pending.Writer.WriteAsync((pixels,timestamp),token);
+                    }
                 }
-                await frame(pixels, size.Width, size.Height);
+                catch(Exception e){error=e;}
+                finally{pending.Writer.TryComplete(error);}
+            },token);
+            bool first=true;
+            try
+            {
+                await foreach(var item in pending.Reader.ReadAllAsync(token))
+                {
+                    try
+                    {
+                        while(!first)
+                        {
+                            token.ThrowIfCancellationRequested();bool ready;
+                            lock(gate)ready=playing && FrameTiming.IsDue(item.Timestamp,Current());
+                            if(ready)break;await Task.Delay(5,token);
+                        }
+                        bool late;lock(gate)late=!first && FrameTiming.IsLate(item.Timestamp,Current(),1/fps);
+                        if(!late)await frame(item.Pixels,size.Width,size.Height);
+                        first=false;
+                    }
+                    finally{free.Enqueue(item.Pixels);}
+                }
+                await producer;
             }
+            catch {await owner.CancelAsync();try {await producer;}catch(Exception){}throw;}
             await movie.WaitForExitAsync(token);
             if (movie.ExitCode != 0) throw new InvalidDataException("The video decoder could not read this media.");
             await musicTask;
@@ -136,7 +178,7 @@ public sealed class VideoPlayback : IVideoOutput
             {
                 if (run == owner) { offset = Current(); clock.Reset(); output?.Dispose(); run = null; video = audio = null; sound = device = null; playing = false; }
             }
-            output?.Dispose(); movie?.Dispose(); music?.Dispose(); owner.Dispose();
+            output?.Dispose(); if(ownsLease)AudioDeviceLease.Gate.Release(); movie?.Dispose(); music?.Dispose(); owner.Dispose();
         }
     }
     async Task Watch(Process movie, Process music, CancellationToken token)
@@ -148,7 +190,7 @@ public sealed class VideoPlayback : IVideoOutput
                 await Task.Delay(250, token);
                 long bytes = 0;
                 foreach (var process in new[] { movie, music })
-                    if (process != null && !process.HasExited) { process.Refresh(); bytes += process.WorkingSet64; }
+                    if (process != null && !process.HasExited) { process.Refresh(); bytes += WorkerSupervisor.ResidentBytes(process); }
                 if (bytes > memoryLimit)
                 { Kill(movie); Kill(music); throw new IOException("Video decoder memory limit exceeded."); }
             }
@@ -168,6 +210,7 @@ public sealed class VideoPlayback : IVideoOutput
                 await Task.Delay(10, token);
             }
             output.Push(samples, read);
+            lock(gate) if(run==owner && playing)output.Pause(false);
         }
         await process.WaitForExitAsync(token);
         if (process.ExitCode != 0) throw new InvalidDataException("The video decoder could not read this media.");
@@ -203,10 +246,22 @@ public sealed class VideoPlayback : IVideoOutput
     static void Kill(Process process) { try { if (process != null && !process.HasExited) process.Kill(true); } catch (InvalidOperationException) { } catch (System.ComponentModel.Win32Exception) { } }
     void Halt()
     {
-        run?.Cancel(); run = null; playing = false; clock.Reset(); device?.Dispose(); sound = device = null;
-        Kill(video); Kill(audio); video = audio = null;
+        var owner=run;var output=device;var movie=video;var music=audio;
+        run=null;playing=false;clock.Reset();sound=device=null;video=audio=null;
+        var previous=closing;
+        closing=Task.Run(async()=>
+        {
+            await previous;
+            if(owner!=null) {try {await owner.CancelAsync();}catch(ObjectDisposedException){}}
+            Kill(movie);Kill(music);output?.Dispose();
+        });
     }
-    public void Dispose() { lock (gate) { if (disposed) return; disposed = true; Halt(); } }
+    public void Dispose()
+    {
+        Task close,decode;
+        lock(gate){if(disposed)return;disposed=true;Halt();close=closing;decode=decoding;}
+        close.GetAwaiter().GetResult();decode.GetAwaiter().GetResult();
+    }
 
     sealed unsafe class PcmOutput : IDisposable
     {

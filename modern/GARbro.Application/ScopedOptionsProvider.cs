@@ -8,7 +8,9 @@ using Newtonsoft.Json;
 namespace GARbro.Application;
 
 /// <summary>Keys belong to the selected provider, not to every nested container.</summary>
-public sealed class ScopedOptionsProvider : IOptionsProvider
+public interface ILocatedOptionsProvider : IOptionsProvider { void SetLocation(ResourceLocation location); }
+
+public sealed class ScopedOptionsProvider : ILocatedOptionsProvider
 {
     readonly DecoderContext context;
     readonly JsonOptionsProvider fallback;

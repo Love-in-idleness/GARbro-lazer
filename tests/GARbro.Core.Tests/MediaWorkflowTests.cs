@@ -100,6 +100,8 @@ public sealed class MediaWorkflowTests
             Assert.Equal(File.ReadAllBytes(Fixture(filename)),File.ReadAllBytes(artifact.Path));Assert.Equal(160,artifact.Info.Width);Assert.True(artifact.Info.Duration>0);
             File.Copy(Fixture(filename),Path.Combine(root,"renamed.dat"));
             var renamed=await Request<ResourcePreview>(new("resource-preview",null,Location:new(root),Entry:"renamed.dat"));Assert.Equal("video",renamed.Kind);
+            File.Copy(Fixture(filename),Path.Combine(root,"renamed.txt"));
+            Assert.Equal("video",(await Request<ResourcePreview>(new("resource-preview",null,Location:new(root),Entry:"renamed.txt"))).Kind);
             if(filename=="movie.mpg")
             {
                 var wrapper=await Request<BrowserListing>(new("resource-list",null,Location:new(Path.Combine(root,filename))));Assert.Equal("media",wrapper.Tag);

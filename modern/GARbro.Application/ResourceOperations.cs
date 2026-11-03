@@ -343,14 +343,12 @@ public static partial class ResourceService
 
     public static AudioArtifact PrepareAudio(ResourceLocation location, string name, string output, IOptionsProvider options)
     {
-        using var session = new ResourceSession(location, options);
+        using var session = BrowserDecoderSession.Open(location, options);
         string scratch = WorkerTemporaryFiles.CreateDirectory(Path.GetTempPath());
         string temporary = null;
         try
         {
-            string source = Path.Combine(scratch, Path.GetFileName(name));
-            using (var input = session.OpenEntry(name))
-            using (var target = File.Create(source)) CopyBounded(input, target, 512L << 20);
+            string source = session.Physical ? session.PhysicalPath(name) : BrowserDecoderSession.Materialize(session,name,scratch);
             using var binary = new BinaryStream(File.OpenRead(source), name);
             using var audio = AudioFormat.Read(binary) ?? throw new UnknownFormatException();
             var f = audio.Format;

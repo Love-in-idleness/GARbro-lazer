@@ -6,9 +6,14 @@ namespace GARbro.Application;
 
 public static partial class ResourceService
 {
-    public static VideoArtifact PrepareVideo(ResourceLocation location, string name, string output, IOptionsProvider options)
+    public static VideoArtifact PrepareVideo(ResourceLocation location, string name, string output, IOptionsProvider options, bool preferDirectSource=false)
     {
-        using var session = new ResourceSession(location, options);
+        using var session = BrowserDecoderSession.Open(location, options);
+        if(preferDirectSource && session.Physical)
+        {
+            string path=session.PhysicalPath(name);
+            return new(path,new FileInfo(path).Length,MediaTools.Probe(path));
+        }
         string root = Path.GetDirectoryName(Path.GetFullPath(output)); Directory.CreateDirectory(root);
         string temporary = WorkerTemporaryFiles.Create(root);
         try
