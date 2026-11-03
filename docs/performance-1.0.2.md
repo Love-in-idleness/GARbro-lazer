@@ -1,5 +1,9 @@
 # Browsing and preview regression checks
 
+For the requested same-machine WPF / 1.0.1 / 1.0.2 comparison, see the
+[bilingual timing report](performance-comparison-1.0.2.md), with raw samples and
+separate first-access, warm-access and window-ready measurements.
+
 The native smoke test writes `performance.json` when `GARBRO_BENCHMARKS=1`.
 The Linux x64/ARM64 release jobs enforce the agreed directory, warm archive,
 image-cache and dispatcher budgets. Reports are retained with the job artifacts.

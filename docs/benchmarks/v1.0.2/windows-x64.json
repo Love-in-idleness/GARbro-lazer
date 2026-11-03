@@ -1,0 +1,989 @@
+{
+  "environment": {
+    "platform": "Windows-2025Server-10.0.26100-SP0",
+    "machine": "AMD64",
+    "cpu": "AMD EPYC 9V45 96-Core Processor",
+    "trials": 5,
+    "warmMeasurementsPerTrial": 7,
+    "v101Commit": "4fbd482832a210ad3cbccab4b2376d2ee5cccdc6",
+    "v102Commit": "4f12f736f57b02f90693a99c3b1b93867c525d14",
+    "fixtures": {
+      "standard.xfl": "85d92b6ead9013f35b8556d88112622251cb288c6597e2383c90a957a99ce8e2",
+      "colors-rgb.png": "78253200c249d4d84293b2a1e6fc803adedeba8645f38d6bc2f6734a2dfacec9"
+    },
+    "method": "Action to validated view plus common layout/17 ms/DwmFlush barrier. Process-cold, OS file caches retained. Alternate identical A/B inputs to prevent WPF same-path no-op. Image timings include native selection debounce. Startup is measured from driver entry to ready window; WPF initializes formats at startup, modern versions keep their normal deferred/prewarm policy."
+  },
+  "summary": {
+    "WPF": {
+      "archive": {
+        "firstMedianMs": 78.78500000000001,
+        "warmMedianMs": 77.9606,
+        "startupMedianMs": 749.7137,
+        "uiDelayP95MedianMs": 53.2378,
+        "uiDelayMaxMs": 95.9026
+      },
+      "directory": {
+        "firstMedianMs": 166.74550000000002,
+        "warmMedianMs": 111.36670000000001,
+        "startupMedianMs": 781.2643,
+        "uiDelayP95MedianMs": 115.5789,
+        "uiDelayMaxMs": 156.9478
+      },
+      "image": {
+        "firstMedianMs": 79.8326,
+        "warmMedianMs": 63.215500000000006,
+        "startupMedianMs": 789.3716000000001,
+        "uiDelayP95MedianMs": 37.826,
+        "uiDelayMaxMs": 63.15390000000001
+      }
+    },
+    "1.0.1": {
+      "archive": {
+        "firstMedianMs": 1066.9985,
+        "warmMedianMs": 958.1392,
+        "startupMedianMs": 1003.4763,
+        "uiDelayP95MedianMs": 16.1886,
+        "uiDelayMaxMs": 103.6764
+      },
+      "directory": {
+        "firstMedianMs": 1148.2687,
+        "warmMedianMs": 1010.5841,
+        "startupMedianMs": 1028.5775,
+        "uiDelayP95MedianMs": 16.3775,
+        "uiDelayMaxMs": 108.534
+      },
+      "image": {
+        "firstMedianMs": 991.6549,
+        "warmMedianMs": 913.9121,
+        "startupMedianMs": 1032.5162,
+        "uiDelayP95MedianMs": 11.232800000000001,
+        "uiDelayMaxMs": 80.2065
+      }
+    },
+    "1.0.2": {
+      "archive": {
+        "firstMedianMs": 738.9841,
+        "warmMedianMs": 62.6847,
+        "startupMedianMs": 1172.0516,
+        "uiDelayP95MedianMs": 27.1952,
+        "uiDelayMaxMs": 56.8916
+      },
+      "directory": {
+        "firstMedianMs": 173.3805,
+        "warmMedianMs": 78.6229,
+        "startupMedianMs": 1151.926,
+        "uiDelayP95MedianMs": 39.7975,
+        "uiDelayMaxMs": 76.854
+      },
+      "image": {
+        "firstMedianMs": 677.7614,
+        "warmMedianMs": 48.296,
+        "startupMedianMs": 1136.063,
+        "uiDelayP95MedianMs": 29.072499999999998,
+        "uiDelayMaxMs": 96.9425
+      }
+    }
+  },
+  "samples": [
+    {
+      "framework": "WPF",
+      "version": "1.5.45.1",
+      "scenario": "archive",
+      "startupMs": 793.5685000000001,
+      "firstMs": 78.78500000000001,
+      "warmMs": [
+        94.19080000000001,
+        77.67190000000001,
+        60.520300000000006,
+        62.473400000000005,
+        78.09400000000001,
+        78.7091,
+        62.7462
+      ],
+      "uiDelayP95Ms": 52.598400000000005,
+      "uiDelayMaxMs": 58.5878,
+      "label": "WPF",
+      "trial": 0
+    },
+    {
+      "framework": "WPF",
+      "version": "1.5.45.1",
+      "scenario": "directory",
+      "startupMs": 754.4972,
+      "firstMs": 168.1681,
+      "warmMs": [
+        110.512,
+        110.896,
+        109.851,
+        111.28370000000001,
+        95.16810000000001,
+        156.4473,
+        139.3514
+      ],
+      "uiDelayP95Ms": 115.5789,
+      "uiDelayMaxMs": 137.20180000000002,
+      "label": "WPF",
+      "trial": 0
+    },
+    {
+      "framework": "WPF",
+      "version": "1.5.45.1",
+      "scenario": "image",
+      "startupMs": 789.3716000000001,
+      "firstMs": 78.0695,
+      "warmMs": [
+        61.803900000000006,
+        63.287200000000006,
+        62.2989,
+        62.480700000000006,
+        64.3304,
+        79.256,
+        62.349700000000006
+      ],
+      "uiDelayP95Ms": 27.6937,
+      "uiDelayMaxMs": 58.47710000000001,
+      "label": "WPF",
+      "trial": 0
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.1+4fbd482832a210ad3cbccab4b2376d2ee5cccdc6",
+      "scenario": "archive",
+      "startupMs": 1170.8604,
+      "firstMs": 1182.5757,
+      "warmMs": [
+        1056.2739,
+        997.9697,
+        942.8784,
+        899.7176,
+        958.1392,
+        895.2025,
+        882.2761
+      ],
+      "uiDelayP95Ms": 16.7959,
+      "uiDelayMaxMs": 103.6764,
+      "label": "1.0.1",
+      "trial": 0
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.1+4fbd482832a210ad3cbccab4b2376d2ee5cccdc6",
+      "scenario": "directory",
+      "startupMs": 1007.9366,
+      "firstMs": 1145.3045,
+      "warmMs": [
+        1151.1482,
+        1057.3863,
+        992.9703,
+        1007.667,
+        977.8012,
+        1023.1462,
+        992.8326
+      ],
+      "uiDelayP95Ms": 16.3775,
+      "uiDelayMaxMs": 92.8072,
+      "label": "1.0.1",
+      "trial": 0
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.1+4fbd482832a210ad3cbccab4b2376d2ee5cccdc6",
+      "scenario": "image",
+      "startupMs": 1061.335,
+      "firstMs": 1011.7244,
+      "warmMs": [
+        991.344,
+        958.035,
+        925.7551,
+        910.003,
+        895.0447,
+        894.6183,
+        896.6299
+      ],
+      "uiDelayP95Ms": 11.232800000000001,
+      "uiDelayMaxMs": 77.6262,
+      "label": "1.0.1",
+      "trial": 0
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.2+4f12f736f57b02f90693a99c3b1b93867c525d14",
+      "scenario": "archive",
+      "startupMs": 1172.0516,
+      "firstMs": 738.8007,
+      "warmMs": [
+        48.0818,
+        79.0252,
+        62.6847,
+        47.0276,
+        78.3418,
+        47.8022,
+        62.6152
+      ],
+      "uiDelayP95Ms": 27.1952,
+      "uiDelayMaxMs": 49.9498,
+      "label": "1.0.2",
+      "trial": 0
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.2+4f12f736f57b02f90693a99c3b1b93867c525d14",
+      "scenario": "directory",
+      "startupMs": 1149.9447,
+      "firstMs": 174.4852,
+      "warmMs": [
+        94.7393,
+        79.808,
+        77.9734,
+        63.7683,
+        79.2886,
+        78.8857,
+        94.7397
+      ],
+      "uiDelayP95Ms": 39.7975,
+      "uiDelayMaxMs": 76.854,
+      "label": "1.0.2",
+      "trial": 0
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.2+4f12f736f57b02f90693a99c3b1b93867c525d14",
+      "scenario": "image",
+      "startupMs": 1136.063,
+      "firstMs": 677.7614,
+      "warmMs": [
+        46.6616,
+        48.6114,
+        62.5183,
+        48.0027,
+        47.8595,
+        63.5767,
+        63.2451
+      ],
+      "uiDelayP95Ms": 24.760800000000003,
+      "uiDelayMaxMs": 91.8026,
+      "label": "1.0.2",
+      "trial": 0
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.1+4fbd482832a210ad3cbccab4b2376d2ee5cccdc6",
+      "scenario": "archive",
+      "startupMs": 998.721,
+      "firstMs": 1087.3351,
+      "warmMs": [
+        1041.3577,
+        994.5524,
+        946.0937,
+        913.0148,
+        961.9243,
+        961.6605,
+        941.9684
+      ],
+      "uiDelayP95Ms": 16.1886,
+      "uiDelayMaxMs": 86.7575,
+      "label": "1.0.1",
+      "trial": 1
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.1+4fbd482832a210ad3cbccab4b2376d2ee5cccdc6",
+      "scenario": "directory",
+      "startupMs": 1039.411,
+      "firstMs": 1113.366,
+      "warmMs": [
+        1089.1395,
+        1010.8267,
+        976.6872,
+        1009.4153,
+        944.1877,
+        977.0842,
+        1008.2541
+      ],
+      "uiDelayP95Ms": 16.5134,
+      "uiDelayMaxMs": 82.4782,
+      "label": "1.0.1",
+      "trial": 1
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.1+4fbd482832a210ad3cbccab4b2376d2ee5cccdc6",
+      "scenario": "image",
+      "startupMs": 1027.1472,
+      "firstMs": 964.2479,
+      "warmMs": [
+        959.1605,
+        863.2152,
+        906.7528,
+        851.6829,
+        880.4478,
+        913.9099,
+        878.6012
+      ],
+      "uiDelayP95Ms": 11.308599999999998,
+      "uiDelayMaxMs": 77.5415,
+      "label": "1.0.1",
+      "trial": 1
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.2+4f12f736f57b02f90693a99c3b1b93867c525d14",
+      "scenario": "archive",
+      "startupMs": 1159.1713,
+      "firstMs": 738.9841,
+      "warmMs": [
+        63.5757,
+        47.9125,
+        77.4724,
+        62.8514,
+        47.1968,
+        44.9023,
+        79.582
+      ],
+      "uiDelayP95Ms": 27.572699999999998,
+      "uiDelayMaxMs": 56.8916,
+      "label": "1.0.2",
+      "trial": 1
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.2+4f12f736f57b02f90693a99c3b1b93867c525d14",
+      "scenario": "directory",
+      "startupMs": 1157.0768,
+      "firstMs": 170.4964,
+      "warmMs": [
+        61.9427,
+        63.4411,
+        80.0695,
+        78.6229,
+        63.1363,
+        78.0869,
+        78.6128
+      ],
+      "uiDelayP95Ms": 40.9865,
+      "uiDelayMaxMs": 68.7099,
+      "label": "1.0.2",
+      "trial": 1
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.2+4f12f736f57b02f90693a99c3b1b93867c525d14",
+      "scenario": "image",
+      "startupMs": 1152.6802,
+      "firstMs": 642.2112,
+      "warmMs": [
+        48.652,
+        45.9209,
+        62.9698,
+        61.8662,
+        48.296,
+        63.2065,
+        46.0967
+      ],
+      "uiDelayP95Ms": 30.4814,
+      "uiDelayMaxMs": 89.1636,
+      "label": "1.0.2",
+      "trial": 1
+    },
+    {
+      "framework": "WPF",
+      "version": "1.5.45.1",
+      "scenario": "archive",
+      "startupMs": 743.4537,
+      "firstMs": 127.48270000000001,
+      "warmMs": [
+        79.1757,
+        78.7208,
+        77.9606,
+        62.676700000000004,
+        62.6257,
+        62.73350000000001,
+        63.935
+      ],
+      "uiDelayP95Ms": 52.458400000000005,
+      "uiDelayMaxMs": 95.9026,
+      "label": "WPF",
+      "trial": 1
+    },
+    {
+      "framework": "WPF",
+      "version": "1.5.45.1",
+      "scenario": "directory",
+      "startupMs": 781.2643,
+      "firstMs": 164.477,
+      "warmMs": [
+        126.3138,
+        94.71170000000001,
+        93.8608,
+        93.99990000000001,
+        125.2701,
+        125.0493,
+        155.8454
+      ],
+      "uiDelayP95Ms": 114.6901,
+      "uiDelayMaxMs": 146.279,
+      "label": "WPF",
+      "trial": 1
+    },
+    {
+      "framework": "WPF",
+      "version": "1.5.45.1",
+      "scenario": "image",
+      "startupMs": 809.1855,
+      "firstMs": 79.8326,
+      "warmMs": [
+        78.9332,
+        62.3984,
+        78.18310000000001,
+        77.2733,
+        77.94680000000001,
+        46.8526,
+        63.215500000000006
+      ],
+      "uiDelayP95Ms": 38.3943,
+      "uiDelayMaxMs": 52.4799,
+      "label": "WPF",
+      "trial": 1
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.2+4f12f736f57b02f90693a99c3b1b93867c525d14",
+      "scenario": "archive",
+      "startupMs": 1164.2832,
+      "firstMs": 772.2962,
+      "warmMs": [
+        47.584,
+        47.4733,
+        49.5561,
+        79.0801,
+        63.807,
+        46.3358,
+        78.6866
+      ],
+      "uiDelayP95Ms": 24.9107,
+      "uiDelayMaxMs": 36.892,
+      "label": "1.0.2",
+      "trial": 2
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.2+4f12f736f57b02f90693a99c3b1b93867c525d14",
+      "scenario": "directory",
+      "startupMs": 1135.1099,
+      "firstMs": 173.3805,
+      "warmMs": [
+        63.2794,
+        63.3546,
+        64.2004,
+        79.2995,
+        64.3038,
+        64.9327,
+        94.1146
+      ],
+      "uiDelayP95Ms": 35.9588,
+      "uiDelayMaxMs": 61.3608,
+      "label": "1.0.2",
+      "trial": 2
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.2+4f12f736f57b02f90693a99c3b1b93867c525d14",
+      "scenario": "image",
+      "startupMs": 1095.0018,
+      "firstMs": 740.5092,
+      "warmMs": [
+        65.5922,
+        46.4554,
+        62.3027,
+        77.9145,
+        47.4752,
+        47.3687,
+        31.5577
+      ],
+      "uiDelayP95Ms": 31.511699999999998,
+      "uiDelayMaxMs": 44.8745,
+      "label": "1.0.2",
+      "trial": 2
+    },
+    {
+      "framework": "WPF",
+      "version": "1.5.45.1",
+      "scenario": "archive",
+      "startupMs": 736.8624,
+      "firstMs": 70.5599,
+      "warmMs": [
+        79.5113,
+        94.061,
+        78.0723,
+        77.8927,
+        61.8361,
+        78.5417,
+        77.4778
+      ],
+      "uiDelayP95Ms": 70.7718,
+      "uiDelayMaxMs": 84.00150000000001,
+      "label": "WPF",
+      "trial": 2
+    },
+    {
+      "framework": "WPF",
+      "version": "1.5.45.1",
+      "scenario": "directory",
+      "startupMs": 777.3832,
+      "firstMs": 154.2624,
+      "warmMs": [
+        125.34450000000001,
+        126.6312,
+        109.607,
+        109.744,
+        110.63250000000001,
+        157.21450000000002,
+        141.3613
+      ],
+      "uiDelayP95Ms": 134.8572,
+      "uiDelayMaxMs": 156.9478,
+      "label": "WPF",
+      "trial": 2
+    },
+    {
+      "framework": "WPF",
+      "version": "1.5.45.1",
+      "scenario": "image",
+      "startupMs": 724.4314,
+      "firstMs": 78.9274,
+      "warmMs": [
+        77.0569,
+        78.0116,
+        64.6964,
+        60.401500000000006,
+        76.1692,
+        62.919900000000005,
+        47.6974
+      ],
+      "uiDelayP95Ms": 30.560700000000004,
+      "uiDelayMaxMs": 45.0482,
+      "label": "WPF",
+      "trial": 2
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.1+4fbd482832a210ad3cbccab4b2376d2ee5cccdc6",
+      "scenario": "archive",
+      "startupMs": 985.9008,
+      "firstMs": 1023.6582,
+      "warmMs": [
+        1026.5263,
+        1041.9278,
+        946.4825,
+        915.3951,
+        947.1128,
+        913.0579,
+        931.3542
+      ],
+      "uiDelayP95Ms": 13.901700000000002,
+      "uiDelayMaxMs": 75.2043,
+      "label": "1.0.1",
+      "trial": 2
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.1+4fbd482832a210ad3cbccab4b2376d2ee5cccdc6",
+      "scenario": "directory",
+      "startupMs": 991.2008,
+      "firstMs": 1148.2687,
+      "warmMs": [
+        1057.854,
+        1090.8448,
+        962.0028,
+        1022.7575,
+        1024.4807,
+        1007.2457,
+        988.0035
+      ],
+      "uiDelayP95Ms": 16.1791,
+      "uiDelayMaxMs": 95.6622,
+      "label": "1.0.1",
+      "trial": 2
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.1+4fbd482832a210ad3cbccab4b2376d2ee5cccdc6",
+      "scenario": "image",
+      "startupMs": 1012.3959,
+      "firstMs": 985.0556,
+      "warmMs": [
+        978.2297,
+        910.2607,
+        913.9121,
+        874.842,
+        909.5322,
+        895.3455,
+        959.0633
+      ],
+      "uiDelayP95Ms": 11.2942,
+      "uiDelayMaxMs": 77.0944,
+      "label": "1.0.1",
+      "trial": 2
+    },
+    {
+      "framework": "WPF",
+      "version": "1.5.45.1",
+      "scenario": "archive",
+      "startupMs": 749.7137,
+      "firstMs": 64.9469,
+      "warmMs": [
+        62.77310000000001,
+        61.191100000000006,
+        78.5296,
+        79.16120000000001,
+        64.1005,
+        62.724500000000006,
+        62.6105
+      ],
+      "uiDelayP95Ms": 53.2378,
+      "uiDelayMaxMs": 68.99470000000001,
+      "label": "WPF",
+      "trial": 3
+    },
+    {
+      "framework": "WPF",
+      "version": "1.5.45.1",
+      "scenario": "directory",
+      "startupMs": 808.3529000000001,
+      "firstMs": 166.74550000000002,
+      "warmMs": [
+        110.92460000000001,
+        125.4299,
+        111.36670000000001,
+        110.1627,
+        109.3482,
+        171.9832,
+        142.7533
+      ],
+      "uiDelayP95Ms": 125.36420000000001,
+      "uiDelayMaxMs": 140.4421,
+      "label": "WPF",
+      "trial": 3
+    },
+    {
+      "framework": "WPF",
+      "version": "1.5.45.1",
+      "scenario": "image",
+      "startupMs": 745.1745000000001,
+      "firstMs": 100.8262,
+      "warmMs": [
+        62.3997,
+        62.6694,
+        79.2463,
+        78.4564,
+        62.4061,
+        62.6597,
+        80.0296
+      ],
+      "uiDelayP95Ms": 37.826,
+      "uiDelayMaxMs": 43.617900000000006,
+      "label": "WPF",
+      "trial": 3
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.1+4fbd482832a210ad3cbccab4b2376d2ee5cccdc6",
+      "scenario": "archive",
+      "startupMs": 1003.4763,
+      "firstMs": 1051.3246,
+      "warmMs": [
+        999.4059,
+        993.3536,
+        913.4827,
+        1008.3343,
+        1118.3734,
+        955.7393,
+        947.9776
+      ],
+      "uiDelayP95Ms": 13.633199999999999,
+      "uiDelayMaxMs": 74.8376,
+      "label": "1.0.1",
+      "trial": 3
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.1+4fbd482832a210ad3cbccab4b2376d2ee5cccdc6",
+      "scenario": "directory",
+      "startupMs": 1045.7735,
+      "firstMs": 1181.234,
+      "warmMs": [
+        1417.0795,
+        1107.9198,
+        1010.3063,
+        1026.5054,
+        1010.5841,
+        1070.196,
+        1009.126
+      ],
+      "uiDelayP95Ms": 14.039000000000001,
+      "uiDelayMaxMs": 108.534,
+      "label": "1.0.1",
+      "trial": 3
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.1+4fbd482832a210ad3cbccab4b2376d2ee5cccdc6",
+      "scenario": "image",
+      "startupMs": 1032.5162,
+      "firstMs": 991.6549,
+      "warmMs": [
+        1006.198,
+        939.5349,
+        926.3384,
+        899.3019,
+        926.0546,
+        883.3515,
+        897.4277
+      ],
+      "uiDelayP95Ms": 10.5518,
+      "uiDelayMaxMs": 79.0717,
+      "label": "1.0.1",
+      "trial": 3
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.2+4f12f736f57b02f90693a99c3b1b93867c525d14",
+      "scenario": "archive",
+      "startupMs": 1191.0179,
+      "firstMs": 738.9131,
+      "warmMs": [
+        61.1269,
+        63.034,
+        62.4935,
+        63.3579,
+        47.8482,
+        62.0926,
+        77.632
+      ],
+      "uiDelayP95Ms": 24.250799999999998,
+      "uiDelayMaxMs": 34.6685,
+      "label": "1.0.2",
+      "trial": 3
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.2+4f12f736f57b02f90693a99c3b1b93867c525d14",
+      "scenario": "directory",
+      "startupMs": 1151.926,
+      "firstMs": 156.5443,
+      "warmMs": [
+        94.7207,
+        77.8012,
+        95.1531,
+        63.8409,
+        79.5536,
+        63.6156,
+        94.415
+      ],
+      "uiDelayP95Ms": 35.9095,
+      "uiDelayMaxMs": 63.2765,
+      "label": "1.0.2",
+      "trial": 3
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.2+4f12f736f57b02f90693a99c3b1b93867c525d14",
+      "scenario": "image",
+      "startupMs": 1119.1811,
+      "firstMs": 687.6555,
+      "warmMs": [
+        64.6007,
+        46.9627,
+        48.6,
+        45.4723,
+        77.6591,
+        47.597,
+        47.6371
+      ],
+      "uiDelayP95Ms": 25.3429,
+      "uiDelayMaxMs": 96.9425,
+      "label": "1.0.2",
+      "trial": 3
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.1+4fbd482832a210ad3cbccab4b2376d2ee5cccdc6",
+      "scenario": "archive",
+      "startupMs": 1012.0097,
+      "firstMs": 1066.9985,
+      "warmMs": [
+        1075.3455,
+        1030.1184,
+        960.4834,
+        945.7445,
+        995.3456,
+        946.0951,
+        979.9538
+      ],
+      "uiDelayP95Ms": 18.3059,
+      "uiDelayMaxMs": 78.5286,
+      "label": "1.0.1",
+      "trial": 4
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.1+4fbd482832a210ad3cbccab4b2376d2ee5cccdc6",
+      "scenario": "directory",
+      "startupMs": 1028.5775,
+      "firstMs": 1183.5759,
+      "warmMs": [
+        1139.4898,
+        1070.4789,
+        1025.2561,
+        1021.5199,
+        992.3805,
+        973.2811,
+        1009.5383
+      ],
+      "uiDelayP95Ms": 18.4702,
+      "uiDelayMaxMs": 97.5387,
+      "label": "1.0.1",
+      "trial": 4
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.1+4fbd482832a210ad3cbccab4b2376d2ee5cccdc6",
+      "scenario": "image",
+      "startupMs": 1054.7999,
+      "firstMs": 1017.5272,
+      "warmMs": [
+        1022.1931,
+        1004.2955,
+        990.7533,
+        941.2815,
+        944.0706,
+        940.4036,
+        945.2101
+      ],
+      "uiDelayP95Ms": 10.8992,
+      "uiDelayMaxMs": 80.2065,
+      "label": "1.0.1",
+      "trial": 4
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.2+4f12f736f57b02f90693a99c3b1b93867c525d14",
+      "scenario": "archive",
+      "startupMs": 1221.7147,
+      "firstMs": 755.0331,
+      "warmMs": [
+        47.9444,
+        78.9044,
+        63.5296,
+        61.649,
+        62.8163,
+        63.1277,
+        78.7655
+      ],
+      "uiDelayP95Ms": 27.8658,
+      "uiDelayMaxMs": 39.1432,
+      "label": "1.0.2",
+      "trial": 4
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.2+4f12f736f57b02f90693a99c3b1b93867c525d14",
+      "scenario": "directory",
+      "startupMs": 1265.9959,
+      "firstMs": 189.1902,
+      "warmMs": [
+        64.5037,
+        62.6079,
+        79.8915,
+        79.8327,
+        79.8726,
+        94.0559,
+        110.9527
+      ],
+      "uiDelayP95Ms": 39.8197,
+      "uiDelayMaxMs": 72.9789,
+      "label": "1.0.2",
+      "trial": 4
+    },
+    {
+      "framework": "Avalonia",
+      "version": "1.0.2+4f12f736f57b02f90693a99c3b1b93867c525d14",
+      "scenario": "image",
+      "startupMs": 1195.5337,
+      "firstMs": 632.4182,
+      "warmMs": [
+        61.909,
+        78.1254,
+        48.1095,
+        46.0711,
+        47.3444,
+        62.814,
+        46.4042
+      ],
+      "uiDelayP95Ms": 29.072499999999998,
+      "uiDelayMaxMs": 84.3832,
+      "label": "1.0.2",
+      "trial": 4
+    },
+    {
+      "framework": "WPF",
+      "version": "1.5.45.1",
+      "scenario": "archive",
+      "startupMs": 825.9218000000001,
+      "firstMs": 95.8473,
+      "warmMs": [
+        78.8735,
+        78.2232,
+        78.4662,
+        93.9858,
+        78.4516,
+        79.4979,
+        63.230700000000006
+      ],
+      "uiDelayP95Ms": 63.54430000000001,
+      "uiDelayMaxMs": 76.4355,
+      "label": "WPF",
+      "trial": 4
+    },
+    {
+      "framework": "WPF",
+      "version": "1.5.45.1",
+      "scenario": "directory",
+      "startupMs": 809.7714000000001,
+      "firstMs": 170.0261,
+      "warmMs": [
+        110.3896,
+        110.8217,
+        109.3836,
+        125.13520000000001,
+        125.0044,
+        127.1119,
+        156.2502
+      ],
+      "uiDelayP95Ms": 106.8759,
+      "uiDelayMaxMs": 140.7225,
+      "label": "WPF",
+      "trial": 4
+    },
+    {
+      "framework": "WPF",
+      "version": "1.5.45.1",
+      "scenario": "image",
+      "startupMs": 819.7677,
+      "firstMs": 80.6827,
+      "warmMs": [
+        61.8757,
+        61.401700000000005,
+        77.91040000000001,
+        77.9345,
+        62.5962,
+        61.023300000000006,
+        77.6815
+      ],
+      "uiDelayP95Ms": 39.002900000000004,
+      "uiDelayMaxMs": 63.15390000000001,
+      "label": "WPF",
+      "trial": 4
+    }
+  ]
+}
