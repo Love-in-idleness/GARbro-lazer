@@ -44,6 +44,10 @@ jobs:
       - run: python -m unittest discover -s tools/tests
       - run: python tools/inventory-formats.py --check
       - run: python tools/check-ui-localization.py
+      - name: Prepare the disposable Windows test desktop
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: tools/prepare-windows-desktop.ps1
       - name: Install Linux system audio library
         if: runner.os == 'Linux'
         run: |
@@ -153,6 +157,7 @@ jobs:
           path: |
             tests/**/TestResults/*.trx
             artifacts/native-video/
+            artifacts/desktop-readiness/
             artifacts/native-desktop/video-window.png
             artifacts/native-desktop/video-rendering.json
             artifacts/native-desktop/performance.json
