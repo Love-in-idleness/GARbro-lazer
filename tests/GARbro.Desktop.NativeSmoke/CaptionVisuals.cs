@@ -28,14 +28,14 @@ static class CaptionVisuals
                 await Task.Delay(150);
                 foreach(string name in new[]{"PART_MinimizeButton","PART_MaximizeButton","PART_CloseButton"})
                 {
-                    var button=window.GetVisualDescendants().OfType<Button>().Single(b=>b.Name==name);
+                    var root=window.GetVisualAncestors().LastOrDefault()??window;
+                    var button=root.GetVisualDescendants().OfType<Button>().Single(b=>b.Name==name);
                     var center=button.TranslatePoint(new Point(button.Bounds.Width/2,button.Bounds.Height/2),window).Value;
                     WindowsFrame.VerifyVisibleAt(window,center);
                     var screen=window.PointToScreen(center);SetCursorPos(screen.X,screen.Y);
                     await Task.Delay(120);
-                    using var bitmap=new RenderTargetBitmap(new PixelSize((int)Math.Ceiling(window.Bounds.Width*window.RenderScaling),
-                        (int)Math.Ceiling(window.Bounds.Height*window.RenderScaling)),new Vector(96*window.RenderScaling,96*window.RenderScaling));
-                    bitmap.Render(window);
+                    using var bitmap=new RenderTargetBitmap(PixelSize.FromSize(root.Bounds.Size,window.RenderScaling),new Vector(96*window.RenderScaling,96*window.RenderScaling));
+                    bitmap.Render(root);
                     bitmap.Save(Path.Combine(directory,$"{theme}-{language}-{name}-hover.png"),new PngBitmapEncoderOptions());
                 }
             }
