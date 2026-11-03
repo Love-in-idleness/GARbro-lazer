@@ -20,4 +20,5 @@ packages
 
 TestResults/
 artifacts/
+.flatpak-nuget.config
 __pycache__/

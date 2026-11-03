@@ -11,6 +11,11 @@ on:
       - 'packaging/flatpak/**'
       - 'tools/*flatpak*'
       - 'tools/*flathub*'
+      - 'tools/patched_dependencies.py'
+      - 'tools/patches/avalonia-wayland/**'
+      - 'vendor/nuget/**'
+      - 'NuGet.Config'
+      - 'Directory.Packages.props'
       - '.github/workflows/flatpak.yml'
 permissions:
   contents: read

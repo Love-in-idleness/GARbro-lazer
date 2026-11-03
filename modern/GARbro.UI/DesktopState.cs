@@ -113,7 +113,8 @@ public sealed partial class DesktopText : INotifyPropertyChanged
         }
     }
     public string this[string key] => strings.TryGetValue(key, out var value) ? Language == "zh-CN" ? value.Zh : value.En : key;
-    public void Change(string language) { Language = language; PropertyChanged?.Invoke(this, new("Item[]")); }
+    // Avalonia's reflection indexer observes the CLR property name, Item.
+    public void Change(string language) { Language = language; PropertyChanged?.Invoke(this, new("Item")); }
     public string Format(string key, params object[] args) => string.Format(CultureInfo.CurrentCulture, this[key], args);
     public string Limitation(string message) => Language == "zh-CN" ? message switch
     {

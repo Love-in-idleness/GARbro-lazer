@@ -1,0 +1,28 @@
+name: Reproducible Wayland backend
+on:
+  pull_request:
+    paths:
+      - 'tools/patches/avalonia-wayland/**'
+      - 'tools/build-patched-wayland.py'
+      - 'vendor/nuget/**'
+      - '.github/workflows/wayland-patch.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reproduce:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.403'
+      - run: python3 tools/build-patched-wayland.py --verify
+      - run: dotnet build tests/GARbro.Desktop.NativeSmoke -c Release -r linux-x64 --disable-build-servers -m:1
+      - name: Verify the original assembly identity and public API
+        shell: bash
+        run: |
+          curl --fail --location https://api.nuget.org/v3-flatcontainer/avalonia.wayland/12.1.4/avalonia.wayland.12.1.4.nupkg --output artifacts/original-wayland.nupkg
+          unzip -q artifacts/original-wayland.nupkg -d artifacts/original-wayland
+          dotnet run --project tools/patches/avalonia-wayland/VerifyApi -c Release -- artifacts/original-wayland/lib/net10.0/Avalonia.Wayland.dll tools/patches/avalonia-wayland/bin/Release/net10.0/Avalonia.Wayland.dll tests/GARbro.Desktop.NativeSmoke/bin/Release/net10.0/linux-x64

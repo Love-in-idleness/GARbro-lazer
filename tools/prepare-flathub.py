@@ -7,11 +7,12 @@ import re
 import subprocess
 import urllib.request
 from pathlib import Path
+from patched_dependencies import local_packages
 
 ROOT=Path(__file__).resolve().parents[1]
 APP='io.github.love_in_idleness.GARbro-no-wpf'
 
-def package_records(assets):
+def package_records(assets, local=()):
     packages={name.lower():library for name,library in assets['libraries'].items() if library['type']=='package'}
     # SDK runtime/apphost packs are download-only dependencies and do not appear
     # under libraries. A clean offline sandbox still needs their archives.
@@ -21,7 +22,9 @@ def package_records(assets):
             if not match or match[1]!=match[2]:raise ValueError('Expected a pinned SDK pack version')
             identity=dependency['name'].lower()+'/'+match[1]
             packages.setdefault(identity,{'path':identity})
-    return packages.items()
+    # Local patched packages travel with the pinned source tree. They must not
+    # acquire invented nuget.org URLs in an offline-source manifest.
+    return ((name, library) for name, library in packages.items() if name not in local)
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
@@ -30,7 +33,7 @@ def main():
     parser.add_argument('--output',type=Path,default=Path('artifacts/flathub'))
     args=parser.parse_args()
     if not re.fullmatch('[0-9a-f]{40}',args.revision):parser.error('A full source commit is required')
-    args.output.mkdir(parents=True,exist_ok=True);sources={}
+    args.output.mkdir(parents=True,exist_ok=True);sources={};local=local_packages(ROOT)
     for rid,arch in [('linux-x64','x86_64'),('linux-arm64','aarch64')]:
         for project in ('GARbro.Desktop','GARbro.Worker','GARbro.Cli'):
             host=['dotnet']
@@ -42,7 +45,7 @@ def main():
             subprocess.run([*host,'restore',str(ROOT/f'modern/{project}/{project}.csproj'),'-r',rid,
                 '-p:SelfContained=true','-p:RuntimeFrameworkVersion=10.0.14','-p:NuGetAudit=false'],cwd=ROOT,check=True)
             assets=json.loads((ROOT/f'modern/{project}/obj/project.assets.json').read_text())
-            for identity,library in package_records(assets):
+            for identity,library in package_records(assets,local):
                 name,version=identity.lower().split('/');filename=f'{name}.{version}.nupkg'
                 # NuGet's contentHash excludes signature metadata; Flatpak checks
                 # the complete downloaded ZIP. Hash the archive itself instead.

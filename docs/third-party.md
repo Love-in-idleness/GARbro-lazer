@@ -41,6 +41,14 @@ must retain their runtime directories. No package relies on System.Drawing.Commo
 The core does not open playback devices; some legacy compressed WAV conversions
 still require an alternative portable decoder and report that limitation.
 
+GARbro carries a narrowly scoped Avalonia.Wayland `12.1.4-garbro.1` compatibility
+build for compositor-owned standard cursors. The other Avalonia packages remain
+official 12.1.4. The pinned upstream commit, complete patch, reproducible build
+recipe, MIT notice and checksums are documented in
+[the backend source notes](../tools/patches/avalonia-wayland/README.md).
+The local NuGet package includes the upstream license and patch; release and
+Flatpak builds retain that license in their dependency notices.
+
 The GPPG and GPLEX notices in `docs/licenses` are copied from the original
 maintainer's repositories:
 [GPPG](https://github.com/k-john-gough/gppg/blob/master/LICENSE.md)

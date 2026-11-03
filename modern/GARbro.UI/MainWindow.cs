@@ -234,7 +234,7 @@ public sealed partial class MainWindow : AppWindow
 
     Binding Bind(string key) => new("[" + key + "]") { Source = Text };
     TextBlock Label(string key) { var label = new TextBlock(); label.Bind(TextBlock.TextProperty, Bind(key)); return label; }
-    Button Button(string key) { var button = new Button { Command = commands[key], Name = key == "Open" ? "OpenArchive" : key == "Cancel" ? "CancelOperation" : null }; button.Bind(ContentControl.ContentProperty, Bind(key)); return button; }
+    Button Button(string key, bool textContent = true) { var button = new Button { Command = commands[key], Name = key == "Open" ? "OpenArchive" : key == "Cancel" ? "CancelOperation" : null }; if (textContent) button.Bind(ContentControl.ContentProperty, Bind(key)); return button; }
     internal Button ActionButton(string key, Func<Task> run) { var b = new Button(); b.Bind(ContentControl.ContentProperty, Bind(key)); b.Click += async (_, _) => await Guard(run); return b; }
     string compactPanel = "BrowsePanel";
     void ArrangeBrowser()
@@ -254,7 +254,7 @@ public sealed partial class MainWindow : AppWindow
     }
     Button IconButton(string key)
     {
-        var button = Button(key); button.Content = MaterialIcons.Create(key); button.Classes.Add("iconMenu");
+        var button = Button(key, false); button.Content = MaterialIcons.Create(key); button.Classes.Add("iconMenu");
         button.Bind(ToolTip.TipProperty, Bind(key)); button.Bind(Avalonia.Automation.AutomationProperties.NameProperty, Bind(key)); return button;
     }
     static Control GearIcon() => new PathIcon { Width = 20, Height = 20, Data = Geometry.Parse("M10,0 L14,0 L15,3 L18,4 L21,3 L24,7 L22,10 L22,13 L24,16 L21,20 L18,19 L15,21 L14,24 L10,24 L9,21 L6,19 L3,20 L0,16 L2,13 L2,10 L0,7 L3,3 L6,4 L9,3 Z M12,7 A5,5 0 1 0 12,17 A5,5 0 1 0 12,7") };

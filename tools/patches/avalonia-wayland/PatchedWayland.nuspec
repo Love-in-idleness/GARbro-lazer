@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>Avalonia.Wayland</id>
+    <version>12.1.4-garbro.1</version>
+    <authors>Avalonia Team; GARbro contributors (compatibility patch)</authors>
+    <license type="expression">MIT</license>
+    <icon>Icon.png</icon>
+    <readme>README.md</readme>
+    <description>Avalonia 12.1.4 Wayland backend with compositor-owned standard cursors. The pinned source, patch and rebuild instructions accompany this package.</description>
+    <repository type="git" url="https://github.com/AvaloniaUI/Avalonia" commit="2d79ba55fae1b1e71c69f93a668080c9029e6a31" />
+    <dependencies>
+      <group targetFramework="net10.0">
+        <dependency id="Avalonia" version="12.1.4" />
+        <dependency id="Avalonia.FreeDesktop" version="12.1.4" exclude="Build,Analyzers" />
+        <dependency id="NWayland" version="0.11.0" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="$output$Avalonia.Wayland.dll" target="lib/net10.0" />
+    <file src="$output$Avalonia.Wayland.xml" target="lib/net10.0" />
+    <file src="$output$Avalonia.Wayland.pdb" target="lib/net10.0" />
+    <file src="$upstream$/build/Assets/Icon.png" target="Icon.png" />
+    <file src="$upstream$/licence.md" target="licenses/MIT.md" />
+    <file src="system-cursors.patch" target="source-patches" />
+    <file src="README.md" target="README.md" />
+  </files>
+</package>

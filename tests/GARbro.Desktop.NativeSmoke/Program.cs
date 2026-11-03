@@ -17,15 +17,16 @@ using GARbro.Desktop;
 public static class Program
 {
     internal static string Fixture, Output;
-    internal static bool TestIme;
+    internal static bool TestIme,TestCursor;
     [STAThread]
     public static int Main(string[] args)
     {
         System.Diagnostics.Trace.Listeners.Add(new System.Diagnostics.TextWriterTraceListener(Console.Error));
         System.Diagnostics.Trace.AutoFlush = true;
-        if (args.Length is <2 or >3) throw new ArgumentException("Expected fixture path, output directory and optional --wayland-ime.");
+        if (args.Length is <2 or >3) throw new ArgumentException("Expected fixture path, output directory and optional --wayland-ime or --wayland-cursor.");
         Fixture=Path.GetFullPath(args[0]); Output=Path.GetFullPath(args[1]);
         TestIme=args.Length==3 && args[2]=="--wayland-ime";
+        TestCursor=args.Length==3 && args[2]=="--wayland-cursor";
         return DesktopPlatform.Configure(AppBuilder.Configure<NativeSmokeApp>())
             .LogToTrace().StartWithClassicDesktopLifetime(args);
     }
@@ -62,11 +63,18 @@ public sealed class NativeSmokeApp : Avalonia.Application
                 await window.LoadArchiveAsync(Program.Fixture);
                 if (window.ArchiveTag!="XFL" || window.VisibleEntryCount!=3)
                     throw new InvalidDataException("Native window did not list the fixture.");
+                if(Program.TestCursor)
+                {
+                    await CursorProbe.Check(window);
+                    code=0;
+                    return;
+                }
                 // Let the native window complete its layout/render pass.
                 await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);
                 await Task.Delay(150);
                 SharedFrame.Check(window);
                 WindowsFrame.Check(window.DesktopHost);
+                await CaptionVisuals.Check(window,store.Load());
                 Directory.CreateDirectory(Program.Output);
                 if(Program.TestIme)
                 {

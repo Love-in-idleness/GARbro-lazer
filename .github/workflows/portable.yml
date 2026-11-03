@@ -66,11 +66,15 @@ jobs:
         if: runner.os == 'Windows'
         timeout-minutes: 2
         run: python tools/smoke-desktop.py
+        env:
+          GARBRO_CAPTION_SNAPSHOTS: '1'
       - uses: actions/upload-artifact@v4
         if: always() && runner.os == 'Windows'
         with:
           name: windows-frame-${{ matrix.rid }}
-          path: artifacts/native-desktop/window-with-titlebar.png
+          path: |
+            artifacts/native-desktop/window-with-titlebar.png
+            artifacts/native-desktop/captions/
       - name: Build redistributable video helpers
         if: runner.os != 'Linux'
         run: python tools/build-media.py --rid ${{ matrix.rid }}
@@ -112,6 +116,15 @@ jobs:
         if: runner.os == 'Linux'
         timeout-minutes: 2
         run: python tools/smoke-wayland.py
+      - name: Install KDE cursor test dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y --no-install-recommends kwin-wayland kwin-common breeze-cursor-theme plasma-wayland-protocols python3-dbus gcc libwayland-dev fonts-noto-cjk
+          sudo setcap -r /usr/bin/kwin_wayland || true
+      - name: Verify native KDE system cursors and caption circles
+        if: runner.os == 'Linux'
+        timeout-minutes: 3
+        run: dbus-run-session -- /usr/bin/python3 tools/smoke-kde-cursors.py --output artifacts/kde-cursors
       - run: python tools/smoke-cli.py
       - name: Compare public release corpus
         timeout-minutes: 6
@@ -163,7 +176,9 @@ jobs:
             artifacts/native-desktop/performance.json
             artifacts/native-desktop/window.png
             artifacts/native-desktop/window-with-titlebar.png
+            artifacts/native-desktop/captions/
             artifacts/wayland-ime/
+            artifacts/kde-cursors/
             artifacts/public-corpus.json
             artifacts/created-archives/
             artifacts/media/build-*/FFmpeg-*/ffbuild/config.log

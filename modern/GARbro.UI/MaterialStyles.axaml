@@ -1,27 +1,50 @@
 <Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="GARbro.Desktop.MaterialStyles">
   <Styles.Resources>
   <ControlTheme x:Key="GarbroCaptionButton" TargetType="Button">
-    <Setter Property="Background" Value="{DynamicResource CaptionButtonBackground}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource CaptionButtonBorderBrush}" />
+    <Setter Property="Background" Value="{DynamicResource CaptionButtonHoverBackground}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource CaptionButtonPressedBackground}" />
     <Setter Property="Foreground" Value="{DynamicResource CaptionButtonForeground}"/>
     <Setter Property="Width" Value="46"/>
     <Setter Property="Height" Value="40"/>
+    <Setter Property="MinHeight" Value="40"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="CornerRadius" Value="16"/>
+    <Setter Property="FocusAdorner" Value="{x:Null}"/>
     <Setter Property="VerticalAlignment" Value="Stretch"/>
     <Setter Property="(WindowDecorationProperties.ElementRole)" Value="DecorationsElement"/>
     <Setter Property="Template">
       <ControlTemplate>
-        <ContentPresenter Name="PART_ContentPresenter"
-                          Background="Transparent"
-                          Content="{TemplateBinding Content}"/>
+        <Panel Background="Transparent">
+          <Border Name="PART_CaptionSurface" Width="32" Height="32"
+                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                  CornerRadius="16" ClipToBounds="True" Background="Transparent"
+                  BorderBrush="Transparent" BorderThickness="1.5">
+            <ContentPresenter Name="PART_ContentPresenter" Background="Transparent"
+                              HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                              Foreground="{TemplateBinding Foreground}"
+                              Content="{TemplateBinding Content}"/>
+          </Border>
+        </Panel>
       </ControlTemplate>
     </Setter>
 
-    <Style Selector="^:pointerover /template/ ContentPresenter">
+    <Style Selector="^:pointerover:not(:disabled) /template/ Border#PART_CaptionSurface">
       <Setter Property="Background" Value="{TemplateBinding Background}" />
     </Style>
 
-    <Style Selector="^:pressed /template/ ContentPresenter">
+    <Style Selector="^:pressed:not(:disabled) /template/ Border#PART_CaptionSurface">
       <Setter Property="Background" Value="{TemplateBinding BorderBrush}" />
+    </Style>
+    <Style Selector="^:focus-visible /template/ Border#PART_CaptionSurface">
+      <Setter Property="BorderBrush" Value="{TemplateBinding Foreground}" />
+    </Style>
+    <Style Selector="^:disabled"><Setter Property="Opacity" Value="0.38" /></Style>
+  </ControlTheme>
+  <ControlTheme x:Key="GarbroCloseCaptionButton" TargetType="Button" BasedOn="{StaticResource GarbroCaptionButton}">
+    <Setter Property="Background" Value="#e81123" />
+    <Setter Property="BorderBrush" Value="#f1707a" />
+    <Style Selector="^:pointerover:not(:disabled), ^:pressed:not(:disabled)">
+      <Setter Property="Foreground" Value="White" />
     </Style>
   </ControlTheme>
 
@@ -70,48 +93,32 @@
                           Orientation="Horizontal"
                           Spacing="2"
                           TextElement.FontSize="10">
-                <Button x:Name="PART_FullScreenButton"
+                <Button x:Name="PART_FullScreenButton" Classes="captionButton"
                         Theme="{StaticResource GarbroCaptionButton}"
                         WindowDecorationProperties.ElementRole="FullScreenButton">
-                  <Viewbox Width="11" Margin="2">
-                    <Path Name="FullScreenButtonPath"
-                          Stretch="UniformToFill"
-                          Fill="{DynamicResource CaptionButtonForeground}"
-                          Data="M2048 2048v-819h-205v469l-1493 -1493h469v-205h-819v819h205v-469l1493 1493h-469v205h819z" />
-                  </Viewbox>
+                  <Path Width="14" Height="14" StrokeThickness="1.25" StrokeLineCap="Round" StrokeJoin="Round"
+                        Stroke="{Binding $parent[Button].Foreground}"
+                        Data="M1,5 V1 H5 M9,1 H13 V5 M13,9 V13 H9 M5,13 H1 V9" />
                 </Button>
-                <Button x:Name="PART_MinimizeButton"
+                <Button x:Name="PART_MinimizeButton" Classes="captionButton"
                         Theme="{StaticResource GarbroCaptionButton}"
                         WindowDecorationProperties.ElementRole="MinimizeButton">
-                  <Viewbox Width="11" Margin="2">
-                    <Path Stretch="UniformToFill"
-                          Fill="{DynamicResource CaptionButtonForeground}"
-                          Data="M2048 1229v-205h-2048v205h2048z" />
-                  </Viewbox>
+                  <Path Width="14" Height="14" StrokeThickness="1.25" StrokeLineCap="Round"
+                        Stroke="{Binding $parent[Button].Foreground}" Data="M1,7 H13" />
                 </Button>
-                <Button x:Name="PART_MaximizeButton"
+                <Button x:Name="PART_MaximizeButton" Classes="captionButton"
                         Theme="{StaticResource GarbroCaptionButton}"
                         WindowDecorationProperties.ElementRole="MaximizeButton">
-                  <Viewbox Width="11" Margin="2">
-                    <Viewbox.RenderTransform>
-                      <RotateTransform Angle="-90" />
-                    </Viewbox.RenderTransform>
-                    <Path Name="RestoreButtonPath"
-                          Stretch="UniformToFill"
-                          Fill="{DynamicResource CaptionButtonForeground}"
-                          Data="M2048 2048v-2048h-2048v2048h2048zM1843 1843h-1638v-1638h1638v1638z"/>
-                  </Viewbox>
+                  <Path Name="PART_CaptionWindowGlyph" Width="14" Height="14"
+                        StrokeThickness="1.25" StrokeLineCap="Round" StrokeJoin="Round"
+                        Stroke="{Binding $parent[Button].Foreground}"
+                        Data="M4,2 H10 A2,2 0 0 1 12,4 V10 A2,2 0 0 1 10,12 H4 A2,2 0 0 1 2,10 V4 A2,2 0 0 1 4,2 Z" />
                 </Button>
-                <Button x:Name="PART_CloseButton"
-                        Background="#ffe81123"
-                        BorderBrush="#fff1707a"
-                        Theme="{StaticResource GarbroCaptionButton}"
+                <Button x:Name="PART_CloseButton" Classes="captionButton"
+                        Theme="{StaticResource GarbroCloseCaptionButton}"
                         WindowDecorationProperties.ElementRole="CloseButton">
-                  <Viewbox Width="11" Margin="2">
-                    <Path Stretch="UniformToFill"
-                          Fill="{DynamicResource CaptionButtonForeground}"
-                          Data="M1169 1024l879 -879l-145 -145l-879 879l-879 -879l-145 145l879 879l-879 879l145 145l879 -879l879 879l145 -145z" />
-                  </Viewbox>
+                  <Path Width="14" Height="14" StrokeThickness="1.25" StrokeLineCap="Round"
+                        Stroke="{Binding $parent[Button].Foreground}" Data="M2,2 L12,12 M12,2 L2,12" />
                 </Button>
               </StackPanel>
             </Panel>
@@ -124,31 +131,24 @@
                    WindowDecorationProperties.ElementRole="DecorationsElement">
               <TextBlock Text="{TemplateBinding Title}"
                          VerticalAlignment="Center"
-                         Margin="12,0,0,0"
+                         Margin="12,0,106,0" TextTrimming="CharacterEllipsis"
                          FontSize="12" />
               <StackPanel HorizontalAlignment="Right"
                           Orientation="Horizontal"
                           Spacing="2"
                           TextElement.FontSize="10">
-                <Button x:Name="PART_PopoverFullScreenButton"
+                <Button x:Name="PART_PopoverFullScreenButton" Classes="captionButton"
                         Theme="{StaticResource GarbroCaptionButton}"
                         WindowDecorationProperties.ElementRole="FullScreenButton">
-                  <Viewbox Width="11" Margin="2">
-                    <Path Stretch="UniformToFill"
-                          Fill="{DynamicResource CaptionButtonForeground}"
-                          Data="M205 1024h819v-819h-205v469l-674 -674l-145 145l674 674h-469v205zM1374 1229h469v-205h-819v819h205v-469l674 674l145 -145z" />
-                  </Viewbox>
+                  <Path Width="14" Height="14" StrokeThickness="1.25" StrokeLineCap="Round" StrokeJoin="Round"
+                        Stroke="{Binding $parent[Button].Foreground}"
+                        Data="M1,5 H5 V1 M9,1 V5 H13 M13,9 H9 V13 M5,13 V9 H1" />
                 </Button>
-                <Button x:Name="PART_PopoverCloseButton"
-                        Background="#ffe81123"
-                        BorderBrush="#fff1707a"
-                        Theme="{StaticResource GarbroCaptionButton}"
+                <Button x:Name="PART_PopoverCloseButton" Classes="captionButton"
+                        Theme="{StaticResource GarbroCloseCaptionButton}"
                         WindowDecorationProperties.ElementRole="CloseButton">
-                  <Viewbox Width="11" Margin="2">
-                    <Path Stretch="UniformToFill"
-                          Fill="{DynamicResource CaptionButtonForeground}"
-                          Data="M1169 1024l879 -879l-145 -145l-879 879l-879 -879l-145 145l879 879l-879 879l145 145l879 -879l879 879l145 -145z" />
-                  </Viewbox>
+                  <Path Width="14" Height="14" StrokeThickness="1.25" StrokeLineCap="Round"
+                        Stroke="{Binding $parent[Button].Foreground}" Data="M2,2 L12,12 M12,2 L2,12" />
                 </Button>
               </StackPanel>
             </Panel>
@@ -163,7 +163,9 @@
       <Style Selector="^ /template/ Button">
         <Setter Property="Width" Value="46" /><Setter Property="Height" Value="40" />
         <Setter Property="MinHeight" Value="40" /><Setter Property="Padding" Value="0" />
-        <Setter Property="CornerRadius" Value="0" />
+      </Style>
+      <Style Selector="^:maximized /template/ Path#PART_CaptionWindowGlyph">
+        <Setter Property="Data" Value="M5,3 V2.5 Q5,1 6.5,1 H11.5 Q13,1 13,2.5 V7.5 Q13,9 11.5,9 H11 M2.5,5 H7.5 Q9,5 9,6.5 V11.5 Q9,13 7.5,13 H2.5 Q1,13 1,11.5 V6.5 Q1,5 2.5,5 Z" />
       </Style>
       <Style Selector="^ /template/ Button#PART_FullScreenButton"><Setter Property="IsVisible" Value="False" /></Style>
       <Style Selector="^ /template/ Button#PART_MinimizeButton"><Setter Property="IsVisible" Value="True" /></Style>
@@ -178,7 +180,7 @@
     <Setter Property="Background" Value="{DynamicResource M3Surface}" />
     <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
   </Style>
-  <Style Selector="Button">
+  <Style Selector="Button:not(.captionButton)">
     <Setter Property="CornerRadius" Value="20" />
     <Setter Property="MinHeight" Value="{DynamicResource M3ControlHeight}" />
     <Setter Property="Padding" Value="14,8" />
@@ -191,7 +193,7 @@
     <Setter Property="CornerRadius" Value="24" /><Setter Property="Padding" Value="12" />
     <Setter Property="Background" Value="Transparent" />
   </Style>
-  <Style Selector="Button:pointerover, Button.iconMenu:pointerover">
+  <Style Selector="Button:not(.captionButton):pointerover, Button.iconMenu:pointerover">
     <Setter Property="Background" Value="{DynamicResource M3PrimaryContainer}" />
     <Setter Property="Foreground" Value="{DynamicResource M3OnPrimaryContainer}" />
   </Style>

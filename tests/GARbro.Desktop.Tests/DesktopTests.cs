@@ -14,6 +14,8 @@ using GARbro.Desktop;
 using Xunit;
 
 [assembly: AvaloniaTestApplication(typeof(DesktopTests))]
+// UI tests share one Avalonia application, theme and desktop/mobile services.
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
 public sealed class DesktopTests
 {
     [AvaloniaFact]

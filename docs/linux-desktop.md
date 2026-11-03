@@ -33,7 +33,7 @@ covered by that test.
 
 Linux needs the .NET 10 runtime, Wayland client/EGL/GLES, xkbcommon and fontconfig
 libraries. On Debian/Ubuntu, the native Wayland dependencies include
-`libwayland-client0 libwayland-egl1 libegl1 libgles2 libxkbcommon0 libfontconfig1`.
+`libwayland-client0 libwayland-cursor0 libwayland-egl1 libegl1 libgles2 libxkbcommon0 libfontconfig1`.
 X11 libraries are also needed for the fallback. A compositor-appropriate
 `xdg-desktop-portal` backend supplies file-picker integration.
 
@@ -54,3 +54,29 @@ Ubuntu 24.04 GNOME is supported; CI uses a newer headless Sway and separately te
 the DEB on Ubuntu 24.04 and Debian 13 for both CPU architectures.
 
 原生 Wayland 需要合成器提供 xdg_wm_base 第 3 版或更高版本。Ubuntu 24.04 自带的旧 Sway 等环境会回退到 X11；Ubuntu 24.04 的 GNOME 不受此限制。CI 使用较新的无头 Sway 测试输入法，并另行在 Ubuntu 24.04、Debian 13 上安装测试双架构 DEB。
+
+Standard cursors use the compositor's `wp_cursor_shape_v1` protocol when it is
+available. On KDE 6, KWin supplies the user's cursor theme, size and animation,
+including changes made while GARbro is running. GARbro installs no cursor theme
+and has no custom cursor factory. On older compositors, libwayland-cursor reads
+`XCURSOR_THEME` / `XCURSOR_SIZE` and its system default theme. Windows, X11 and
+macOS continue using their existing platform backends.
+
+在 KDE 6 原生 Wayland 下，光标外观、大小与动画由 KWin 按系统设置提供，运行中修改也会跟随。
+GARbro 不安装或绘制自己的光标。缺少新协议的旧合成器使用系统 libwayland-cursor，遵循
+`XCURSOR_THEME`、`XCURSOR_SIZE`；Windows、X11 和 macOS 保留原有系统后端。
+
+For a reproducible KDE regression, install `kwin-wayland kwin-common
+breeze-cursor-theme plasma-wayland-protocols python3-dbus libwayland-dev gcc
+xvfb`, then build the native smoke project and run:
+
+```sh
+dbus-run-session -- /usr/bin/python3 tools/smoke-kde-cursors.py --output artifacts/kde-cursors
+```
+
+This launches a private nested KWin session. Permission-check overrides apply
+only to that disposable compositor, for test input and screenshots. It never
+injects input into the user's desktop. The test checks protocol messages,
+actual caption hover/pressed screenshots, live system theme/size changes and
+popup/dialog pointer enters. A compositor without cursor-shape can be checked
+with `--expect-fallback --cursor-size 24` and `--cursor-size 48` in separate runs.

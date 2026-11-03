@@ -55,7 +55,8 @@ public static class MaterialTheme
         app.Resources["SystemControlBackgroundChromeMediumLowBrush"] = app.Resources["M3SurfaceContainer"];
         app.Resources["TitleBarBackgroundBrush"] = app.Resources["M3Surface"];
         app.Resources["CaptionButtonForeground"] = app.Resources["M3OnSurface"];
-        app.Resources["CaptionButtonBackground"] = app.Resources["M3PrimaryContainer"];
-        app.Resources["CaptionButtonBorderBrush"] = app.Resources["M3OutlineVariant"];
+        var caption = Color.FromUInt32(colors["OnSurface"]);
+        app.Resources["CaptionButtonHoverBackground"] = new SolidColorBrush(caption, 0.10);
+        app.Resources["CaptionButtonPressedBackground"] = new SolidColorBrush(caption, 0.16);
     }
 }
