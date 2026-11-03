@@ -12,7 +12,7 @@ public interface IWorkerClient
         IProgress<ExtractionProgress> progress = null, CancellationToken cancellation = default);
 }
 
-public sealed class ManagedWorkerClient(string assembly) : IWorkerClient, IDisposable
+public sealed class ManagedWorkerClient(string assembly) : IWorkerClient, IDisposable, IAsyncDisposable
 {
     readonly BrowsingWorker browser = new(assembly);
     public WorkerTiming LastTiming=>browser.LastTiming;
@@ -22,6 +22,7 @@ public sealed class ManagedWorkerClient(string assembly) : IWorkerClient, IDispo
             ? browser.ExecuteAsync<T>(request, limits, cancellation)
             : WorkerArchiveSession.RequestAsync<T>(assembly, request, limits, progress, cancellation);
     public void Dispose() => browser.Dispose();
+    public ValueTask DisposeAsync() => browser.DisposeAsync();
 }
 
 public interface IAudioOutput : IDisposable

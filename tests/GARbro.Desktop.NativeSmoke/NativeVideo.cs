@@ -50,9 +50,12 @@ static class NativeVideo
         var handle=window.TryGetPlatformHandle().Handle;
         if(OperatingSystem.IsWindows())
         {
-            var dc=GetDC(handle);
+            // Desktop DC includes the compositor's presented pixels, including
+            // hardware-accelerated/layered windows. The window DC can be stale.
+            var screen=window.PointToScreen(center);cx=screen.X;cy=screen.Y;
+            var dc=GetDC(IntPtr.Zero);
             try {for(int y=-16;y<16;y+=2)for(int x=-32;x<32;x+=2)hash=unchecked((hash^GetPixel(dc,cx+x,cy+y))*1099511628211);}
-            finally{ReleaseDC(handle,dc);}
+            finally{ReleaseDC(IntPtr.Zero,dc);}
         }
         else
         {

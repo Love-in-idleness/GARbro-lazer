@@ -12,7 +12,9 @@ public static class BrowserDecoderSession
     [ThreadStatic] static string applied, key, directory;
     [ThreadStatic] static ResourceSession current;
     [ThreadStatic] static ForwardOptions forward;
-    [ThreadStatic] static Dictionary<string,string> materialized;
+    [ThreadStatic] static Dictionary<string,(string Path,long Bytes)> materialized;
+    [ThreadStatic] static long materializedBytes;
+    const long FileCacheLimit=512L<<20;
     public static void Enable() => enabled = true;
     public static void Apply(DecoderContext context)
     {
@@ -34,18 +36,43 @@ public static class BrowserDecoderSession
     }
     public static string Materialize(ResourceSession session,string name,string scratch)
     {
-        if(enabled && materialized?.TryGetValue(name,out string found)==true && File.Exists(found))return found;
+        if(enabled && materialized?.TryGetValue(name,out var found)==true)
+        {
+            if(File.Exists(found.Path))return found.Path;
+            materialized.Remove(name);materializedBytes-=found.Bytes;
+        }
+        string transient=scratch;
         if(enabled) { directory ??= WorkerTemporaryFiles.CreateDirectory(Path.GetTempPath()); scratch=directory; }
         string path=Path.Combine(scratch,Guid.NewGuid().ToString("N")+Path.GetExtension(name));
-        using(var input=session.OpenEntry(name))using(var output=File.Create(path))ResourceService.CopyBounded(input,output,GARbro.Media.MediaInfo.IsVideoName(name)?2L<<30:512L<<20);
-        if(enabled)(materialized??=new(StringComparer.Ordinal))[name]=path;
-        return path;
+        try
+        {
+            long bytes;
+            using(var input=session.OpenEntry(name))using(var output=File.Create(path))bytes=ResourceService.CopyBounded(input,output,GARbro.Media.MediaInfo.IsVideoName(name)?2L<<30:512L<<20);
+            if(enabled)
+            {
+                // Oversized media live only for this operation. Reusable scratch files
+                // share a disk budget as well as the parent's separate memory LRU.
+                if(bytes>FileCacheLimit)
+                {
+                    string temporary=Path.Combine(transient,Path.GetFileName(path));File.Move(path,temporary);return temporary;
+                }
+                if(materializedBytes+bytes>FileCacheLimit || materialized?.Count>=32)
+                {
+                    foreach(var entry in materialized.Values)File.Delete(entry.Path);
+                    materialized.Clear();materializedBytes=0;
+                }
+                (materialized??=new(StringComparer.Ordinal))[name]=(path,bytes);materializedBytes+=bytes;
+            }
+            return path;
+        }
+        catch {File.Delete(path);throw;}
     }
+
     static void Release()
     {
         if(current!=null) {current.Retained=false;current.Dispose();current=null;}
         if(directory!=null) {try {Directory.Delete(directory,true);}catch(IOException){}directory=null;}
-        materialized=null;key=null;
+        materialized=null;materializedBytes=0;key=null;
     }
     public static void Reset() {Release();applied=null;}
     sealed class ForwardOptions : ILocatedOptionsProvider

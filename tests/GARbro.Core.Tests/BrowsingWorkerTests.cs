@@ -14,7 +14,7 @@ public sealed class BrowsingWorkerTests
     [Fact]
     public async Task ReusedWorkerPreservesNestedNavigationAndIndependentPreviewEncoding()
     {
-        using var client=new ManagedWorkerClient(WorkerMarker.AssemblyPath);var limits=new WorkerLimits();
+        await using var client=new ManagedWorkerClient(WorkerMarker.AssemblyPath);var limits=new WorkerLimits();
         var listing=await client.ExecuteAsync<BrowserListing>(new("resource-list",null,Location:new(Fixture("standard.xfl"))),limits);
         for(int n=0;n<5;n++)
         {
@@ -34,7 +34,7 @@ public sealed class BrowsingWorkerTests
         {
             string path=Path.Combine(root,"large.bin");
             using(var file=File.Create(path)){file.SetLength(3L<<30);file.Position=65536;file.Write(new byte[]{0x41,0x42,0x43,0x7f,0xff});}
-            using var client=new ManagedWorkerClient("worker-not-needed");
+            await using var client=new ManagedWorkerClient("worker-not-needed");
             var preview=await client.ExecuteAsync<ResourcePreview>(new("resource-preview",null,Location:new(root),Entry:"large.bin",PreviewMode:"hex",PreviewEncoding:"not-an-encoding",Offset:65536),new());
             Assert.Equal(65536,preview.Offset);Assert.True(preview.More);Assert.StartsWith("00010000  41 42 43 7F FF",preview.Text);Assert.Contains("| ABC..",preview.Text);
             File.WriteAllBytes(Path.Combine(root,"empty.png"),Array.Empty<byte>());
@@ -50,7 +50,7 @@ public sealed class BrowsingWorkerTests
         try
         {
             string path=Path.Combine(root,"source.xfl");File.Copy(Fixture("standard.xfl"),path);
-            using var client=new ManagedWorkerClient(WorkerMarker.AssemblyPath);
+            await using var client=new ManagedWorkerClient(WorkerMarker.AssemblyPath);
             var first=await client.ExecuteAsync<BrowserListing>(new("resource-list",null,Location:new(path)),new());
             File.SetLastWriteTimeUtc(path,DateTime.UtcNow.AddMinutes(1));
             await Assert.ThrowsAsync<WorkerOperationException>(()=>client.ExecuteAsync<ResourcePreview>(new("resource-preview",null,Location:first.Location,Entry:"hello.txt"),new()));
@@ -62,7 +62,7 @@ public sealed class BrowsingWorkerTests
     [Fact]
     public async Task CancellationAndTimeoutRecycleTheSessionAndTheNextRequestSucceeds()
     {
-        using var client=new ManagedWorkerClient(WorkerMarker.AssemblyPath);
+        await using var client=new ManagedWorkerClient(WorkerMarker.AssemblyPath);
         using var cancel=new CancellationTokenSource();cancel.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(()=>client.ExecuteAsync<BrowserListing>(new("resource-list",null,Location:new(Fixture("standard.xfl"))),new(),cancellation:cancel.Token));
         await Assert.ThrowsAsync<WorkerLimitException>(()=>client.ExecuteAsync<BrowserListing>(new("resource-list",null,Location:new(Fixture("standard.xfl"))),new(.001)));
@@ -71,13 +71,13 @@ public sealed class BrowsingWorkerTests
     }    [Fact]
     public async Task CrashesAndIdleExpiryAreRecoveredWithoutRetainingTheOldProcess()
     {
-        using var browser=new BrowsingWorker(WorkerMarker.AssemblyPath,TimeSpan.FromMilliseconds(150));
+        await using var browser=new BrowsingWorker(WorkerMarker.AssemblyPath,TimeSpan.FromMilliseconds(150));
         var request=new WorkerRequest("resource-list",null,Location:new(Fixture("standard.xfl")));
         var first=await browser.ExecuteAsync<BrowserListing>(request,new());int pid=browser.ProcessId.Value;
         using(var process=System.Diagnostics.Process.GetProcessById(pid)){process.Kill(true);await process.WaitForExitAsync();}
         var recovered=await browser.ExecuteAsync<BrowserListing>(request,new());Assert.Equal(first.Entries,recovered.Entries);
         Assert.NotEqual(pid,browser.ProcessId);
-        await Task.Delay(600);Assert.Null(browser.ProcessId);
+        for(int i=0;i<150 && browser.ProcessId!=null;i++)await Task.Delay(20);Assert.Null(browser.ProcessId);
         Assert.Equal("XFL",(await browser.ExecuteAsync<BrowserListing>(request,new())).Tag);
     }
     [Fact]
@@ -87,11 +87,40 @@ public sealed class BrowsingWorkerTests
         try
         {
             string path=Path.Combine(root,"source.xfl");File.Copy(Fixture("standard.xfl"),path);
-            using var client=new ManagedWorkerClient(WorkerMarker.AssemblyPath);
+            await using var client=new ManagedWorkerClient(WorkerMarker.AssemblyPath);
             await client.ExecuteAsync<BrowserListing>(new("resource-list",null,Location:new(path)),new());
             await client.ExecuteAsync<BrowserListing>(new("resource-list",null,Location:new(root)),new());
             using var exclusive=new FileStream(path,FileMode.Open,FileAccess.ReadWrite,FileShare.None);
             Assert.True(exclusive.Length>0);
+        }
+        finally{Directory.Delete(root,true);}
+    }
+    [Fact]
+    public async Task MaterializedEntriesRemainReadableAfterCacheEviction()
+    {
+        string root=Path.Combine(Path.GetTempPath(),"garbro-cache-"+Guid.NewGuid());Directory.CreateDirectory(root);
+        try
+        {
+            string path=Path.Combine(root,"many.xfl");
+            var payloads=Enumerable.Range(0,40).Select(i=>System.Text.Encoding.ASCII.GetBytes($"Resource {i:D2}")).ToArray();
+            using(var writer=new BinaryWriter(File.Create(path)))
+            {
+                writer.Write(0x1424cu);writer.Write(40*40);writer.Write(40);uint offset=0;
+                for(int i=0;i<40;i++)
+                {
+                    byte[] name=new byte[32];System.Text.Encoding.ASCII.GetBytes($"entry-{i:D2}.chunk").CopyTo(name,0);
+                    writer.Write(name);writer.Write(offset);writer.Write(payloads[i].Length);offset+=(uint)payloads[i].Length;
+                }
+                foreach(var data in payloads)writer.Write(data);
+            }
+            await using var client=new ManagedWorkerClient(WorkerMarker.AssemblyPath);
+            var location=new ResourceLocation(path);
+            for(int i=0;i<41;i++)
+            {
+                int index=i%40;
+                var preview=await client.ExecuteAsync<ResourcePreview>(new("resource-preview",null,Location:location,Entry:$"entry-{index:D2}.chunk",ForcedType:"script"),new());
+                Assert.Equal($"Resource {index:D2}",preview.Text);
+            }
         }
         finally{Directory.Delete(root,true);}
     }

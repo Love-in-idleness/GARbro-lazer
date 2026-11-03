@@ -10,9 +10,11 @@ using System.Threading.Tasks;
 namespace GARbro.Application;
 
 /// <summary>A supervised, single-flight browsing process. Heavy jobs remain isolated one-shot requests.</summary>
-public sealed class BrowsingWorker : IDisposable
+public sealed class BrowsingWorker : IDisposable, IAsyncDisposable
 {
     readonly string assembly;
+    readonly object disposeGate=new();
+    Task cleanup=Task.CompletedTask;
     readonly SemaphoreSlim gate=new(1,1);
     readonly CancellationTokenSource lifetime=new();
     readonly Timer idle;
@@ -40,7 +42,19 @@ public sealed class BrowsingWorker : IDisposable
     async Task Expire(bool force=false)
     {
         await gate.WaitAsync().ConfigureAwait(false);
-        try { if(force || Stopwatch.GetTimestamp()>=Interlocked.Read(ref expiresAt))await Recycle().ConfigureAwait(false); }finally {gate.Release();}
+        try
+        {
+            long deadline=Interlocked.Read(ref expiresAt),now=Stopwatch.GetTimestamp();
+            if(force || now>=deadline)await Recycle().ConfigureAwait(false);
+            else if(deadline!=long.MaxValue && !disposed)
+                ScheduleIdle(TimeSpan.FromMilliseconds(Math.Max(1,Math.Ceiling((deadline-now)*1000d/Stopwatch.Frequency))));
+        }
+        finally {gate.Release();}
+    }
+    void ScheduleIdle(TimeSpan delay)
+    {
+        try {idle.Change(delay,Timeout.InfiniteTimeSpan);}
+        catch(ObjectDisposedException)when(disposed){}
     }
     public Task<T> ExecuteAsync<T>(WorkerRequest request,WorkerLimits limits,CancellationToken cancellation=default) =>
         Task.Run(()=>ExecuteCore<T>(request,limits,cancellation),CancellationToken.None);
@@ -107,7 +121,7 @@ public sealed class BrowsingWorker : IDisposable
         }
         catch(WorkerOperationException) {throw;}
         catch { await Recycle().ConfigureAwait(false);throw; }
-        finally {if(!disposed){Interlocked.Exchange(ref expiresAt,Stopwatch.GetTimestamp()+(long)(idleTimeout.TotalSeconds*Stopwatch.Frequency));idle.Change(idleTimeout,Timeout.InfiniteTimeSpan);}gate.Release();}
+        finally {if(!disposed){Interlocked.Exchange(ref expiresAt,Stopwatch.GetTimestamp()+(long)(idleTimeout.TotalSeconds*Stopwatch.Frequency));ScheduleIdle(idleTimeout);}gate.Release();}
     }
     void Start(WorkerLimits limits)
     {
@@ -164,8 +178,16 @@ public sealed class BrowsingWorker : IDisposable
         catch(InvalidOperationException){}
         finally {owned.Dispose();monitor?.Dispose();monitor=null;WorkerTemporaryFiles.Cleanup(registry,scope);stdout=stderr=watchdog=null;}
     }
+    public async ValueTask DisposeAsync()
+    {
+        Dispose();Task pending;lock(disposeGate)pending=cleanup;await pending.ConfigureAwait(false);
+    }
     public void Dispose()
     {
-        if(disposed)return;disposed=true;lifetime.Cancel();idle.Dispose();_ = Task.Run(async()=>{await Expire(true);AppDomain.CurrentDomain.ProcessExit-=OnExit;});
+        lock(disposeGate)
+        {
+            if(disposed)return;disposed=true;lifetime.Cancel();idle.Dispose();
+            cleanup=Task.Run(async()=>{try{await Expire(true).ConfigureAwait(false);}finally{AppDomain.CurrentDomain.ProcessExit-=OnExit;}});
+        }
     }
 }
