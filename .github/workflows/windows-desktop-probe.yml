@@ -1,5 +1,8 @@
 name: Windows desktop readiness
 on:
+  push:
+    branches: [migration/net10]
+    paths: ['tools/prepare-windows-desktop.ps1', '.github/workflows/windows-desktop-probe.yml']
   workflow_dispatch:
 permissions:
   contents: read
