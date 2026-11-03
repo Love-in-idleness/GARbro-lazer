@@ -18,7 +18,6 @@ static class WpfBench
     [STAThread] static int Main(string[] args)
     {
         string root=Path.GetFullPath(args[1]),scenario=args[2],output=Path.GetFullPath(args[3]);
-        Application.ResourceAssembly=typeof(GARbro.GUI.App).Assembly;
         var app=new GARbro.GUI.App();app.InitializeComponent();app.StartupUri=null;app.ShutdownMode=ShutdownMode.OnExplicitShutdown;
         app.Startup+=delegate
         {

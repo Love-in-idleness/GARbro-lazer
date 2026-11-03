@@ -7,6 +7,7 @@
     <Reference Include="GameRes"><HintPath>$(GarbroLegacyDirectory)\GameRes.dll</HintPath><Private>False</Private></Reference>
     <Reference Include="Newtonsoft.Json"><HintPath>$(GarbroLegacyDirectory)\Newtonsoft.Json.dll</HintPath><Private>False</Private></Reference>
     <Compile Include="WpfBench.cs" />
+    <EmbeddedResource Include="$(GarbroLegacyDirectory)\benchmark-ui.g.resources"><LogicalName>GARbro.WpfBenchmark.g.resources</LogicalName></EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

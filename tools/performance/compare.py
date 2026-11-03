@@ -23,6 +23,7 @@ for name,source in [('1.0.1',a.v101.resolve()),('1.0.2',a.v102.resolve())]:
  run(['dotnet','build',destination/'ModernBench.csproj','-c','Release','--disable-build-servers','-m:1',f'-p:GarbroSourceDirectory={source}'])
  executables[name]=destination/'bin/Release/net10.0/ModernBench.exe'
 legacy=a.v102.resolve()/'bin/Release'
+run(['powershell','-NoProfile','-File',ROOT/'tools/performance/export-wpf-resources.ps1','-Directory',legacy])
 run(['msbuild',ROOT/'tools/performance/WpfBench.csproj','/p:Configuration=Release','/p:GarbroLegacyDirectory='+str(legacy)])
 config=legacy/'GARbro.GUI.exe.config'
 if config.exists():shutil.copy2(config,legacy/'GARbro.WpfBenchmark.exe.config')
