@@ -19,12 +19,38 @@ Add-Type -AssemblyName System.Drawing
 Add-Type @'
 using System;
 using System.Runtime.InteropServices;
+using System.Text;
 public static class GarbroDesktopProbe {
     [StructLayout(LayoutKind.Sequential)] public struct Point { public int X, Y; }
     [DllImport("user32.dll")] public static extern IntPtr WindowFromPoint(Point point);
     [DllImport("user32.dll")] public static extern IntPtr GetAncestor(IntPtr window, uint flags);
+    [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr window, out uint process);
+    [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowText(IntPtr window, StringBuilder text, int size);
+    [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetClassName(IntPtr window, StringBuilder text, int size);
+    [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
+    [DllImport("user32.dll")] public static extern IntPtr GetThreadDesktop(uint thread);
+    [DllImport("user32.dll")] public static extern IntPtr GetProcessWindowStation();
+    [DllImport("user32.dll")] public static extern IntPtr OpenInputDesktop(uint flags, bool inherit, uint access);
+    [DllImport("user32.dll")] public static extern bool CloseDesktop(IntPtr desktop);
+    [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern bool GetUserObjectInformation(IntPtr handle, int index, StringBuilder value, uint size, out uint needed);
+    public static string ObjectName(IntPtr handle) {
+        var text=new StringBuilder(256);uint needed;
+        return GetUserObjectInformation(handle,2,text,512,out needed)?text.ToString():"unavailable";
+    }
+    public static string Describe(IntPtr window) {
+        uint pid;GetWindowThreadProcessId(window,out pid);
+        var title=new StringBuilder(256);var type=new StringBuilder(256);
+        GetWindowText(window,title,256);GetClassName(window,type,256);
+        return "HWND="+window+" PID="+pid+" class="+type+" title="+title;
+    }
 }
 '@
+Write-Host "Test process session: $([System.Diagnostics.Process]::GetCurrentProcess().SessionId)"
+Write-Host "Window station: $([GarbroDesktopProbe]::ObjectName([GarbroDesktopProbe]::GetProcessWindowStation()))"
+Write-Host "Thread desktop: $([GarbroDesktopProbe]::ObjectName([GarbroDesktopProbe]::GetThreadDesktop([GarbroDesktopProbe]::GetCurrentThreadId())))"
+$inputDesktop = [GarbroDesktopProbe]::OpenInputDesktop(0, $false, 1)
+Write-Host "Input desktop: $([GarbroDesktopProbe]::ObjectName($inputDesktop))"
+if ($inputDesktop -ne [IntPtr]::Zero) { [GarbroDesktopProbe]::CloseDesktop($inputDesktop) | Out-Null }
 $window = New-Object System.Windows.Forms.Form
 $window.Text = 'GARbro CI desktop readiness'
 $window.Size = New-Object System.Drawing.Size(400, 240)
@@ -42,6 +68,8 @@ try {
     $point = New-Object GarbroDesktopProbe+Point
     $point.X = $screen.X; $point.Y = $screen.Y
     $visible = [GarbroDesktopProbe]::GetAncestor([GarbroDesktopProbe]::WindowFromPoint($point), 2)
+    Write-Host "Test window: $([GarbroDesktopProbe]::Describe($window.Handle)); sample=($($screen.X),$($screen.Y))"
+    Write-Host "Visible window: $([GarbroDesktopProbe]::Describe($visible))"
     New-Item -ItemType Directory -Force artifacts/desktop-readiness | Out-Null
     & "$PSScriptRoot/capture-window.ps1" -X $window.Left -Y $window.Top -Width $window.Width -Height $window.Height -Output artifacts/desktop-readiness/window.png
     if ($visible -ne $window.Handle) {
