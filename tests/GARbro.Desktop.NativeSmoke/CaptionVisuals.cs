@@ -21,7 +21,7 @@ static class CaptionVisuals
         var directory=Path.Combine(Program.Output,"captions");Directory.CreateDirectory(directory);
         try
         {
-            foreach(var (theme,language) in new[]{("dark","zh-CN"),("light","en")})
+            foreach(var (theme,language) in new[]{("dark","zh-CN"),("light","en-US")})
             {
                 Appearance(page,theme,language);
                 window.WindowState=WindowState.Normal;
@@ -40,13 +40,14 @@ static class CaptionVisuals
                 }
             }
         }
-        finally {MaterialTheme.Apply(original);UiPlatform.CurrentText.Change(original.Language);}
+        finally {Appearance(page,original.Theme,original.Language,original.DynamicColors);}
         Console.WriteLine("Shared caption hover screenshots saved on the native Windows backend.");
     }
-    internal static void Appearance(MainWindow page,string theme,string language)
+    internal static void Appearance(MainWindow page,string theme,string language,bool dynamicColors=false)
     {
         var settings=(AppSettings)typeof(MainWindow).GetField("Settings",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(page);
-        settings.Theme=theme;settings.Language=language;settings.DynamicColors=false;
+        settings.Theme=theme;settings.Language=language;settings.DynamicColors=dynamicColors;
+        settings.Validate();
         typeof(MainWindow).GetMethod("ApplySettings",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(page,new object[]{false});
     }
     [DllImport("user32.dll")]static extern bool SetCursorPos(int x,int y);

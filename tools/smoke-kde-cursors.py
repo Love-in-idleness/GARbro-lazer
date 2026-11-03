@@ -59,6 +59,9 @@ def main():
     parser.add_argument('--expect-fallback',action='store_true',help='Require protocol absence, e.g. on KWin 5.27')
     parser.add_argument('--cursor-size',default='8',help='Client fallback size; ignored by compositor-owned shapes')
     args=parser.parse_args();output=args.output.resolve();output.mkdir(parents=True,exist_ok=True)
+    bus=dbus.SessionBus()
+    if bus.name_has_owner('org.kde.KWin'):
+        raise RuntimeError('An existing KWin session is on this bus. Run inside a private dbus-run-session.')
     compositor=pointer=app=xserver=None
     with tempfile.TemporaryDirectory(prefix='garbro-kwin-')as temporary:
         run=Path(temporary);runtime=run/'runtime';runtime.mkdir(mode=0o700);config=run/'config';config.mkdir()
@@ -91,7 +94,10 @@ def main():
                     '--no-global-shortcuts','--no-kactivities'],env=env,stdout=kwinlog,stderr=subprocess.STDOUT)
                 wait(lambda:list(runtime.glob('wayland-*.lock')),compositor,'KWin did not start.')
                 env['WAYLAND_DISPLAY']=next(runtime.glob('wayland-*.lock')).name.removesuffix('.lock')
-                bus=dbus.SessionBus();wait(lambda:bus.name_has_owner('org.kde.KWin'),compositor,'KWin DBus missing.')
+                wait(lambda:bus.name_has_owner('org.kde.KWin'),compositor,'KWin DBus missing.')
+                owner=bus.call_blocking('org.freedesktop.DBus','/org/freedesktop/DBus','org.freedesktop.DBus',
+                    'GetConnectionUnixProcessID','s',('org.kde.KWin',))
+                if int(owner)!=compositor.pid:raise RuntimeError('The test does not own this KWin session.')
                 pointer=subprocess.Popen([str(run/'pointer')],env=env,text=True,stdin=subprocess.PIPE,stdout=subprocess.PIPE)
                 if pointer.stdout.readline().strip()!='ready':raise RuntimeError('KWin test pointer unavailable.')
                 def move(point):
@@ -143,7 +149,7 @@ def main():
                             time.sleep(.02)
                         raw.seek(0);data=raw.read(size)
                     png(output/(name+'.png'),width,height,stride,data);return data,(width,height,stride)
-                for appearance,language in [('dark','zh-CN'),('light','en')]:
+                for appearance,language in [('dark','zh-CN'),('light','en-US')]:
                     command('theme',theme=appearance,language=language);move(targets['blank']);capture(appearance+'-normal')
                     for name,point in targets['captions'].items():
                         move(point);capture(appearance+'-'+name+'-hover');button(1);capture(appearance+'-'+name+'-pressed');move(targets['blank']);button(0)
