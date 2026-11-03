@@ -49,6 +49,28 @@ public sealed class DesktopTests
         }
         finally {window.Close();}
     }
+    [AvaloniaFact]
+    public async Task OriginalSizeReloadsTheImageAfterAViewportPreview()
+    {
+        string root=Path.Combine(Path.GetTempPath(),"garbro-image-size-"+Guid.NewGuid());Directory.CreateDirectory(root);
+        string source=Path.Combine(root,"large.png");
+        using(var output=File.Create(source))
+            GameRes.ImageFormat.Png.Write(output,GameRes.ImageData.Create(new GameRes.ImageMetaData {Width=2000,Height=800,BPP=32},GARbro.Imaging.PixelFormats.Bgra32,null,new byte[2000*800*4]));
+        var window=new MainWindow(new SettingsStore(Path.Combine(root,"settings.json")));window.Show();
+        try
+        {
+            await window.LoadArchiveAsync(source);
+            var image=window.GetLogicalDescendants().OfType<Image>().Single(i=>i.Name=="PreviewImage");
+            for(int i=0;i<200&&image.Source==null;i++)await Task.Delay(25,TestContext.Current.CancellationToken);
+            var fitted=Assert.IsType<Avalonia.Media.Imaging.Bitmap>(image.Source);Assert.True(fitted.PixelSize.Width<2000);
+            var view=window.GetVisualDescendants().OfType<Button>().Single(b=>b.Name=="MenuView");
+            var fit=view.ContextMenu.Items.OfType<MenuItem>().Single(m=>m.Header as string==UiPlatform.CurrentText["FitImage"]);
+            fit.Command.Execute(null);
+            for(int i=0;i<200&&(image.Source as Avalonia.Media.Imaging.Bitmap)?.PixelSize.Width!=2000;i++)await Task.Delay(25,TestContext.Current.CancellationToken);
+            Assert.Equal(2000,((Avalonia.Media.Imaging.Bitmap)image.Source).PixelSize.Width);
+        }
+        finally {window.Close();Directory.Delete(root,true);}
+    }
     public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>().WithInterFont().UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
     [AvaloniaFact]
     public async Task InvalidOptionsRestoreTheOpenButton()

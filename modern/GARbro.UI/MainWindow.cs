@@ -453,7 +453,7 @@ public sealed partial class MainWindow : AppWindow
             string forced=typeOverrides.GetValueOrDefault(entry.Name);
             string sourcePath=listing.Physical?Path.Combine(location.RootPath,entry.Name):location.RootPath;
             var fingerprint=await Task.Run(()=>ArchiveFingerprint.Read(sourcePath),cancel.Token);
-            string cacheKey=WorkerProtocol.Serialize(new {location,entry.Name,fingerprint,code,forced,offset,Settings.Context,Settings.FitImage});
+            string cacheKey=WorkerProtocol.Serialize(new {location,entry.Name,fingerprint,code,forced,offset,Settings.Context,Settings.FitImage,OptionsJson=options.Text,Scheme=scheme.Text,Profile=sessionOptions.GetValueOrDefault(location.RootPath)});
             ResourcePreview result;
             if(!previewCache.TryGet(cacheKey,out result))
             {

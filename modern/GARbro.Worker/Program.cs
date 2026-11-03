@@ -41,7 +41,7 @@ namespace GARbro.Worker
                             {
                                 if (line.Length > 32 << 20) throw new InvalidDataException("Worker request exceeds the size limit.");
                                 var next = WorkerProtocol.Deserialize<WorkerRequest>(line) ?? throw new InvalidDataException("Worker request is missing.");
-                                if (next.Operation is not ("resource-list" or "resource-preview" or "resource-warm" or "resource-audio" or "resource-video")) throw new InvalidDataException("Unsupported browsing operation.");
+                                if (next.Operation is not ("resource-list" or "resource-preview" or "resource-warm" or "resource-release" or "resource-audio" or "resource-video")) throw new InvalidDataException("Unsupported browsing operation.");
                                 WorkerExecutor.ExecuteAsync(next, r => { Reply(r with { RequestId = next.RequestId }); replies.Flush(); }).GetAwaiter().GetResult();
                             }
                             return 0;

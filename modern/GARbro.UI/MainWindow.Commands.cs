@@ -64,7 +64,9 @@ public sealed partial class MainWindow
         Register("Trash", async () =>
         {
             if (!await Dialogs.Confirm(this, Text, "TrashConfirm")) return;
-            StopAudio(); foreach (var item in files.SelectedItems.Cast<BrowserEntry>().Where(e => !e.IsDirectory).ToArray())
+            StopAudio();await mediaCleanup;
+            await Request<bool>(new("resource-release",null),lifetime.Token);
+            foreach (var item in files.SelectedItems.Cast<BrowserEntry>().Where(e => !e.IsDirectory).ToArray())
                 await DesktopServices.Trash(Path.Combine(listing.Location.RootPath, item.Name));
             await LoadLocationAsync(listing.Location, false);
         }, () => !busy && listing?.Physical == true && (UiPlatform.CanTrash?.Invoke() ?? true));
@@ -74,7 +76,7 @@ public sealed partial class MainWindow
             {
                 switch (key) { case "Toolbar": Settings.ToolbarVisible = !Settings.ToolbarVisible; break; case "Menubar": Settings.ToolbarVisible = !Settings.ToolbarVisible; break;
                     case "Statusbar": Settings.StatusVisible = !Settings.StatusVisible; break; case "FitImage": Settings.FitImage = !Settings.FitImage; break; }
-                ApplySettings(); return Task.CompletedTask;
+                ApplySettings(); return key=="FitImage" && previewEntry!=null ? ShowPreviewPage(0) : Task.CompletedTask;
             });
         foreach (string page in new[] { "Feedback", "Manual", "Troubleshoot", "Updates", "License", "ExportLogs", "About" })
             Register(page, () => ShowHelp(page), () => !busy);

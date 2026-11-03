@@ -14,6 +14,7 @@ public static class WorkerExecutor
         {
                 if(request.Operation.StartsWith("resource-",StringComparison.Ordinal))
                 {
+                    if(request.Operation=="resource-release"){BrowserDecoderSession.Reset();reply(WorkerProtocol.Result(true));return 0;}
                     var measurement=System.Diagnostics.Stopwatch.StartNew();
                     if (LightweightResources.TryExecute(request, out var quick))
                     { reply(WorkerProtocol.Result(quick) with {Timing=new(OperationMs:measurement.Elapsed.TotalMilliseconds)}); return 0; }

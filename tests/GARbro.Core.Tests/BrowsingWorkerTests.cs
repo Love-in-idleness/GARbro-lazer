@@ -80,5 +80,20 @@ public sealed class BrowsingWorkerTests
         await Task.Delay(600);Assert.Null(browser.ProcessId);
         Assert.Equal("XFL",(await browser.ExecuteAsync<BrowserListing>(request,new())).Tag);
     }
+    [Fact]
+    public async Task ReturningToADirectoryReleasesTheArchiveFileHandle()
+    {
+        string root=Path.Combine(Path.GetTempPath(),"garbro-release-"+Guid.NewGuid());Directory.CreateDirectory(root);
+        try
+        {
+            string path=Path.Combine(root,"source.xfl");File.Copy(Fixture("standard.xfl"),path);
+            using var client=new ManagedWorkerClient(WorkerMarker.AssemblyPath);
+            await client.ExecuteAsync<BrowserListing>(new("resource-list",null,Location:new(path)),new());
+            await client.ExecuteAsync<BrowserListing>(new("resource-list",null,Location:new(root)),new());
+            using var exclusive=new FileStream(path,FileMode.Open,FileAccess.ReadWrite,FileShare.None);
+            Assert.True(exclusive.Length>0);
+        }
+        finally{Directory.Delete(root,true);}
+    }
 
 }

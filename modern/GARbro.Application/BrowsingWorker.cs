@@ -22,8 +22,8 @@ public sealed class BrowsingWorker : IDisposable
     Channel<WorkerReply> replies;
     Task stdout,stderr,watchdog;
     CancellationTokenSource monitor;
-    string registry,scope,key;
-    long sequence;
+    string registry,scope,key,cachedArchive;
+    long sequence,expiresAt=long.MaxValue;
     public WorkerTiming LastTiming {get;private set;}
     bool disposed;
     public BrowsingWorker(string assembly, TimeSpan? idleTimeout=null)
@@ -37,10 +37,10 @@ public sealed class BrowsingWorker : IDisposable
         var owned=process;
         try {if(owned is {HasExited:false})owned.Kill(true);if(owned!=null && owned.WaitForExit(2000))WorkerTemporaryFiles.Cleanup(registry,scope);}catch(InvalidOperationException){}
     }
-    async Task Expire()
+    async Task Expire(bool force=false)
     {
         await gate.WaitAsync().ConfigureAwait(false);
-        try { await Recycle().ConfigureAwait(false); }finally {gate.Release();}
+        try { if(force || Stopwatch.GetTimestamp()>=Interlocked.Read(ref expiresAt))await Recycle().ConfigureAwait(false); }finally {gate.Release();}
     }
     public Task<T> ExecuteAsync<T>(WorkerRequest request,WorkerLimits limits,CancellationToken cancellation=default) =>
         Task.Run(()=>ExecuteCore<T>(request,limits,cancellation),CancellationToken.None);
@@ -52,15 +52,27 @@ public sealed class BrowsingWorker : IDisposable
         token.ThrowIfCancellationRequested();
         ObjectDisposedException.ThrowIf(disposed,this);
         var watch=Stopwatch.StartNew();
-        if(LightweightResources.TryExecute(request,out object quick,token)) {token.ThrowIfCancellationRequested();LastTiming=new(OperationMs:watch.Elapsed.TotalMilliseconds,RoundTripMs:watch.Elapsed.TotalMilliseconds);return (T)quick;}
+        if(request.Operation=="resource-release" && process==null)return (T)(object)true;
+        if(LightweightResources.TryExecute(request,out object quick,token))
+        {
+            token.ThrowIfCancellationRequested();
+            if(cachedArchive!=null)await ExecuteCore<bool>(request with {Operation="resource-release"},limits,token).ConfigureAwait(false);
+            LastTiming=new(OperationMs:watch.Elapsed.TotalMilliseconds,RoundTripMs:watch.Elapsed.TotalMilliseconds);return (T)quick;
+        }
         await gate.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            idle.Change(Timeout.Infinite,Timeout.Infinite);
+            Interlocked.Exchange(ref expiresAt,long.MaxValue);idle.Change(Timeout.Infinite,Timeout.Infinite);
             token.ThrowIfCancellationRequested();
             var file=request.Location==null?null:new FileInfo(request.Location.RootPath);
             var database=request.Context?.SchemesFile==null?null:new FileInfo(request.Context.SchemesFile);
             string next=WorkerProtocol.Serialize(new {request.Context,request.OptionsJson,Scheme=request.Scheme is "none"?null:request.Scheme,DatabaseWritten=database?.Exists==true?database.LastWriteTimeUtc.Ticks:0,limits.MaxMemoryBytes});
+            if(request.Operation=="resource-release")
+            {
+                cachedArchive=null;
+                if(process==null || process.HasExited){await Recycle().ConfigureAwait(false);return (T)(object)true;}
+                next=key;
+            }
             if(process==null || process.HasExited || key!=next) { await Recycle().ConfigureAwait(false); Start(limits); key=next; }
             request=request with {RequestId=Interlocked.Increment(ref sequence)};
             string input=WorkerProtocol.Serialize(request);
@@ -83,6 +95,7 @@ public sealed class BrowsingWorker : IDisposable
             if(result.Kind!="result" || result.Data==null)throw new InvalidDataException("Invalid decoder worker response.");
             var decode=Stopwatch.StartNew();
             var value=result.Data.Value.Deserialize<T>(WorkerProtocol.Json);
+            if(request.Location!=null && !Directory.Exists(request.Location.RootPath))cachedArchive=request.Location.RootPath;
             LastTiming=(result.Timing??new()) with {PayloadDecodeMs=decode.Elapsed.TotalMilliseconds,RoundTripMs=watch.Elapsed.TotalMilliseconds};
             return value;
         }
@@ -94,7 +107,7 @@ public sealed class BrowsingWorker : IDisposable
         }
         catch(WorkerOperationException) {throw;}
         catch { await Recycle().ConfigureAwait(false);throw; }
-        finally {if(!disposed)idle.Change(idleTimeout,Timeout.InfiniteTimeSpan);gate.Release();}
+        finally {if(!disposed){Interlocked.Exchange(ref expiresAt,Stopwatch.GetTimestamp()+(long)(idleTimeout.TotalSeconds*Stopwatch.Frequency));idle.Change(idleTimeout,Timeout.InfiniteTimeSpan);}gate.Release();}
     }
     void Start(WorkerLimits limits)
     {
@@ -139,7 +152,7 @@ public sealed class BrowsingWorker : IDisposable
     async Task Recycle()
     {
         if(process==null)return;
-        var owned=process;process=null;key=null;monitor?.Cancel();
+        var owned=process;process=null;key=null;cachedArchive=null;monitor?.Cancel();
         try
         {
             if(!owned.HasExited)owned.Kill(true);
@@ -153,6 +166,6 @@ public sealed class BrowsingWorker : IDisposable
     }
     public void Dispose()
     {
-        if(disposed)return;disposed=true;lifetime.Cancel();idle.Dispose();_ = Task.Run(async()=>{await Expire();AppDomain.CurrentDomain.ProcessExit-=OnExit;});
+        if(disposed)return;disposed=true;lifetime.Cancel();idle.Dispose();_ = Task.Run(async()=>{await Expire(true);AppDomain.CurrentDomain.ProcessExit-=OnExit;});
     }
 }

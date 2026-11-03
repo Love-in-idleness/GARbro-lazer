@@ -18,7 +18,7 @@ public sealed class ManagedWorkerClient(string assembly) : IWorkerClient, IDispo
     public WorkerTiming LastTiming=>browser.LastTiming;
     public Task<T> ExecuteAsync<T>(WorkerRequest request, WorkerLimits limits,
         IProgress<ExtractionProgress> progress = null, CancellationToken cancellation = default) =>
-        request.Operation is "resource-list" or "resource-preview" or "resource-warm" or "resource-audio" or "resource-video"
+        request.Operation is "resource-list" or "resource-preview" or "resource-warm" or "resource-release" or "resource-audio" or "resource-video"
             ? browser.ExecuteAsync<T>(request, limits, cancellation)
             : WorkerArchiveSession.RequestAsync<T>(assembly, request, limits, progress, cancellation);
     public void Dispose() => browser.Dispose();

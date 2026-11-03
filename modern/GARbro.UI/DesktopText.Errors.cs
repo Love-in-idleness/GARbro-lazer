@@ -65,6 +65,12 @@ Invalid video dimensions.|视频尺寸无效。
 Video exceeds the pixel limit.|视频尺寸超过预览像素上限。
 No video stream was found.|文件中没有可预览的视频流。
 Video duration exceeds the preview limit.|视频时长超过预览限制。
+Worker request exceeds the size limit.|解码请求超过大小限制。
+Worker response exceeds the size limit.|解码结果超过大小限制。
+Invalid decoder worker response.|解码服务返回了无效数据。
+Decoder worker exited before returning a result.|解码服务意外退出，请重试。
+Image is too large for a preview.|图像超过预览大小限制。
+Resource leaves its input directory.|资源路径超出来源目录。
 Unexpected browsing request number.|浏览服务返回了过期的请求结果，请重试。
 Unsupported browsing operation.|浏览服务不支持此操作。
 Unexpected decoder worker response.|解码服务返回了意外消息。
