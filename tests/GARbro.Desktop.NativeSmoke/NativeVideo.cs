@@ -28,18 +28,29 @@ static class NativeVideo
         if(image.Source==null)throw new InvalidDataException("Video poster did not appear.");
         var play=page.GetVisualDescendants().OfType<Button>().Single(b=>b.Content as string==UiPlatform.CurrentText["Play"]);
         play.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        var frames=new HashSet<ulong>();
+        var ready=System.Diagnostics.Stopwatch.StartNew();
+        while(image.Source is not Avalonia.Media.Imaging.WriteableBitmap && ready.Elapsed.TotalSeconds<15)await Task.Delay(25);
+        if(image.Source is not Avalonia.Media.Imaging.WriteableBitmap)throw new InvalidDataException("Video playback did not produce a first frame.");
+        double firstFrameMs=ready.Elapsed.TotalMilliseconds;
+        await Task.Delay(100);
+        var frames=new HashSet<ulong>();var decoded=new HashSet<ulong>();
         for(int i=0;i<24;i++)
         {
             await Task.Delay(70);
             var origin=image.TranslatePoint(default,page.DesktopHost)??throw new InvalidDataException("Video has no rendered position.");
             frames.Add(Sample(page.DesktopHost,new Point(origin.X+image.Bounds.Width/2,origin.Y+image.Bounds.Height/2)));
+            if(image.Source is Avalonia.Media.Imaging.Bitmap pixels)
+            {
+                int stride=pixels.PixelSize.Width*4;var bytes=new byte[stride*pixels.PixelSize.Height];var pinned=GCHandle.Alloc(bytes,GCHandleType.Pinned);
+                try{pixels.CopyPixels(new PixelRect(pixels.PixelSize),pinned.AddrOfPinnedObject(),bytes.Length,stride);}finally{pinned.Free();}
+                ulong hash=14695981039346656037;foreach(byte value in bytes)hash=unchecked((hash^value)*1099511628211);decoded.Add(hash);
+            }
         }
-        if(frames.Count<4)throw new InvalidDataException($"Native video did not animate: {frames.Count} distinct rendered regions.");
-        File.WriteAllText(Path.Combine(Program.Output,"video-rendering.json"),System.Text.Json.JsonSerializer.Serialize(new {distinctRegions=frames.Count,captures=24,source="native drawable",excluded="all controls and labels"}));
+        File.WriteAllText(Path.Combine(Program.Output,"video-rendering.json"),System.Text.Json.JsonSerializer.Serialize(new {distinctRegions=frames.Count,decodedFrames=decoded.Count,firstFrameMs,captures=24,source="native drawable",excluded="all controls and labels",imageBounds=image.Bounds.ToString()}));
         var root=page.DesktopHost.GetVisualAncestors().LastOrDefault()??page.DesktopHost;
         using(var snapshot=new Avalonia.Media.Imaging.RenderTargetBitmap(PixelSize.FromSize(root.Bounds.Size,page.DesktopHost.RenderScaling),new Vector(96*page.DesktopHost.RenderScaling,96*page.DesktopHost.RenderScaling)))
         {snapshot.Render(root);snapshot.Save(Path.Combine(Program.Output,"video-window.png"),new Avalonia.Media.Imaging.PngBitmapEncoderOptions());}
+        if(frames.Count<4)throw new InvalidDataException($"Native video did not animate: {frames.Count} distinct rendered regions; {decoded.Count} decoded frames.");
         page.StopPreviewAudio();
         await page.LoadArchiveAsync(Program.Fixture);
         Console.WriteLine($"Continuous video: {frames.Count} distinct native pixel regions.");
