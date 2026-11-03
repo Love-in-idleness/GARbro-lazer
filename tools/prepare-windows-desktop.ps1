@@ -5,8 +5,8 @@ if ($env:GITHUB_ACTIONS -ne 'true') { throw 'This desktop preparation is restric
 # Windows 11 ARM images may leave first-login privacy setup over the desktop.
 # Close its hosts without choosing or persisting any privacy preference.
 $setupHosts = @('UserOOBEBroker', 'CloudExperienceHostBroker', 'CloudExperienceHost', 'msoobe', 'WWAHost', 'AccountsControlHost')
-Get-Process | Where-Object { $_.MainWindowHandle -ne 0 -or $_.ProcessName -in $setupHosts } |
-    Select-Object ProcessName, Id, MainWindowTitle | Format-Table -AutoSize
+Get-Process | Where-Object { $_.ProcessName -in $setupHosts } |
+    Select-Object ProcessName, Id, SessionId | Format-Table -AutoSize
 foreach ($pass in 1..3) {
     $running = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -in $setupHosts }
     if (-not $running) { break }
@@ -45,6 +45,9 @@ public static class GarbroDesktopProbe {
         try {process=System.Diagnostics.Process.GetProcessById((int)pid).ProcessName;}catch(ArgumentException){}
         return "HWND="+window+" PID="+pid+" process="+process+" class="+type+" title="+title;
     }
+    public static int OwnerPid(IntPtr window) {
+        uint pid;GetWindowThreadProcessId(window,out pid);return (int)pid;
+    }
 }
 '@
 Write-Host "Test process session: $([System.Diagnostics.Process]::GetCurrentProcess().SessionId)"
@@ -61,15 +64,28 @@ $window.TopMost = $true
 $window.BackColor = [System.Drawing.Color]::FromArgb(18, 171, 52)
 try {
     $window.Show()
-    $window.Activate()
-    foreach ($tick in 1..20) {
-        [System.Windows.Forms.Application]::DoEvents()
-        Start-Sleep -Milliseconds 50
-    }
     $screen = $window.PointToScreen((New-Object System.Drawing.Point(200, 120)))
     $point = New-Object GarbroDesktopProbe+Point
     $point.X = $screen.X; $point.Y = $screen.Y
-    $visible = [GarbroDesktopProbe]::GetAncestor([GarbroDesktopProbe]::WindowFromPoint($point), 2)
+    foreach ($attempt in 1..4) {
+        $window.TopMost = $false
+        $window.TopMost = $true
+        $window.BringToFront()
+        $window.Activate()
+        foreach ($tick in 1..20) {
+            [System.Windows.Forms.Application]::DoEvents()
+            Start-Sleep -Milliseconds 50
+        }
+        $visible = [GarbroDesktopProbe]::GetAncestor([GarbroDesktopProbe]::WindowFromPoint($point), 2)
+        if ($visible -eq $window.Handle) { break }
+        Write-Host "Covering shell surface: $([GarbroDesktopProbe]::Describe($visible))"
+        $cover = Get-Process -Id ([GarbroDesktopProbe]::OwnerPid($visible)) -ErrorAction SilentlyContinue
+        # The shell can open Start after its first-login web host exits.
+        if ($cover -and $cover.ProcessName -in ($setupHosts + @('StartMenuExperienceHost', 'SearchHost', 'SearchApp'))) {
+            $cover | Stop-Process -Force
+            Start-Sleep -Milliseconds 500
+        } else { break }
+    }
     Write-Host "Test window: $([GarbroDesktopProbe]::Describe($window.Handle)); sample=($($screen.X),$($screen.Y))"
     Write-Host "Visible window: $([GarbroDesktopProbe]::Describe($visible))"
     New-Item -ItemType Directory -Force artifacts/desktop-readiness | Out-Null
