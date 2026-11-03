@@ -67,7 +67,7 @@ namespace GARbro.Application
             bool packaged=HasPackageIdentity();
             if(packaged && !File.Exists(apphost)) throw new FileNotFoundException("Packaged decoder apphost is missing.",apphost);
             bool native=File.Exists(apphost);
-            var start=new ProcessStartInfo(native?apphost:DotnetHost()) {UseShellExecute=false,CreateNoWindow=true,RedirectStandardInput=true,RedirectStandardOutput=true,RedirectStandardError=true,StandardInputEncoding=new UTF8Encoding(false),StandardOutputEncoding=Encoding.UTF8,StandardErrorEncoding=Encoding.UTF8};
+            var start=new ProcessStartInfo(native?apphost:DotnetHost()) {WorkingDirectory=Path.GetDirectoryName(full),UseShellExecute=false,CreateNoWindow=true,RedirectStandardInput=true,RedirectStandardOutput=true,RedirectStandardError=true,StandardInputEncoding=new UTF8Encoding(false),StandardOutputEncoding=Encoding.UTF8,StandardErrorEncoding=Encoding.UTF8};
             if(!native)start.ArgumentList.Add(full);
             return start;
         }

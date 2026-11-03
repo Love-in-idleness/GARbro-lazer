@@ -23,7 +23,13 @@ public static class BrowserDecoderSession
     }
     public static ResourceSession Open(ResourceLocation location, IOptionsProvider options)
     {
-        if (!enabled) return new(location,options);
+        // Filesystem previews need a scoped working directory only while decoding.
+        // Retaining that scope would lock the directory on Windows.
+        if (!enabled || Directory.Exists(location.RootPath))
+        {
+            if(enabled)Release();
+            return new(location,options);
+        }
         var file = new FileInfo(location.RootPath);
         string next = WorkerProtocol.Serialize(new { location.RootPath, Chain=location.Chain, Length=file.Exists?file.Length:0, Written=file.Exists?file.LastWriteTimeUtc.Ticks:0 });
         if (key != next)

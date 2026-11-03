@@ -124,5 +124,20 @@ public sealed class BrowsingWorkerTests
         }
         finally{Directory.Delete(root,true);}
     }
+    [Fact]
+    public async Task OrdinaryPreviewDoesNotRetainItsSourceDirectory()
+    {
+        string root=Path.Combine(Path.GetTempPath(),"garbro-directory-release-"+Guid.NewGuid()),moved=root+"-moved";Directory.CreateDirectory(root);
+        try
+        {
+            File.Copy(Fixture("colors-rgb.png"),Path.Combine(root,"image.png"));
+            await using var client=new ManagedWorkerClient(WorkerMarker.AssemblyPath);
+            var preview=await client.ExecuteAsync<ResourcePreview>(new("resource-preview",null,Location:new(root),Entry:"image.png"),new());
+            Assert.Equal("image",preview.Kind);
+            File.Move(Path.Combine(root,"image.png"),Path.Combine(root,"renamed.png"));
+            Directory.Move(root,moved);
+        }
+        finally{if(Directory.Exists(root))Directory.Delete(root,true);if(Directory.Exists(moved))Directory.Delete(moved,true);}
+    }
 
 }
