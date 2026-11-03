@@ -86,6 +86,7 @@ def main():
     packed = args.workdir / 'packed'
     subprocess.run(['dotnet', 'pack', str(PATCH / 'PatchedWayland.csproj'), '-c', 'Release',
                     '--disable-build-servers', '-m:1', '-p:AvaloniaSourceRoot=' + str(source),
+                    '-p:RestoreConfigFile=' + str(ROOT / 'NuGet.Config'),
                     '-o', str(packed)], cwd=ROOT, check=True)
     filename = metadata['package'].lower() + '.' + metadata['version'] + '.nupkg'
     target = args.output.resolve() / filename

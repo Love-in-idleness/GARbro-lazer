@@ -55,12 +55,11 @@ static class CursorProbe
                         window.GetVisualDescendants().OfType<Button>().Single(b=>b.Name=="MenuFile").ContextMenu.Close();
                         break;
                     case "settings":
-                        var settings=window.GetVisualDescendants().OfType<Button>().Single(b=>b.Name=="MenuSettings");
-                        var general=(MenuItem)settings.ContextMenu.Items[0];
-                        general.Command.Execute(general.CommandParameter);
-                        for(int i=0;i<80 && lifetime.Windows.Count<2;i++)await Task.Delay(25);
-                        var dialog=lifetime.Windows.Last(w=>w!=window&&w.IsVisible);
-                        dialog.WindowState=WindowState.Maximized;
+                        // Exercise a second real native surface without making
+                        // cursor tests depend on a complete format-catalog scan.
+                        var settings=new SettingsWindow(new AppSettings(),UiPlatform.CurrentText,Array.Empty<GARbro.Application.ResourceFormatInfo>());
+                        _=settings.ShowDialog<bool>(window);
+                        settings.DesktopHost.WindowState=WindowState.Maximized;
                         break;
                     case "close-dialog":
                         foreach(var child in lifetime.Windows.Where(w=>w!=window).ToArray())child.Close();

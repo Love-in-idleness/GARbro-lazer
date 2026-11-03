@@ -166,10 +166,10 @@ def main():
             protocol=(output/'application.log').read_text()
             if args.expect_fallback:
                 assert 'wp_cursor_shape_manager_v1'not in protocol,'Fallback test requires protocol absence.'
-                assert re.search(r'wl_pointer#\d+\.set_cursor\(\d+, wl_surface#',protocol),'System library fallback was not used.'
+                assert re.search(r'wl_pointer[#@]\d+\.set_cursor\(\d+, wl_surface[#@]',protocol),'System library fallback was not used.'
             else:
                 assert 'wp_cursor_shape_device_v1' in protocol and '.set_shape(' in protocol
-                assert not re.search(r'wl_pointer#\d+\.set_cursor\(\d+, wl_surface#',protocol),'Client cursor image used despite cursor-shape support.'
+                assert not re.search(r'wl_pointer[#@]\d+\.set_cursor\(\d+, wl_surface[#@]',protocol),'Client cursor image used despite cursor-shape support.'
                 assert samples[0]['visibleSize']!=samples[1]['visibleSize'],'System cursor size did not change.'
                 assert samples[1]['sha256']!=samples[2]['sha256'],'System cursor theme did not change.'
             (output/'verification.json').write_text(json.dumps(dict(initial=initial,samples=samples,standardCursorProtocol=not args.expect_fallback,

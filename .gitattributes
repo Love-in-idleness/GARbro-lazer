@@ -11,6 +11,10 @@
 *.fsproj merge=union
 *.dbproj merge=union
 
+# Source/package checksums must survive Windows checkouts unchanged.
+tools/patches/avalonia-wayland/** text eol=lf
+vendor/nuget/*.nupkg binary
+
 # Standard to msysgit
 *.doc	 diff=astextplain
 *.DOC	 diff=astextplain
