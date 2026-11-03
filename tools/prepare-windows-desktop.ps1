@@ -4,7 +4,7 @@ if ($env:GITHUB_ACTIONS -ne 'true') { throw 'This desktop preparation is restric
 
 # Windows 11 ARM images may leave first-login privacy setup over the desktop.
 # Close its hosts without choosing or persisting any privacy preference.
-$setupHosts = @('UserOOBEBroker', 'CloudExperienceHostBroker', 'CloudExperienceHost', 'msoobe')
+$setupHosts = @('UserOOBEBroker', 'CloudExperienceHostBroker', 'CloudExperienceHost', 'msoobe', 'WWAHost', 'AccountsControlHost')
 Get-Process | Where-Object { $_.MainWindowHandle -ne 0 -or $_.ProcessName -in $setupHosts } |
     Select-Object ProcessName, Id, MainWindowTitle | Format-Table -AutoSize
 foreach ($pass in 1..3) {
@@ -41,7 +41,9 @@ public static class GarbroDesktopProbe {
         uint pid;GetWindowThreadProcessId(window,out pid);
         var title=new StringBuilder(256);var type=new StringBuilder(256);
         GetWindowText(window,title,256);GetClassName(window,type,256);
-        return "HWND="+window+" PID="+pid+" class="+type+" title="+title;
+        string process="unknown";
+        try {process=System.Diagnostics.Process.GetProcessById((int)pid).ProcessName;}catch(ArgumentException){}
+        return "HWND="+window+" PID="+pid+" process="+process+" class="+type+" title="+title;
     }
 }
 '@
