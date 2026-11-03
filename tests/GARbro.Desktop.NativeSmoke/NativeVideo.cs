@@ -53,9 +53,17 @@ static class NativeVideo
             // Desktop DC includes the compositor's presented pixels, including
             // hardware-accelerated/layered windows. The window DC can be stale.
             var screen=window.PointToScreen(center);cx=screen.X;cy=screen.Y;
-            var dc=GetDC(IntPtr.Zero);
-            try {for(int y=-16;y<16;y+=2)for(int x=-32;x<32;x+=2)hash=unchecked((hash^GetPixel(dc,cx+x,cy+y))*1099511628211);}
-            finally{ReleaseDC(IntPtr.Zero,dc);}
+            var dc=GetDC(IntPtr.Zero);var copy=CreateCompatibleDC(dc);var bitmap=CreateCompatibleBitmap(dc,64,32);IntPtr previous=IntPtr.Zero;
+            try
+            {
+                previous=SelectObject(copy,bitmap);
+                if(!BitBlt(copy,0,0,64,32,dc,cx-32,cy-16,0x40CC0020))throw new IOException("Cannot capture the desktop video area.");
+                SelectObject(copy,previous);previous=IntPtr.Zero;
+                var info=new BitmapInfo {Size=40,Width=64,Height=-32,Planes=1,Bits=32};var pixels=new byte[64*32*4];
+                if(GetDIBits(dc,bitmap,0,32,pixels,ref info,0)!=32)throw new IOException("Cannot read the desktop video area.");
+                for(int i=0;i<pixels.Length;i+=4)hash=unchecked((hash^(uint)(pixels[i]|pixels[i+1]<<8|pixels[i+2]<<16))*1099511628211);
+            }
+            finally {if(previous!=IntPtr.Zero)SelectObject(copy,previous);DeleteObject(bitmap);DeleteDC(copy);ReleaseDC(IntPtr.Zero,dc);}
         }
         else
         {
@@ -73,7 +81,14 @@ static class NativeVideo
     }
     [DllImport("user32.dll")]static extern IntPtr GetDC(IntPtr window);
     [DllImport("user32.dll")]static extern int ReleaseDC(IntPtr window,IntPtr dc);
-    [DllImport("gdi32.dll")]static extern uint GetPixel(IntPtr dc,int x,int y);
+    [StructLayout(LayoutKind.Sequential)]struct BitmapInfo {public uint Size;public int Width,Height;public ushort Planes,Bits;public uint Compression,ImageSize;public int Xppm,Yppm;public uint Used,Important,Color;}
+    [DllImport("gdi32.dll")]static extern IntPtr CreateCompatibleDC(IntPtr dc);
+    [DllImport("gdi32.dll")]static extern bool DeleteDC(IntPtr dc);
+    [DllImport("gdi32.dll")]static extern IntPtr CreateCompatibleBitmap(IntPtr dc,int width,int height);
+    [DllImport("gdi32.dll")]static extern IntPtr SelectObject(IntPtr dc,IntPtr value);
+    [DllImport("gdi32.dll")]static extern bool DeleteObject(IntPtr value);
+    [DllImport("gdi32.dll")]static extern bool BitBlt(IntPtr target,int x,int y,int width,int height,IntPtr source,int sx,int sy,uint operation);
+    [DllImport("gdi32.dll")]static extern int GetDIBits(IntPtr dc,IntPtr bitmap,uint start,uint count,byte[] pixels,ref BitmapInfo info,uint usage);
     [DllImport("libX11.so.6")]static extern IntPtr XOpenDisplay(IntPtr name);
     [DllImport("libX11.so.6")]static extern int XCloseDisplay(IntPtr display);
     [DllImport("libX11.so.6")]static extern IntPtr XGetImage(IntPtr display,IntPtr drawable,int x,int y,uint width,uint height,nuint planeMask,int format);

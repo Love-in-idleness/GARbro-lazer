@@ -99,17 +99,21 @@ int main(int argc,char **argv) {
     zwp_input_method_v2_add_listener(method,&method_listener,NULL);
     if(wl_display_roundtrip(display)<0)return 1;
     ready(argv[1]);
-    int phase=0, previous_activations=0, previous_deactivations=0;double start=seconds();
+    int phase=0, previous_activations=0, previous_deactivations=0;uint32_t preedit_serial=0;double start=seconds();
     while(seconds()-start<35 && !unavailable) {
         if(wl_display_roundtrip(display)<0)break;
         /* Wait for compositor acknowledgments after layout/caret changes before
          * committing an IME batch; sending an old done serial is invalid. */
-        int settled=seconds()-last_done>.15 && seconds()-last_action>.15;
+        int settled=seconds()-last_done>.75 && seconds()-last_action>.75;
         if(phase==0 && active && settled) {
             zwp_input_method_v2_set_preedit_string(method,"ni",2,2);
-            zwp_input_method_v2_commit(method,serial);phase=1;
+            zwp_input_method_v2_commit(method,serial);phase=1;preedit_serial=serial;
             fprintf(stderr,"sent preedit serial=%u\n",serial);
             last_action=seconds();
+        } else if(phase==1 && active && settled && !flag(argv[1],"preedit-ok") && serial!=preedit_serial) {
+            zwp_input_method_v2_set_preedit_string(method,"ni",2,2);
+            zwp_input_method_v2_commit(method,serial);preedit_serial=serial;last_action=seconds();
+            fprintf(stderr,"renewed preedit serial=%u after caret/layout update\n",serial);
         } else if(phase==1 && settled && flag(argv[1],"preedit-ok")) {
             zwp_input_method_v2_set_preedit_string(method,"",0,0);
             zwp_input_method_v2_commit_string(method,"你好");

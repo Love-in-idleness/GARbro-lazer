@@ -427,9 +427,7 @@ public sealed partial class MainWindow : AppWindow
         if (files.SelectedItem is not BrowserEntry { IsDirectory: false } entry || listing == null) return;
         previewPrompt.IsVisible = false; previewInfo.Text = Text["Preparing"];
         previewEntry = entry; encodingControls.IsVisible = true;
-        int ticket=generation;
-        try { await Task.Delay(120,lifetime.Token); } catch(OperationCanceledException) {return;}
-        if(ticket==generation)await ShowPreviewPage(0);
+        await ShowPreviewPage(0, debounce: true);
     }
     void ClearPreview()
     {
@@ -439,7 +437,7 @@ public sealed partial class MainWindow : AppWindow
         text.Text = previewInfo.Text = "";
         UpdateCommands();
     }
-    async Task ShowPreviewPage(long offset)
+    async Task ShowPreviewPage(long offset, bool debounce = false)
     {
         if (previewEntry == null || listing == null) return;
         previewCancellation?.Cancel(); using var cancel = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token); previewCancellation = cancel;
@@ -457,6 +455,9 @@ public sealed partial class MainWindow : AppWindow
             ResourcePreview result;
             if(!previewCache.TryGet(cacheKey,out result))
             {
+                // Cached previews are already cheap; debounce only decoder work.
+                if(debounce)await Task.Delay(120,cancel.Token);
+                cancel.Token.ThrowIfCancellationRequested();
                 Directory.CreateDirectory(DesktopServices.CacheDirectory);
                 string output=Path.Combine(DesktopServices.CacheDirectory,"preview-"+Guid.NewGuid().ToString("N")+".bgra");
                 using(File.Create(output)){}

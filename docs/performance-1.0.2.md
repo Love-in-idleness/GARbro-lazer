@@ -24,7 +24,7 @@ A native X11 run with software rendering measured:
 `workerStages` separates initialization, resource work, payload deserialization and
 parent round-trip time. Round-trip time includes process startup when cold and
 protocol serialization/transport; the residual is not a separate network metric.
-The 120 ms automatic selection debounce is intentional and separate from cache lookup.
+Uncached automatic previews use a 120 ms decoder debounce; cache hits are presented immediately.
 
 Video tests inspect the last presented headless framebuffer without manually
 rendering the control. The native Windows/X11 test also reads actual drawable
