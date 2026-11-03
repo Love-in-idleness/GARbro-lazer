@@ -18,10 +18,12 @@ static class WpfBench
     [STAThread] static int Main(string[] args)
     {
         string root=Path.GetFullPath(args[1]),scenario=args[2],output=Path.GetFullPath(args[3]);
-        var app=new GARbro.GUI.App();app.InitializeComponent();app.StartupUri=null;app.ShutdownMode=ShutdownMode.OnExplicitShutdown;
-        app.Startup+=delegate
+        var app=new GARbro.GUI.App();app.InitializeComponent();app.StartupUri=new Uri("/GARbro.GUI;component/MainWindow.xaml",UriKind.Relative);app.ShutdownMode=ShutdownMode.OnExplicitShutdown;
+        bool attached=false;
+        EventManager.RegisterClassHandler(typeof(GARbro.GUI.MainWindow),FrameworkElement.LoadedEvent,new RoutedEventHandler((sender,ev)=>
         {
-            var window=new GARbro.GUI.MainWindow();window.Width=1280;window.Height=840;window.Left=40;window.Top=40;app.MainWindow=window;
+            if(attached)return;attached=true;
+            var window=(GARbro.GUI.MainWindow)sender;window.Width=1280;window.Height=840;window.Left=40;window.Top=40;
             bool started=false;
             window.ContentRendered+=async delegate
             {
@@ -63,8 +65,7 @@ static class WpfBench
                 catch(Exception error){File.WriteAllText(output+".error.txt",error.ToString());Console.Error.WriteLine(error);}
                 finally{timer.Stop();window.Close();app.Shutdown(code);}
             };
-            window.Show();
-        };
+        }));
         return app.Run();
     }
     static async Task Present(Window window)

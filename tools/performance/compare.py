@@ -17,17 +17,17 @@ for suffix in ('a','b'):
  directory=fixtures/f'directory-{suffix}';directory.mkdir()
  for i in range(10000):(directory/f'entry-{i:05}.txt').touch()
 # Build the same instrumentation against each unmodified application source tree.
-executables={}
-for name,source in [('1.0.1',a.v101.resolve()),('1.0.2',a.v102.resolve())]:
- destination=out/('driver-'+name);shutil.copytree(ROOT/'tools/performance/modern',destination,ignore=shutil.ignore_patterns('bin','obj'))
- run(['dotnet','build',destination/'ModernBench.csproj','-c','Release','--disable-build-servers','-m:1',f'-p:GarbroSourceDirectory={source}'])
- executables[name]=destination/'bin/Release/net10.0/ModernBench.exe'
 legacy=a.v102.resolve()/'bin/Release'
 run(['powershell','-NoProfile','-File',ROOT/'tools/performance/export-wpf-resources.ps1','-Directory',legacy])
 run(['msbuild',ROOT/'tools/performance/WpfBench.csproj','/p:Configuration=Release','/p:GarbroLegacyDirectory='+str(legacy)])
 config=legacy/'GARbro.GUI.exe.config'
 if config.exists():shutil.copy2(config,legacy/'GARbro.WpfBenchmark.exe.config')
-executables['WPF']=legacy/'GARbro.WpfBenchmark.exe'
+executables={'WPF':legacy/'GARbro.WpfBenchmark.exe'}
+run([executables['WPF'],fixtures/'empty',fixtures,'archive',out/'preflight-WPF.json'],timeout=60,cwd=legacy)
+for name,source in [('1.0.1',a.v101.resolve()),('1.0.2',a.v102.resolve())]:
+ destination=out/('driver-'+name);shutil.copytree(ROOT/'tools/performance/modern',destination,ignore=shutil.ignore_patterns('bin','obj'))
+ run(['dotnet','build',destination/'ModernBench.csproj','-c','Release','--disable-build-servers','-m:1',f'-p:GarbroSourceDirectory={source}'])
+ executables[name]=destination/'bin/Release/net10.0/ModernBench.exe'
 results=[]
 for trial in range(a.trials):
  names=list(executables);names=names[trial%3:]+names[:trial%3]
