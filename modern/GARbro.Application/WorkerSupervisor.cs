@@ -35,9 +35,14 @@ namespace GARbro.Application
         }
         public static long ResidentBytes(Process process)
         {
-            try {process.Refresh();return process.HasExited?0:process.WorkingSet64;}
-            catch(InvalidOperationException)when(process.HasExited){return 0;}
-            catch(System.ComponentModel.Win32Exception)when(process.HasExited){return 0;}
+            // Refresh invalidates Process's shared metadata and exit state. The
+            // request loop and watchdog must not clear it during another read.
+            lock(process)
+            {
+                try {process.Refresh();return process.HasExited?0:process.WorkingSet64;}
+                catch(InvalidOperationException)when(process.HasExited){return 0;}
+                catch(System.ComponentModel.Win32Exception)when(process.HasExited){return 0;}
+            }
         }
 
         public static string DotnetHost()
@@ -140,13 +145,8 @@ namespace GARbro.Application
                     if(stderr.IsFaulted) await stderr;
                     if(clock.Elapsed.TotalSeconds>limits.TimeoutSeconds)
                         throw new WorkerLimitException($"Operation exceeded {limits.TimeoutSeconds:g} seconds.","timeout");
-                    try
-                    {
-                        process.Refresh();
-                        if(!process.HasExited && process.WorkingSet64>limits.MaxMemoryBytes)
-                            throw new WorkerLimitException($"Operation exceeded the {limits.MaxMemoryBytes/(1<<20)} MiB memory limit.","memory");
-                    }
-                    catch(InvalidOperationException) when(process.HasExited) { }
+                    if(ResidentBytes(process)>limits.MaxMemoryBytes)
+                        throw new WorkerLimitException($"Operation exceeded the {limits.MaxMemoryBytes/(1<<20)} MiB memory limit.","memory");
                     await Task.WhenAny(exit,Task.Delay(100));
                 }
                 await Task.WhenAll(stdout,stderr,exit);

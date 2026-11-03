@@ -61,8 +61,7 @@ public static class MediaTools
             {
                 if (output.IsFaulted) output.GetAwaiter().GetResult();
                 if (clock.ElapsedMilliseconds > timeout) throw new IOException("Video probing exceeded its time limit.");
-                process.Refresh(); parent.Refresh();
-                if (!process.HasExited && WorkerSupervisor.ResidentBytes(process) + parent.WorkingSet64 > limit)
+                if (WorkerSupervisor.ResidentBytes(process) + WorkerSupervisor.ResidentBytes(parent) > limit)
                     throw new WorkerLimitException("Video decoder memory limit exceeded.", "memory");
             }
             var bytes = output.GetAwaiter().GetResult();

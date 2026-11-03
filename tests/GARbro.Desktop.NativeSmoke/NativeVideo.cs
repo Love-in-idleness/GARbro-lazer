@@ -61,6 +61,7 @@ static class NativeVideo
         var handle=window.TryGetPlatformHandle().Handle;
         if(OperatingSystem.IsWindows())
         {
+            WindowsFrame.VerifyVisibleAt(window,center);
             // Desktop DC includes the compositor's presented pixels, including
             // hardware-accelerated/layered windows. The window DC can be stale.
             var screen=window.PointToScreen(center);cx=screen.X;cy=screen.Y;

@@ -15,6 +15,20 @@ public sealed class WorkerTests
     static string Fixture(string name)=>Path.Combine(AppContext.BaseDirectory,"Fixtures",name);
 
     [Fact]
+    public async Task ConcurrentMemorySamplesDoNotInvalidateLiveProcessMetadata()
+    {
+        // The request loop and watchdog can sample the same Process together.
+        // Process.Refresh clears shared metadata, including the exit state.
+        using var process=Process.GetCurrentProcess();
+        using var start=new Barrier(4);
+        await Task.WhenAll(Enumerable.Range(0,4).Select(_=>Task.Run(()=>
+        {
+            start.SignalAndWait();
+            for(int i=0;i<100;i++)Assert.True(WorkerSupervisor.ResidentBytes(process)>0);
+        })));
+    }
+
+    [Fact]
     public async Task ParentExitKillsTheWorkerEvenWithoutAwaitingItsAsyncCleanup()
     {
         string root=Path.Combine(Path.GetTempPath(),"garbro-worker-exit-"+Guid.NewGuid());

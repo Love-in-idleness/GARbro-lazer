@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform;
 
@@ -19,6 +20,7 @@ static class WindowsFrame
         if((style&expected)!=expected)throw new InvalidDataException("The native title bar is missing window controls.");
         Point origin=default;
         if(!GetWindowRect(hwnd,out var outer)||!ClientToScreen(hwnd,ref origin))throw new InvalidDataException("Cannot inspect the native window frame.");
+        VerifyVisibleAt(window,new Avalonia.Point(window.Bounds.Width/2,window.Bounds.Height/2));
         var capture=new ProcessStartInfo("powershell.exe"){UseShellExecute=false,CreateNoWindow=true};
         foreach(string argument in new[]{"-NoProfile","-NonInteractive","-File",Path.GetFullPath("tools/capture-window.ps1"),
             "-X",outer.Left.ToString(),"-Y",outer.Top.ToString(),"-Width",(outer.Right-outer.Left).ToString(),
@@ -31,9 +33,19 @@ static class WindowsFrame
             throw new InvalidDataException("The window frame or caption is outside the screen work area.");
         Console.WriteLine("Native Windows frame remains inside the desktop work area.");
     }
+    public static void VerifyVisibleAt(Window window,Avalonia.Point point)
+    {
+        if(!OperatingSystem.IsWindows())return;
+        var screen=window.PointToScreen(point);
+        var visible=GetAncestor(WindowFromPoint(new Point {X=screen.X,Y=screen.Y}),2);
+        if(visible!=window.TryGetPlatformHandle()?.Handle)
+            throw new InvalidDataException("The native capture point is covered by another window.");
+    }
     [StructLayout(LayoutKind.Sequential)]struct Rect{public int Left,Top,Right,Bottom;}
     [StructLayout(LayoutKind.Sequential)]struct Point{public int X,Y;}
     [DllImport("user32.dll")]static extern int GetWindowLongW(IntPtr window,int index);
     [DllImport("user32.dll")]static extern bool GetWindowRect(IntPtr window,out Rect rect);
     [DllImport("user32.dll")]static extern bool ClientToScreen(IntPtr window,ref Point point);
+    [DllImport("user32.dll")]static extern IntPtr WindowFromPoint(Point point);
+    [DllImport("user32.dll")]static extern IntPtr GetAncestor(IntPtr window,uint flags);
 }

@@ -202,7 +202,7 @@ public sealed class VideoPlayback : IVideoOutput
                 await Task.Delay(250, token);
                 long bytes = 0;
                 foreach (var process in new[] { movie, music })
-                    if (process != null && !process.HasExited) { process.Refresh(); bytes += WorkerSupervisor.ResidentBytes(process); }
+                    if (process != null) bytes += WorkerSupervisor.ResidentBytes(process);
                 if (bytes > memoryLimit)
                 { Kill(movie); Kill(music); throw new IOException("Video decoder memory limit exceeded."); }
             }

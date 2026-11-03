@@ -46,12 +46,16 @@ public sealed class NativeSmokeApp : Avalonia.Application
             [settingType.Assembly.GetName().Name+":"+settingType.FullName+"/ODNAudioSampleRate"]=JsonSerializer.SerializeToElement("44100")
         }});
         var window=new MainWindow(store);
+        // Hosted Windows ARM images can display an always-on-top OOBE overlay.
+        // Native pixel tests need the test window visible on the actual desktop.
+        if(OperatingSystem.IsWindows())window.DesktopHost.Topmost=true;
         lifetime.MainWindow=window.DesktopHost;
         window.Opened+=async (_,_)=>
         {
             int code=1;
             try
             {
+                window.DesktopHost.Activate();
                 await window.LoadInputsAsync(new[]{Path.GetDirectoryName(Program.Fixture)});
                 if (window.ArchiveTag!="directory")
                     throw new InvalidDataException("Saved format settings blocked folder browsing.");

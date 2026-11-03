@@ -98,8 +98,7 @@ public sealed class BrowsingWorker : IDisposable, IAsyncDisposable
             {
                 token.ThrowIfCancellationRequested();
                 if(watch.Elapsed.TotalSeconds>limits.TimeoutSeconds)throw new WorkerLimitException($"Operation exceeded {limits.TimeoutSeconds:g} seconds.","timeout");
-                process.Refresh();
-                if(!process.HasExited && WorkerSupervisor.ResidentBytes(process)>limits.MaxMemoryBytes)throw new WorkerLimitException($"Operation exceeded the {limits.MaxMemoryBytes/(1<<20)} MiB memory limit.","memory");
+                if(WorkerSupervisor.ResidentBytes(process)>limits.MaxMemoryBytes)throw new WorkerLimitException($"Operation exceeded the {limits.MaxMemoryBytes/(1<<20)} MiB memory limit.","memory");
                 await Task.WhenAny(read,Task.Delay(25,token)).ConfigureAwait(false);
             }
             WorkerReply result=await read.ConfigureAwait(false);
@@ -151,8 +150,8 @@ public sealed class BrowsingWorker : IDisposable, IAsyncDisposable
             {
                 while(!monitoring.IsCancellationRequested && !owned.HasExited)
                 {
-                    await Task.Delay(100,monitoring).ConfigureAwait(false);owned.Refresh();
-                    if(!owned.HasExited && WorkerSupervisor.ResidentBytes(owned)>limits.MaxMemoryBytes)
+                    await Task.Delay(100,monitoring).ConfigureAwait(false);
+                    if(WorkerSupervisor.ResidentBytes(owned)>limits.MaxMemoryBytes)
                     {
                         channel.Writer.TryComplete(new WorkerLimitException($"Operation exceeded the {limits.MaxMemoryBytes/(1<<20)} MiB memory limit.","memory"));
                         owned.Kill(true);return;
