@@ -117,6 +117,25 @@ public sealed class VideoTests
         output.Stop();Assert.False(output.Playing);Assert.Equal(0,output.Position);Assert.Null(failure);
     }
     [Fact]
+    public async Task PlaybackClockWaitsForTheFirstVideoFrameBeforeStartingAudio()
+    {
+        using var sdl=AudioPlayback.LoadApi();sdl.SetHint("SDL_AUDIODRIVER","dummy");
+        string path=Path.Combine(AppContext.BaseDirectory,"Fixtures","movie.mpg");
+        var entered=new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release=new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);int frames=0;
+        using var output=new VideoPlayback(new(path,new FileInfo(path).Length,MediaTools.Probe(path)),async(_,_,_)=>
+        {if(System.Threading.Interlocked.Increment(ref frames)==1){entered.TrySetResult(true);await release.Task;}},error=>entered.TrySetException(error),1L<<30);
+        try
+        {
+            output.Play();await entered.Task.WaitAsync(TimeSpan.FromSeconds(15),TestContext.Current.CancellationToken);
+            await Task.Delay(400,TestContext.Current.CancellationToken);
+            Assert.InRange(output.Position,0,.05);
+            release.TrySetResult(true);await Task.Delay(200,TestContext.Current.CancellationToken);
+            Assert.True(output.Position>.05);Assert.True(frames>=3);
+        }
+        finally{release.TrySetResult(true);}
+    }
+    [Fact]
     public async Task UnavailableAudioStreamFallsBackToMutedVideo()
     {
         using var sdl=AudioPlayback.LoadApi();sdl.SetHint("SDL_AUDIODRIVER","dummy");

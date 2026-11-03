@@ -28,7 +28,7 @@ public sealed class VideoPlayback : IVideoOutput
     Process video, audio;
     PcmOutput sound, device;
     double offset, volume = 1;
-    bool playing, disposed;
+    bool playing, disposed, primed;
     Task closing = Task.CompletedTask, decoding=Task.CompletedTask;
     public string Warning { get; private set; }
     public double Duration => artifact.Info.Duration;
@@ -57,14 +57,14 @@ public sealed class VideoPlayback : IVideoOutput
             if (playing) return;
             if (Duration > 0 && Current() >= Duration) { Halt(); offset = 0; }
             if (run == null) Begin();
-            else { playing = true; clock.Start(); sound?.Pause(false); }
+            else { playing = true; if(primed){clock.Start();sound?.Pause(false);} }
         }
     }
     public void Pause() { lock (gate) { playing = false; clock.Stop(); sound?.Pause(true); } }
     public void Stop() { lock (gate) { Halt(); offset = 0; } }
     void Begin(bool paused = false)
     {
-        var cancel=new CancellationTokenSource();run=cancel;playing=!paused;Warning=null;clock.Reset();
+        var cancel=new CancellationTokenSource();run=cancel;playing=!paused;primed=false;Warning=null;clock.Reset();
         double start=offset;
         var previous=closing;
         decoding=Task.Run(async()=> {await previous;await Decode(cancel,start);});
@@ -75,7 +75,7 @@ public sealed class VideoPlayback : IVideoOutput
     async Task Decode(CancellationTokenSource owner, double start)
     {
         Process movie = null, music = null;
-        PcmOutput output=null;bool ownsLease=false;
+        PcmOutput output=null;bool ownsLease=false;Exception playbackFailure=null;
         Task musicTask = Task.CompletedTask, watchdog = Task.CompletedTask;
         Task<string> movieErrors = Task.FromResult(""), musicErrors = Task.FromResult("");
         var token = owner.Token;
@@ -123,7 +123,6 @@ public sealed class VideoPlayback : IVideoOutput
                         while(!free.TryDequeue(out pixels))await Task.Delay(2,token);
                         if(!await ReadFrame(movie.StandardOutput.BaseStream,pixels,token)){free.Enqueue(pixels);break;}
                         double timestamp=start+index++/fps;
-                        if(index==1)lock(gate) {if(run==owner && playing && sound==null)clock.Restart();}
                         // Decode at most two frames ahead, including while paused.
                         while(index>1)
                         {
@@ -152,19 +151,32 @@ public sealed class VideoPlayback : IVideoOutput
                         }
                         bool late;lock(gate)late=!first && FrameTiming.IsLate(item.Timestamp,Current(),1/fps);
                         if(!late)await frame(item.Pixels,size.Width,size.Height);
+                        if(first)lock(gate)
+                        {
+                            if(run==owner)
+                            {
+                                primed=true;
+                                if(playing){if(sound!=null)sound.Pause(false);else clock.Restart();}
+                            }
+                        }
                         first=false;
                     }
                     finally{free.Enqueue(item.Pixels);}
                 }
                 await producer;
+                if(first)throw new InvalidDataException("The video decoder could not read this media.");
             }
-            catch {await owner.CancelAsync();try {await producer;}catch(Exception){}throw;}
+            catch(Exception error)
+            {
+                if(!token.IsCancellationRequested)playbackFailure=error;
+                await owner.CancelAsync();try {await producer;}catch(Exception){}throw;
+            }
             await movie.WaitForExitAsync(token);
             if (movie.ExitCode != 0) throw new InvalidDataException("The video decoder could not read this media.");
             await musicTask;
             lock (gate) if (run == owner) { playing = false; clock.Stop(); }
         }
-        catch (Exception e) when (token.IsCancellationRequested) { _ = e; }
+        catch (Exception e) when (token.IsCancellationRequested && playbackFailure==null) { _ = e; }
         catch (Exception e)
         {
             lock (gate) if (run == owner) { playing = false; clock.Stop(); }
@@ -210,13 +222,13 @@ public sealed class VideoPlayback : IVideoOutput
                 await Task.Delay(10, token);
             }
             output.Push(samples, read);
-            lock(gate) if(run==owner && playing)output.Pause(false);
+            lock(gate) if(run==owner && playing && primed)output.Pause(false);
         }
         await process.WaitForExitAsync(token);
         if (process.ExitCode != 0) throw new InvalidDataException("The video decoder could not read this media.");
         // Keep the audio clock advancing after the last sample, including short/silent tails.
         while (output.Queued != 0) await Task.Delay(10, token);
-        lock (gate) if (run == owner) { offset += output.Position; clock.Reset(); if (playing) clock.Start(); sound = null; }
+        lock (gate) if (run == owner) { offset += output.Position; clock.Reset(); if (playing && primed) clock.Start(); sound = null; }
     }
     async Task FeedAudioOrMute(Process process, PcmOutput output, CancellationTokenSource owner)
     {
@@ -226,7 +238,7 @@ public sealed class VideoPlayback : IVideoOutput
             lock (gate)
             {
                 if (run != owner) return;
-                offset = Current(); output.Pause(true); sound = null; clock.Reset(); if (playing) clock.Start();
+                offset = Current(); output.Pause(true); sound = null; clock.Reset(); if (playing && primed) clock.Start();
                 Warning = "VideoAudioUnavailable";
             }
             Kill(process);
@@ -247,7 +259,7 @@ public sealed class VideoPlayback : IVideoOutput
     void Halt()
     {
         var owner=run;var output=device;var movie=video;var music=audio;
-        run=null;playing=false;clock.Reset();sound=device=null;video=audio=null;
+        run=null;playing=false;primed=false;clock.Reset();sound=device=null;video=audio=null;
         var previous=closing;
         closing=Task.Run(async()=>
         {
