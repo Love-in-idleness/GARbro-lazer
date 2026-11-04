@@ -31,13 +31,14 @@ try {
             $process=Get-Process GARbro.Desktop -ErrorAction SilentlyContinue | Where-Object {$_.MainWindowTitle -like ('*.'+$extension)} | Select-Object -First 1
         } while(-not $process -and (Get-Date) -lt $deadline)
         if(-not $process){
+            Get-CimInstance Win32_Process | Where-Object {$_.Name -like '*GARbro*'} | Select-Object Name,ProcessId,ParentProcessId,CommandLine | Format-List | Out-String | Write-Output
             Get-Process GARbro.Desktop -ErrorAction SilentlyContinue | Select-Object Id,MainWindowTitle,Path | Format-List | Out-String | Write-Output
             foreach($base in @($env:LOCALAPPDATA,(Join-Path $env:LOCALAPPDATA ('Packages\'+$installed.PackageFamilyName+'\LocalCache\Local')),(Join-Path $env:LOCALAPPDATA ('Packages\'+$installed.PackageFamilyName+'\LocalCache\Roaming')))) {
                 $log=Join-Path $base 'GARbro\desktop.log';if(Test-Path $log){Get-Content -Tail 30 $log | Write-Output}
             }
             throw "Store Open With did not load .$extension"
         }
-        Stop-Process -Id $process.Id
+        if(-not $process.CloseMainWindow()){throw 'Cannot close the associated-file window.'}
         if(-not $process.WaitForExit(10000)){throw 'Previous Store test process did not exit.'}
     }
     Write-Output 'Registered Store identity, self-contained installation and actual Shell file activation passed.'

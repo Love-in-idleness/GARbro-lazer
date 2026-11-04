@@ -58,7 +58,7 @@ try {
         foreach($log in $logs){if(Test-Path $log){Get-Content -Tail 30 $log | Write-Output}}
         throw 'Packaged file activation failed.'
     }
-    Stop-Process -Id $process.Id
+    if(-not $process.CloseMainWindow()){throw 'Cannot close the associated-file window.'}
     if(-not $process.WaitForExit(10000)){throw 'Previous MSIX test process did not exit.'}
     }
     Remove-AppxPackage -Package $installed.PackageFullName
