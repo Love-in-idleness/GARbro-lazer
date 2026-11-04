@@ -130,8 +130,16 @@ public sealed class VideoTests
             output.Play();await entered.Task.WaitAsync(TimeSpan.FromSeconds(15),TestContext.Current.CancellationToken);
             await Task.Delay(400,TestContext.Current.CancellationToken);
             Assert.InRange(output.Position,0,.05);
-            release.TrySetResult(true);await Task.Delay(200,TestContext.Current.CancellationToken);
-            Assert.True(output.Position>.05);Assert.True(frames>=3);
+            release.TrySetResult(true);
+            // SDL's dummy device can start its next callback after 200ms on a
+            // busy Windows runner. Observe resumed playback rather than rely
+            // on a fixed scheduling delay; the blocked-frame assertion above
+            // still verifies that audio cannot start prematurely.
+            var resumed=System.Diagnostics.Stopwatch.StartNew();
+            while(resumed.Elapsed<TimeSpan.FromSeconds(3) && (output.Position<=.05 || System.Threading.Volatile.Read(ref frames)<3))
+                await Task.Delay(20,TestContext.Current.CancellationToken);
+            Assert.True(output.Position>.05,$"Playback clock did not advance after the first frame: {output.Position:F3}s.");
+            Assert.True(System.Threading.Volatile.Read(ref frames)>=3,$"Playback did not resume continuous frames: {frames}.");
         }
         finally{release.TrySetResult(true);}
     }
