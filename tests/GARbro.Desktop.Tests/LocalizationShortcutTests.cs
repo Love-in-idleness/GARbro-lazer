@@ -76,7 +76,14 @@ public sealed class LocalizationShortcutTests
             Assert.Equal(!before,store.Load().ToolbarVisible);
             var search=window.GetVisualDescendants().OfType<TextBox>().Single(c=>c.Name=="Search");search.Focus();
             search.Text="text copied from editor";search.SelectAll();
-            window.DesktopHost.KeyPress(Key.C,OperatingSystem.IsMacOS()?RawInputModifiers.Meta:RawInputModifiers.Control,PhysicalKey.C,"c");
+            // Headless uses its own platform settings even on macOS. Match the editor's actual configuration.
+            var copy=Avalonia.Application.Current.PlatformSettings.HotkeyConfiguration.Copy.First(g=>g.Key==Key.C);
+            var modifiers=RawInputModifiers.None;
+            if(copy.KeyModifiers.HasFlag(KeyModifiers.Control))modifiers|=RawInputModifiers.Control;
+            if(copy.KeyModifiers.HasFlag(KeyModifiers.Meta))modifiers|=RawInputModifiers.Meta;
+            if(copy.KeyModifiers.HasFlag(KeyModifiers.Shift))modifiers|=RawInputModifiers.Shift;
+            if(copy.KeyModifiers.HasFlag(KeyModifiers.Alt))modifiers|=RawInputModifiers.Alt;
+            window.DesktopHost.KeyPress(copy.Key,modifiers,PhysicalKey.C,"c");
             await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);
             Assert.Equal("text copied from editor",await window.Clipboard.TryGetTextAsync());
         }

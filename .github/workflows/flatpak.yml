@@ -71,7 +71,9 @@ jobs:
         run: |
           flatpak remote-add --user --no-gpg-verify --if-not-exists garbro-test "$PWD/artifacts/flatpak-repo"
           flatpak install --user --noninteractive -y garbro-test io.github.love_in_idleness.GARbro-no-wpf
-          dbus-run-session -- xvfb-run -a python3 tools/smoke-flatpak-startup.py
+          test_runtime=$(mktemp -d)
+          chmod 700 "$test_runtime"
+          XDG_RUNTIME_DIR="$test_runtime" XDG_CURRENT_DESKTOP=GNOME xvfb-run -a dbus-run-session -- python3 tools/smoke-flatpak-startup.py
       - name: Validate the built repository with Flathub tooling
         run: |
           python3 tools/inspect-flatpak-media.py build-flatpak

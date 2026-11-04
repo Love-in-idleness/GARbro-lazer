@@ -1,7 +1,7 @@
 name: Release
 on:
   push:
-    paths: [release/version.txt]
+    paths: [release/version.txt, release/rebuild.txt]
   workflow_dispatch:
     inputs:
       tag:
