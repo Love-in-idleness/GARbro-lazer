@@ -32,6 +32,20 @@ public sealed class DeskCommand(Func<Task> execute, Func<bool> enabled, bool con
 
 public sealed partial class MainWindow
 {
+    (KeyGesture Gesture, string Command)[] shortcutMap = Array.Empty<(KeyGesture, string)>();
+    Dictionary<string, string[]> effectiveShortcuts;
+    void ApplyShortcutBindings()
+    {
+        effectiveShortcuts = ShortcutCatalog.Effective(Settings);
+        shortcutMap = effectiveShortcuts.SelectMany(p => p.Value.Select(v => (KeyGesture.Parse(v), p.Key))).ToArray();
+        foreach (var button in this.GetVisualDescendants().OfType<Button>())
+            if (button.Command is DeskCommand command)
+            {
+                string id = commands.FirstOrDefault(p => ReferenceEquals(p.Value, command)).Key;
+                if (id != null) ToolTip.SetTip(button, CommandTip(id));
+            }
+    }
+    string CommandTip(string key) => Text[key] + (effectiveShortcuts?.GetValueOrDefault(key) is { Length: > 0 } values ? " (" + string.Join(", ", values) + ")" : "");
     void Register(string key, Func<Task> action, Func<bool> enabled = null) =>
         commands.Add(key, new(() => Guard(action), enabled ?? (() => !busy), key is "Open" or "OpenFolder" or "Back" or "Forward" or "Parent" or "Refresh"));
     void CreateCommands()
@@ -44,7 +58,7 @@ public sealed partial class MainWindow
         Register("Parent", NavigateParent, () => !busy && listing != null);
         Register("Refresh", () => CurrentLocation == null ? Task.CompletedTask : LoadLocationAsync(CurrentLocation with { Fingerprint = null }, false, true));
         Register("Settings", () => ShowSettings());
-        foreach (string section in new[] { "General", "Appearance", "Decoding", "Formats" })
+        foreach (string section in new[] { "General", "Appearance", "Decoding", "Formats", "Shortcuts" })
             Register(section, () => ShowSettings(section));
         Register("ExtractAll", () => ExtractPicker(false, false), () => !busy && listing != null);
         Register("ExtractSelected", () => ExtractPicker(true, false), () => !busy && listing != null && files.SelectedItems.Count > 0);
@@ -80,11 +94,26 @@ public sealed partial class MainWindow
             });
         foreach (string page in new[] { "Feedback", "Manual", "Troubleshoot", "Updates", "License", "ExportLogs", "About" })
             Register(page, () => ShowHelp(page), () => !busy);
+        Register("FocusMenu", () => { menu.Children.FirstOrDefault()?.Focus(); return Task.CompletedTask; }, () => true);
+        Register("NextSelection", () => { files.SelectedIndex = Math.Min(files.ItemCount - 1, files.SelectedIndex + 1); return Task.CompletedTask; }, () => files.IsFocused && files.ItemCount > 0);
+        foreach (var sort in new[] { ("SortName", "name"), ("SortType", "type"), ("SortSize", "size"), ("SortNone", "none") })
+            Register(sort.Item1, () => { SetSort(sort.Item2); return Task.CompletedTask; });
+        Register("Play", PlayAudio, () => !busy && mediaPreparation == null && preview?.Kind is "audio" or "video");
+        Register("Pause", () => { Playback?.Pause(); return Task.CompletedTask; }, () => Playback != null);
+        Register("Stop", () => { Playback?.Stop(); return Task.CompletedTask; }, () => Playback != null);
+        Register("PreviousPage", () => ShowPreviewPage(Math.Max(0, (preview?.Offset ?? 0) - 65536)), () => preview != null && pageControls.IsVisible);
+        Register("NextPage", () => ShowPreviewPage((preview?.Offset ?? 0) + 65536), () => preview?.More == true);
+        Register("Copy", async () => { if (Clipboard != null) await Clipboard.SetTextAsync(text.Text ?? ""); }, () => text.IsVisible);
+        Register("Wrap", () => { Settings.WrapText = !Settings.WrapText; ApplySettings(); return Task.CompletedTask; });
+        ApplyShortcutBindings();
     }
-    MenuItem Item(string key, string gesture = null)
+    void SetSort(string value)
+    { Settings.SortDescending = Settings.Sort == value && !Settings.SortDescending; Settings.Sort = value; ApplySettings(); }
+    MenuItem Item(string key)
     {
         var item = new MenuItem { Command = commands[key], Icon = MaterialIcons.Create(key) }; item.Bind(MenuItem.HeaderProperty, Bind(key));
-        if (gesture != null) item.InputGesture = KeyGesture.Parse(gesture);
+        if (effectiveShortcuts?.GetValueOrDefault(key)?.FirstOrDefault() is string gesture) item.InputGesture = KeyGesture.Parse(gesture);
+        ToolTip.SetTip(item, CommandTip(key));
         return item;
     }
     MenuItem Group(string key) { var item = new MenuItem { Icon = MaterialIcons.Create(key) }; item.Bind(MenuItem.HeaderProperty, Bind(key)); return item; }
@@ -96,17 +125,17 @@ public sealed partial class MainWindow
         var file = GroupMenu("Open", "OpenFolder");
         var recent = Group("Recent"); foreach (string filename in Settings.Recent)
         { var item = new MenuItem { Header = UiPlatform.Storage.DisplayPath(filename), Icon = MaterialIcons.Create("Recent") }; item.Click += async (_, _) => await Guard(() => LoadInputsAsync(new[] { filename })); recent.Items.Add(item); }
-        file.Items.Add(recent); if (!UiPlatform.IsMobile) file.Items.Add(Item("Exit", "Ctrl+Q"));
+        file.Items.Add(recent); if (!UiPlatform.IsMobile) file.Items.Add(Item("Exit"));
         var process = GroupMenu("ExtractAll", "ExtractSelected", "Recursive", "Create", "Convert", "Cancel");
         var selection = BuildContextMenu(true);
         var view = GroupMenu("Back", "Forward", "Parent", "Refresh", "FitWindow");
         var fit = Item("FitImage"); fit.ToggleType = MenuItemToggleType.CheckBox; fit.IsChecked = Settings.FitImage; view.Items.Add(fit);
-        var sort = Group("Sort"); foreach (var pair in new[] { ("Name", "name"), ("Type", "type"), ("Size", "size"), ("Unsorted", "none") })
-        { var item = Group(pair.Item1); item.ToggleType = MenuItemToggleType.Radio; item.IsChecked = Settings.Sort == pair.Item2; item.Click += (_, _) => { Settings.SortDescending = Settings.Sort == pair.Item2 && !Settings.SortDescending; Settings.Sort = pair.Item2; ApplySettings(); }; sort.Items.Add(item); }
+        var sort = Group("Sort"); foreach (var pair in new[] { ("SortName", "name"), ("SortType", "type"), ("SortSize", "size"), ("SortNone", "none") })
+        { var item = Item(pair.Item1); item.ToggleType = MenuItemToggleType.Radio; item.IsChecked = Settings.Sort == pair.Item2; sort.Items.Add(item); }
         view.Items.Add(sort);
         foreach (string key in new[] { "Toolbar", "Statusbar" })
         { var item = Item(key); item.ToggleType = MenuItemToggleType.CheckBox; item.IsChecked = key == "Toolbar" ? Settings.ToolbarVisible : Settings.StatusVisible; view.Items.Add(item); }
-        var settings = GroupMenu("General", "Appearance", "Decoding", "Formats");
+        var settings = GroupMenu("General", "Appearance", "Decoding", "Formats", "Shortcuts");
         var help = GroupMenu(HelpPages);
         foreach (var group in new[] { ("File", file), ("Process", process), ("Selection", selection), ("View", view), ("Settings", settings), ("Help", help) })
         {
@@ -246,19 +275,14 @@ public sealed partial class MainWindow
     }
     async void OnKeyDown(object sender, KeyEventArgs e)
     {
-        bool ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta);
+        if (e.Handled || e.Key is Key.ImeProcessed or Key.DeadCharProcessed) return;
         bool editing = e.Source is Control source && (source is TextBox || source.FindAncestorOfType<TextBox>() != null);
-        if (editing && !(ctrl && e.Key is Key.O or Key.P or Key.Q) && e.Key is not (Key.Escape or Key.F10)) return;
-        string key = ctrl ? e.Key switch { Key.O => "Open", Key.P => "Settings", Key.Q => "Exit", Key.H => "FitWindow", Key.E => "Explore",
-            Key.A when !editing => "SelectAll", Key.C when !editing => "CopyNames", Key.PageUp => "Parent", _ => null } : e.Key switch
-            { Key.F3 => "Create", Key.F4 => "ExtractSelected", Key.F5 => "Refresh", Key.F6 => "Convert", Key.Delete when !editing => "Trash",
-                Key.Enter when !editing => "OpenSelected", Key.Back when !editing => "Parent", Key.Escape => "Cancel", Key.Add when !editing => "Mask", _ => null };
-        if (e.KeyModifiers == (KeyModifiers.Alt | KeyModifiers.Shift)) key = e.Key switch { Key.T => "Toolbar", Key.M => "Menubar", Key.S => "Statusbar", _ => key };
-        if (e.KeyModifiers.HasFlag(KeyModifiers.Alt)) key = e.Key switch { Key.Left => "Back", Key.Right => "Forward", _ => key };
-        if (e.Key == Key.F10) { menu.Children.FirstOrDefault()?.Focus(); e.Handled = true; return; }
-        if (key != null && commands[key].CanExecute(null)) { e.Handled = true; commands[key].Execute(null); }
-        if (e.Key == Key.Space && !editing && files.IsFocused && files.ItemCount > 0)
-        { files.SelectedIndex = Math.Min(files.ItemCount - 1, files.SelectedIndex + 1); e.Handled = true; }
+        // Let editors and IMEs own typing, composition and standard edit/navigation keys.
+        if (editing && (e.KeyModifiers.HasFlag(KeyModifiers.Alt) || e.Key is Key.A or Key.C or Key.V or Key.X or Key.Z or Key.Y or Key.Enter or Key.Escape or Key.Back or Key.Delete or Key.Left or Key.Right or Key.Up or Key.Down or Key.Home or Key.End or Key.PageUp or Key.PageDown ||
+            (e.KeyModifiers & (KeyModifiers.Control | KeyModifiers.Meta)) == 0 && e.Key is not (>= Key.F1 and <= Key.F24))) return;
+        foreach (var binding in shortcutMap)
+            if (binding.Gesture.Key == e.Key && binding.Gesture.KeyModifiers == e.KeyModifiers && commands[binding.Command].CanExecute(null))
+            { e.Handled = true; commands[binding.Command].Execute(null); break; }
         await Task.CompletedTask;
     }
 }

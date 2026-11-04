@@ -10,6 +10,14 @@ installer=importlib.util.module_from_spec(spec);spec.loader.exec_module(installe
 
 
 class InstallerTests(unittest.TestCase):
+    def test_host_mime_aliases_preserve_third_party_recognition_without_media_types(self):
+        spec=importlib.util.spec_from_file_location('host_associations',installer.ROOT/'tools/installers/update_associations.py')
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory()as directory:
+            globs=Path(directory)/'globs2'
+            globs.write_text('50:application/x-existing-xp3:*.xp3\n50:application/zip:*.zip\n50:video/mpeg:*.dat\n50:application/x-executable:*.bin\n')
+            self.assertEqual({'application/x-existing-xp3','application/zip'},module.supplement(set(installer.associations()),[globs]))
+
     def test_versions_preserve_prerelease_to_stable_upgrade_order(self):
         releases=['0.2.0-alpha.1','0.2.0-beta.1','0.2.0-preview.1','0.2.0-preview.10','0.2.0-rc.1','0.2.0','0.2.1-preview.1']
         windows=[tuple(map(int,installer.versions(v)[1].split('.')))for v in releases]
@@ -20,11 +28,19 @@ class InstallerTests(unittest.TestCase):
 
     def test_associations_exclude_common_media_and_executable_types(self):
         extensions=installer.associations()
-        for extension in ('xp3','rpa','pfs','ypf','lim'):self.assertIn(extension,extensions)
-        self.assertFalse(set(extensions)&{'exe','dll','lnk','dat','bin','png','jpg','wav','mp3','zip','txt','md','lib','psb','psd','xfl','pac'})
+        for extension in ('xp3','rpa','pfs','ypf','lim','xfl','dat','bin','zip','pac'):self.assertIn(extension,extensions)
+        self.assertFalse(set(extensions)&{'exe','dll','lnk','app','png','jpg','wav','mp3','txt','md','psb','psd'})
         desktop=installer.desktop_entry(extensions)
         self.assertIn('Terminal=false\n',desktop)
         self.assertIn('Exec=garbro-desktop %F\n',desktop)
+        self.assertIn('application/zip;',desktop)
+        self.assertIn('application/octet-stream;',desktop)
+        baseline=__import__('json').loads((installer.ROOT/'docs/compatibility/baseline-runtime.json').read_text())
+        expected={e.lower() for f in baseline if f['type']=='archive' for e in f['extensions'] if e and not e.startswith('generic ') and e.lower() not in installer.EXCLUDED_ASSOCIATIONS}
+        self.assertTrue(expected <= set(extensions))
+        documents,imports=installer.mac_document_types(extensions)
+        self.assertIn('public.zip-archive',documents[0]['LSItemContentTypes'])
+        self.assertTrue(any('xfl' in t['UTTypeTagSpecification']['public.filename-extension'] for t in imports))
 
     def test_msix_uses_gui_entry_and_quoted_file_activation(self):
         manifest=installer.msix_manifest('0.2.0-preview.1')

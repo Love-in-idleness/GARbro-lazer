@@ -21,7 +21,8 @@ def main():
         with tempfile.TemporaryDirectory(prefix='garbro-deb-check-')as directory:
             context=Path(directory)
             for source,name in [(args.package,'package.deb'),(ROOT/'tools/installers/Dockerfile','Dockerfile'),
-                (ROOT/'tools/installers/probe.py','probe.py'),(ROOT/'tests/fixtures/generated/standard.xfl','standard.xfl')]:shutil.copy2(source,context/name)
+                (ROOT/'tools/installers/probe.py','probe.py'),(ROOT/'tools/association_probe.py','association_probe.py'),
+                (ROOT/'tests/fixtures/generated/standard.xfl','standard.xfl')]:shutil.copy2(source,context/name)
             tag='garbro-installer-test:'+distro
             command=['docker','build','--build-arg','BASE='+base,'--build-arg','DIST='+distro,'--build-arg','DIST_VERSION='+version,'-t',tag,str(context)]
             if os.environ.get('CODEX_PROXY_CERT'):command[2:2]=['--secret','id=proxy_ca,src='+os.environ['CODEX_PROXY_CERT']]

@@ -5,18 +5,24 @@ import subprocess
 import tempfile
 import time
 from pathlib import Path
+from association_probe import verify_candidate,handlers
 
 
 def run(*args,**kwargs):return subprocess.run(args,check=True,**kwargs)
 
 
 def gui():
-    # GIO uses the installed desktop entry, including its file activation args.
-    run('gio','launch','/usr/share/applications/org.garbro.GARbro.desktop','/tmp/standard.xfl')
+    # Resolve candidates first, then exercise normal system default activation.
+    # This disposable profile is the only place where the test changes a default.
+    path=Path('/tmp/GARbro 中文 Русский 日本語/资源 文件.xfl');path.parent.mkdir(exist_ok=True)
+    path.write_bytes(Path('/tmp/standard.xfl').read_bytes())
+    mime=verify_candidate(path,'org.garbro.GARbro.desktop')
+    run('gio','mime',mime,'org.garbro.GARbro.desktop')
+    run('gio','open',str(path))
     deadline=time.monotonic()+20
     while time.monotonic()<deadline:
         windows=subprocess.check_output(['xwininfo','-root','-tree'],text=True)
-        if 'GARbro — standard.xfl'in windows:
+        if 'GARbro — 资源 文件.xfl'in windows:
             print('Installed desktop entry opened the associated archive without a terminal.')
             return
         time.sleep(.2)
@@ -52,14 +58,20 @@ if __name__=='__main__':
         assert defaults.read_text()==original
         assert 'standard::content-type: application/x-existing-xp3'in subprocess.check_output(['gio','info','-a','standard::content-type','/tmp/associated.xp3'],text=True)
         assert subprocess.check_output(['xdg-mime','query','default','application/x-existing-xp3'],text=True).strip()=='existing-application.desktop'
+    for extension in ('xfl','dat','bin','zip'):
+        fixture=Path('/tmp/associated.'+extension);fixture.write_bytes(Path('/tmp/standard.xfl').read_bytes())
+        verify_candidate(fixture,'org.garbro.GARbro.desktop')
+    verify_candidate(Path('/tmp/associated.xp3'),'org.garbro.GARbro.desktop')
     output=json.loads(subprocess.check_output(['garbro','list','/tmp/standard.xfl','--json'],text=True))
     assert output[0]['format']=='XFL'and len(output[0]['entries'])==3
     with tempfile.TemporaryDirectory()as directory:
         run('garbro','extract','/tmp/standard.xfl','-o',str(Path(directory)/'output'))
         assert (Path(directory)/'output/hello.txt').read_text()=='Hello, GARbro!\n'
     run('xvfb-run','-a','python3','/probe.py','--gui')
+    defaults.write_text(original)
     run('apt-get','remove','-y','garbro',stdout=subprocess.DEVNULL)
     assert not Path('/usr/share/applications/org.garbro.GARbro.desktop').exists()
     assert not Path('/opt/garbro/desktop/GARbro.Desktop').exists()
     assert defaults.read_text()==original
+    assert 'org.garbro.GARbro.desktop'not in handlers('application/octet-stream')
     print('DEB install, upgrade, default preservation, CLI, desktop activation and uninstall passed.')

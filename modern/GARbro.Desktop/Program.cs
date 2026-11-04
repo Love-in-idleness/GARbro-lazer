@@ -2,6 +2,8 @@ using System;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Themes.Fluent;
+using Avalonia.Platform.Storage;
+using System.Linq;
 
 namespace GARbro.Desktop
 {
@@ -25,13 +27,17 @@ namespace GARbro.Desktop
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 var window = new MainWindow();
-                window.Opened += async (_, _) =>
+                var files = new FileActivationRouter(window);
+                var activation = this.TryGetFeature<IActivatableLifetime>();
+                void Activated(object sender, ActivatedEventArgs args)
                 {
-                    var arguments = StartupArguments ?? desktop.Args ?? Array.Empty<string>();
-                    var inputs = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Where(arguments, p => System.IO.File.Exists(p) || System.IO.Directory.Exists(p)));
-                    DesktopServices.Activity("startup", $"arguments={arguments.Length}; resources={inputs.Length}");
-                    if (inputs.Length > 0) await window.Guard(() => window.LoadInputsAsync(inputs));
-                };
+                    if (args is FileActivatedEventArgs documents) files.Open(documents.Files.Select(item => item.TryGetLocalPath()));
+                    if (args.Kind is ActivationKind.File or ActivationKind.Reopen) { window.DesktopHost.Show(); window.DesktopHost.Activate(); }
+                }
+                if (activation != null) activation.Activated += Activated;
+                files.Open(StartupArguments ?? desktop.Args ?? Array.Empty<string>(), startup: true);
+                window.Opened += (_, _) => files.Ready();
+                window.Closed += (_, _) => { files.Stop(); if (activation != null) activation.Activated -= Activated; };
                 desktop.MainWindow = window.DesktopHost;
             }
             base.OnFrameworkInitializationCompleted();

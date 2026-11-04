@@ -18,9 +18,9 @@ public sealed partial class MainWindow
     void BuildPlayback()
     {
         var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        row.Children.Add(ActionButton("Play", PlayAudio));
-        row.Children.Add(ActionButton("Pause", () => { Playback?.Pause(); return Task.CompletedTask; }));
-        row.Children.Add(ActionButton("Stop", () => { Playback?.Stop(); return Task.CompletedTask; }));
+        row.Children.Add(Button("Play"));
+        row.Children.Add(Button("Pause"));
+        row.Children.Add(Button("Stop"));
         playbackInfo.FontSize=12;playbackInfo.Classes.Add("muted");
         position.MinHeight=0;position.Height=24;volume.MinHeight=0;volume.Height=24;
         var volumeRow=new Grid {ColumnDefinitions=new("Auto,*"),ColumnSpacing=12};

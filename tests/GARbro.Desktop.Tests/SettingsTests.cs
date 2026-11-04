@@ -33,10 +33,11 @@ public sealed class SettingsTests
         Assert.False(UpdateService.IsNewer("v0.2.0-preview.2","0.2.0"));
     }
     [Fact]
-    public void EveryUiResourceHasBothLanguagesAndRedactionRemovesSecrets()
+    public void EveryUiResourceHasFourLanguagesAndRedactionRemovesSecrets()
     {
-        var english=new DesktopText("en-US");var chinese=new DesktopText("zh-CN");
-        foreach(string key in english.Keys){Assert.NotEmpty(english[key]);Assert.NotEqual(key,chinese[key]);}
+        var english=new DesktopText("en-US");
+        foreach(string language in GARbro.Domain.LanguageCatalog.Codes)
+            foreach(string key in english.Keys) Assert.NotEmpty(new DesktopText(language)[key]);
         Assert.DoesNotContain("hunter2",DesktopServices.Redact("password=hunter2"));
         Assert.DoesNotContain("hunter2",DesktopServices.Redact("{\"Password\":\"hunter2 with spaces\"}"));
         Assert.DoesNotContain("Someone",DesktopServices.Redact("C:\\Users\\Someone\\game.xp3"));

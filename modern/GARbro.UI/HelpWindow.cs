@@ -18,7 +18,7 @@ public sealed class HelpWindow : AppWindow
         Title = text["Help"]; Width = 850; Height = 650; WindowStartupLocation = WindowStartupLocation.CenterOwner; WaylandTextInput.Attach(this);
         var tabs = new TabControl();
         Control Reader(string content) => new TextBox { Text = content, IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Margin = new Avalonia.Thickness(12) };
-        var manual = new TabItem { Header = text["Manual"], Content = Reader(DesktopServices.ReadResource(text.Language == "zh-CN" ? "manual.zh-CN.md" : "manual.en-US.md")) }; tabs.Items.Add(manual);
+        var manual = new TabItem { Header = text["Manual"], Content = Reader(DesktopServices.ReadResource("manual." + text.Language + ".md")) }; tabs.Items.Add(manual);
         var about = new StackPanel { Spacing = 8, Margin = new Avalonia.Thickness(12) };
         about.Children.Add(new TextBlock { Text = "GARbro " + DesktopServices.Version, FontSize = 20 });
         about.Children.Add(new TextBlock { Text = text["Authors"] });

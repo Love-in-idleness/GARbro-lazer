@@ -6,6 +6,7 @@ ARG DIST_VERSION=13
 COPY package.deb /tmp/garbro.deb
 COPY standard.xfl /tmp/standard.xfl
 COPY probe.py /probe.py
+COPY association_probe.py /association_probe.py
 RUN --mount=type=secret,id=proxy_ca,mode=0444 \
     set -eu; \
     apt-get update; \

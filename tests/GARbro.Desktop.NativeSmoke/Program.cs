@@ -75,6 +75,7 @@ public sealed class NativeSmokeApp : Avalonia.Application
                 SharedFrame.Check(window);
                 WindowsFrame.Check(window.DesktopHost);
                 await CaptionVisuals.Check(window,store.Load());
+                await LocalizationSnapshots.Check(window);
                 Directory.CreateDirectory(Program.Output);
                 if(Program.TestIme)
                 {

@@ -31,6 +31,13 @@ assert run('probe',FIX/'raw565.lim')[0]['format']=='LIM'
 assert len(run('list',FIX/'pf8.pfs')[0]['entries'])==3
 assert run('formats','--timeout','0.01',code=130)['error']=='WorkerLimitException'
 assert run('formats','--max-memory','1',code=2)['error']=='ArgumentOutOfRangeException'
+for language,word in [('en-US','Commands'),('zh-CN','命令'),('ru-RU','Команды'),('ja-JP','コマンド')]:
+ for arguments in [('--language',language,'help'),('help','--language',language)]:
+  help=subprocess.check_output([args.dotnet,str(CLI),*arguments],text=True)
+  assert word in help,(language,help)
+ assert run('--language',language,'list',FIX/'standard.xfl')==run('list',FIX/'standard.xfl','--language',language)
+ error=subprocess.run([args.dotnet,str(CLI),'extract','--language',language],text=True,capture_output=True)
+ assert error.returncode==2 and error.stderr.strip()
 with tempfile.TemporaryDirectory(prefix='garbro-cli-')as folder:
  root=Path(folder)
  run('extract',FIX/'standard.xp3','--scheme','none','-o',root/'output')

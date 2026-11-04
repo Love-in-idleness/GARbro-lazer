@@ -11,6 +11,23 @@ using GameRes;
 
 internal static class Program
 {
+    static ResourceText text = new();
+    static string SelectLanguage(ref string[] args)
+    {
+        string language = "auto";
+        var remaining = new List<string>();
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (args[i] != "--language") { remaining.Add(args[i]); continue; }
+            if (++i >= args.Length) throw new ArgumentException("Incomplete option: --language");
+            language = args[i];
+            if (!GARbro.Domain.LanguageCatalog.IsSupported(language)) throw new ArgumentException("Invalid language: " + language);
+        }
+        text = new(language);
+        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(text.Language);
+        args = remaining.ToArray();
+        return text.Language;
+    }
     static readonly JsonSerializerOptions Json = new()
     {
         WriteIndented = true,
@@ -29,6 +46,7 @@ internal static class Program
         Console.CancelKeyPress+=(s,e)=>{e.Cancel=true;cancel.Cancel();};
         try
         {
+            string language = SelectLanguage(ref args);
             double timeout=300;
             long memory=1L<<30;
             var forwarded=new List<string> {"--garbro-isolated-core"};
@@ -54,6 +72,7 @@ internal static class Program
                         forwarded.Add(args[++i]);
                 }
             }
+            forwarded.Add("--language"); forwarded.Add(language);
             var run=await WorkerSupervisor.RunManagedAsync(typeof(Program).Assembly.Location,forwarded,
                 new WorkerLimits(timeout,memory),cancellation:cancel.Token,
                 output:Console.WriteLine,error:Console.Error.WriteLine);
@@ -69,7 +88,7 @@ internal static class Program
                 ArgumentException or FormatException or OverflowException=>2,
                 _=>7};
             if(args.Contains("--json"))Emit(new {error=error.GetType().Name,message=error.Message,exitCode=code});
-            else Console.Error.WriteLine(error.Message);
+            else Console.Error.WriteLine(text.ErrorMessage(error.Message));
             return code;
         }
     }
@@ -85,9 +104,10 @@ internal static class Program
         };
         try
         {
+            SelectLanguage(ref args);
             if (args.Length == 0 || args[0] is "help" or "--help" or "-h")
             {
-                Console.WriteLine("GARbro portable\n  formats [--type archive|image|audio|script] [--json]\n  schemes FILE [--json]\n  probe FILE [--format TAG] [--json]\n  list FILE [--format TAG] [--json]\n  extract FILE... -o DIRECTORY [--overwrite fail|skip|replace] [--json]\n  convert FILE -o FILE [--to PNG|BMP|JPEG|TIFF|TGA|WAV] [--json]\nOptions: --options FILE, --scheme NAME, --schemes FILE, --max-pixels N, --recursive (disk directories), --nested (child archives), --encoding CODEPAGE, --max-depth N, --max-entry BYTES, --max-total BYTES, --max-ratio N, --timeout SECONDS, --max-memory BYTES\nOperations run in a supervised process (defaults: 300 seconds, 1 GiB resident memory).");
+                Console.WriteLine(text["Cli.Help"]);
                 return 0;
             }
 
@@ -174,7 +194,7 @@ internal static class Program
                 if (json)
                     Emit(report);
                 else
-                    Console.WriteLine($"Applied: {report.Applied.Length}; unported: {report.Unported.Length}; failed: {report.Failed.Count}");
+                    Console.WriteLine(text.Format("Cli.Applied", report.Applied.Length, report.Unported.Length, report.Failed.Count));
                 return report.Failed.Count == 0 ? 0 : 3;
             }
 
@@ -233,7 +253,7 @@ internal static class Program
                         new ExtractionLimits(Number("--max-entry",2L<<30),remaining,double.Parse(Get("--max-ratio","10000"),CultureInfo.InvariantCulture),entriesRemaining),
                         overwrite,null,provider,null);
                     remaining-=report.Bytes;entriesRemaining-=report.Entries;reports.Add(report);
-                    if(!json)Console.WriteLine($"{source}: {report.Files.Length} files, {report.Errors.Length} errors → {root}");
+                    if(!json)Console.WriteLine(text.Format("Cli.NestedResult", source, report.Files.Length, report.Errors.Length, root));
                 }
                 if(json)Emit(reports);
                 return reports.Any(r=>r.Errors.Length>0)?3:0;
@@ -273,7 +293,7 @@ internal static class Program
                         };
                         results.Add(result);
                         if (!json)
-                            Console.WriteLine($"{file}: {probe.Tag}, {probe.Entries.Count} entries");
+                            Console.WriteLine(text.Format("Cli.ProbeResult", file, probe.Tag, probe.Entries.Count));
                     }
                     catch (UnknownFormatException)
                     {
@@ -292,7 +312,7 @@ internal static class Program
                     case "probe":
                         results.Add(new { input = file, type = "archive", format = archive.Tag, count = archive.Entries.Count });
                         if (!json)
-                            Console.WriteLine($"{file}: {archive.Tag}, {archive.Entries.Count} entries");
+                            Console.WriteLine(text.Format("Cli.ProbeResult", file, archive.Tag, archive.Entries.Count));
                         break;
                     case "list":
                         results.Add(new { input = file, format = archive.Tag, entries = archive.Entries });
@@ -309,7 +329,7 @@ internal static class Program
                         var extracted = await archive.ExtractAsync(root, overwrite, limits, cancellation: cancel.Token);
                         results.Add(new { input = file, format = archive.Tag, output = root, files = extracted });
                         if (!json)
-                            Console.WriteLine($"{file}: {extracted.Count} entries processed → {root}");
+                            Console.WriteLine(text.Format("Cli.ExtractResult", file, extracted.Count, root));
                         break;
                     default:
                         throw new ArgumentException("Unknown command: " + args[0]);
@@ -336,7 +356,7 @@ internal static class Program
             if (json)
                 Emit(new { error = error.GetType().Name, message = error.Message, exitCode = code });
             else
-                Console.Error.WriteLine(error.Message);
+                Console.Error.WriteLine(text.ErrorMessage(error.Message));
             return code;
         }
     }

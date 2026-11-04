@@ -27,7 +27,7 @@ static class NativeVideo
         for(int i=0;i<200&&image.Source==null;i++)await Task.Delay(25);
         if(image.Source==null)throw new InvalidDataException("Video poster did not appear.");
         var play=page.GetVisualDescendants().OfType<Button>().Single(b=>b.Content as string==UiPlatform.CurrentText["Play"]);
-        play.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        play.Command.Execute(null);
         var ready=System.Diagnostics.Stopwatch.StartNew();
         while(image.Source is not Avalonia.Media.Imaging.WriteableBitmap && ready.Elapsed.TotalSeconds<15)await Task.Delay(25);
         if(image.Source is not Avalonia.Media.Imaging.WriteableBitmap)throw new InvalidDataException("Video playback did not produce a first frame.");

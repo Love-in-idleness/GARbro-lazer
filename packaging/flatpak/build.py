@@ -24,7 +24,7 @@ ET.SubElement(feeds,'clear');ET.SubElement(feeds,'add',key='offline',value=str(o
 offline_config=root/'.flatpak-nuget.config'
 ET.ElementTree(configuration).write(offline_config,encoding='utf-8',xml_declaration=True)
 rid={'x86_64':'linux-x64','aarch64':'linux-arm64'}[platform.machine()]
-version=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.2')
+version=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.3')
 for project,folder in [('GARbro.Desktop','desktop'),('GARbro.Worker','desktop'),('GARbro.Cli','cli')]:
     path=f'modern/{project}/{project}.csproj'
     options=['-r',rid,'-p:SelfContained=true','-p:RuntimeFrameworkVersion=10.0.14','-p:NuGetAudit=false']
@@ -42,14 +42,11 @@ for name,target in [('garbro-desktop','desktop/GARbro.Desktop'),('garbro','cli/g
     (binary/name).symlink_to('/app/lib/garbro/'+target)
 entries=data/'applications';entries.mkdir(parents=True,exist_ok=True)
 entry=installer.desktop_entry(installer.associations()).replace(installer.APP_ID,app)
+# The executable exists inside the sandbox, not in the host's PATH.
+entry=entry.replace('TryExec=garbro-desktop\n','')
 (entries/(app+'.desktop')).write_text(entry)
 mime=data/'mime/packages';mime.mkdir(parents=True,exist_ok=True)
-xml=ET.Element('mime-info',xmlns='http://www.freedesktop.org/standards/shared-mime-info')
-for ext in installer.associations():
-    node=ET.SubElement(xml,'mime-type',type='application/x-garbro-'+ext)
-    ET.SubElement(node,'comment').text='GARbro game resource (.'+ext+')'
-    ET.SubElement(node,'glob',pattern='*.'+ext,weight='10')
-ET.ElementTree(xml).write(mime/(app+'.xml'),encoding='utf-8',xml_declaration=True)
+installer.mime_document(installer.associations()).write(mime/(app+'.xml'),encoding='utf-8',xml_declaration=True)
 meta=data/'metainfo';meta.mkdir(parents=True,exist_ok=True)
 shutil.copy2(root/'packaging/flatpak'/ (app+'.metainfo.xml'),meta)
 fonts=Path('/app/etc/fonts');fonts.mkdir(parents=True,exist_ok=True)

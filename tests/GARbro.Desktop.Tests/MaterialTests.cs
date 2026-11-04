@@ -45,7 +45,7 @@ public sealed class MaterialTests
         try
         {
             File.WriteAllText(file,"{\"Version\":1,\"MenuVisible\":false,\"Language\":\"zh-CN\",\"TextEncoding\":\"gbk\"}");
-            var settings=new SettingsStore(file).Load();Assert.Equal(2,settings.Version);Assert.True(settings.MenuVisible);
+            var settings=new SettingsStore(file).Load();Assert.Equal(3,settings.Version);Assert.True(settings.MenuVisible);
             Assert.Equal("gbk",settings.TextEncoding);Assert.Equal("zh-CN",settings.Language);Assert.Equal("#6750A4",settings.SeedColor);
         }
         finally{File.Delete(file);}

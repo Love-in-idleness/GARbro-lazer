@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
 from installer_support import build_deb, build_msix
-from installer_support import associations
+from installer_support import associations, mac_document_types
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -61,8 +61,9 @@ def licenses(destination):
     shutil.copy2(ROOT/'docs/compatibility.md',destination/'compatibility.md')
     shutil.copytree(ROOT/'docs/compatibility',destination/'compatibility')
     shutil.copy2(ROOT/'docs/migration-status.md',destination/'migration-status.md')
-    for name in ('linux-desktop.md','install.md','manual.en-US.md','manual.zh-CN.md','desktop-parity.md'):
+    for name in ('linux-desktop.md','install.md','desktop-parity.md'):
         shutil.copy2(ROOT/'docs'/name,destination/name)
+    for file in list((ROOT/'docs').glob('manual.*.md')) + list((ROOT/'docs').glob('troubleshoot.*.md')): shutil.copy2(file,destination/file.name)
 
 
 def main():
@@ -70,7 +71,7 @@ def main():
     parser.add_argument('--rid',required=True,choices=['linux-x64','linux-arm64','win-x64','win-arm64','osx-x64','osx-arm64'])
     parser.add_argument('--output',default='artifacts')
     parser.add_argument('--dotnet',default='dotnet')
-    parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.2'))
+    parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.3'))
     parser.add_argument('--installer',action='store_true',help='Also build DEB or signed test MSIX for the selected architecture')
     args=parser.parse_args()
     if not re.fullmatch(r'\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?',args.version):parser.error('Invalid package version')
@@ -102,14 +103,15 @@ def main():
             '-p:MacManagedAssembly='+str(resources/'app/GARbro.Desktop.dll'),
             '-p:ManagedPath=../Resources/app/GARbro.Desktop.dll','-p:SignHost=true'],check=True)
         (resources/'app/GARbro.Desktop').unlink()
+        documents, imported_types = mac_document_types(associations())
         with (app/'Info.plist').open('wb')as stream:
             plistlib.dump({'CFBundleIdentifier':'org.garbro.desktop','CFBundleName':'GARbro',
                 'CFBundleDisplayName':'GARbro','CFBundleExecutable':'GARbro.Desktop','CFBundlePackageType':'APPL',
                 'CFBundleIconFile':'app-icon.icns',
                 'CFBundleVersion':args.version.split('-')[0],'CFBundleShortVersionString':args.version.split('-')[0],'NSHighResolutionCapable':True,
                 'LSMinimumSystemVersion':'14.0',
-                'CFBundleDocumentTypes':[{'CFBundleTypeName':'Game resources','CFBundleTypeRole':'Viewer','LSHandlerRank':'Alternate',
-                    'CFBundleTypeExtensions':associations()}]},stream)
+                'CFBundleLocalizations':['en','zh-Hans','ru','ja'],
+                'CFBundleDocumentTypes':documents,'UTImportedTypeDeclarations':imported_types},stream)
         shutil.copy2(ROOT/'modern/GARbro.UI/Assets/app-icon.icns',resources/'app-icon.icns')
         # Managed PE assemblies belong in Resources, not the Mach-O code directory.
         # Sign every native helper/library before sealing the outer application.

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise the native Avalonia window; Linux requires a display or xvfb-run."""
 import argparse
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -21,7 +22,7 @@ try:
         time.sleep(.5)
         if manager.poll()is not None:raise RuntimeError('The test window manager did not start: '+(args.output/'window-manager.log').read_text())
     subprocess.run([args.dotnet,str(ROOT/'tests/GARbro.Desktop.NativeSmoke/bin/Release/net10.0/GARbro.Desktop.NativeSmoke.dll'),
-                    str(ROOT/'tests/fixtures/generated/standard.xfl'),str(args.output.resolve())],check=True,timeout=45)
+                    str(ROOT/'tests/fixtures/generated/standard.xfl'),str(args.output.resolve())],check=True,timeout=90 if os.environ.get("GARBRO_LOCALIZATION_SNAPSHOTS")=="1" else 45)
 finally:
     if manager is not None:
         manager.terminate();manager.wait(timeout=5)

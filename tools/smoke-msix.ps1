@@ -1,4 +1,4 @@
-param([string]$Output = 'artifacts', [string]$Version = '0.3.0-preview.2', [ValidateSet('x64','arm64')][string]$Architecture = 'x64')
+param([string]$Output = 'artifacts', [string]$Version = '1.0.3', [ValidateSet('x64','arm64')][string]$Architecture = 'x64')
 $ErrorActionPreference = 'Stop'
 $package = (Resolve-Path (Join-Path $Output "garbro-$Version-win-$Architecture.msix")).Path
 $certificate = (Resolve-Path (Join-Path $Output "garbro-$Version-win-$Architecture.cer")).Path
@@ -34,79 +34,21 @@ try {
     $installed = Get-AppxPackage -Name $identity
     if ([version]$installed.Version -le [version]$before.Version) { throw 'MSIX upgrade did not advance the version.' }
     if ($installed.PackageFamilyName -ne $before.PackageFamilyName) { throw 'MSIX identity changed during upgrade.' }
-    Add-Type -TypeDefinition @'
-using System;
-using System.Runtime.InteropServices;
-[ComImport, Guid("F04061AC-1659-4a3f-A954-775AA57FC083"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-interface IAssocHandler {
-    void GetName([MarshalAs(UnmanagedType.LPWStr)] out string name);
-    void GetUIName([MarshalAs(UnmanagedType.LPWStr)] out string name);
-    void GetIconLocation([MarshalAs(UnmanagedType.LPWStr)] out string path, out int index);
-    [PreserveSig] int IsRecommended();
-    void MakeDefault([MarshalAs(UnmanagedType.LPWStr)] string description);
-    void Invoke(IntPtr data);
-}
-[ComImport, Guid("973810ae-9599-4b88-9e4d-6ee98c9552da"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-interface IEnumAssocHandlers {
-    [PreserveSig] int Next(uint count, [MarshalAs(UnmanagedType.Interface)] out IAssocHandler handler, out uint fetched);
-}
-[ComImport, Guid("b63ea76d-1f85-456f-a19c-48159efa858b"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-interface IShellItemArray {
-    void BindToHandler(IntPtr context, ref Guid handler, ref Guid iid, out IntPtr result);
-}
-public static class PackageActivation {
-    [DllImport("shell32.dll", CharSet=CharSet.Unicode, PreserveSig=false)]
-    static extern void SHCreateItemFromParsingName(string path, IntPtr context, ref Guid iid, out IntPtr item);
-    [DllImport("shell32.dll", PreserveSig=false)]
-    static extern void SHCreateShellItemArrayFromShellItem(IntPtr item, ref Guid iid, out IntPtr array);
-    [DllImport("shell32.dll", CharSet=CharSet.Unicode, PreserveSig=false)]
-    static extern void SHAssocEnumHandlers(string extension, uint filter, out IEnumAssocHandlers handlers);
-    public static void Open(string path) {
-        IntPtr item=IntPtr.Zero, array=IntPtr.Zero, data=IntPtr.Zero;
-        IShellItemArray shellArray=null; IEnumAssocHandlers handlers=null;
-        try {
-            var itemId=new Guid("43826d1e-e718-42ee-bc55-a1e261c37bfe");
-            var arrayId=typeof(IShellItemArray).GUID;
-            SHCreateItemFromParsingName(path, IntPtr.Zero, ref itemId, out item);
-            SHCreateShellItemArrayFromShellItem(item, ref arrayId, out array);
-            shellArray=(IShellItemArray)Marshal.GetObjectForIUnknown(array);
-            var dataHandler=new Guid("b8c0bd9f-ed24-455c-83e6-d5390c4fe8c4");
-            var dataId=new Guid("0000010e-0000-0000-C000-000000000046");
-            shellArray.BindToHandler(IntPtr.Zero, ref dataHandler, ref dataId, out data);
-            SHAssocEnumHandlers(System.IO.Path.GetExtension(path), 0, out handlers);
-            IAssocHandler handler; uint fetched;
-            while(handlers.Next(1,out handler,out fetched)==0 && fetched==1) {
-                try {
-                    string name; handler.GetUIName(out name);
-                    if(name.IndexOf("GARbro",StringComparison.OrdinalIgnoreCase)>=0) {
-                        handler.Invoke(data); return;
-                    }
-                } finally { Marshal.ReleaseComObject(handler); }
-            }
-            throw new InvalidOperationException("GARbro is missing from Windows Open With handlers.");
-        } finally {
-            if(handlers!=null)Marshal.ReleaseComObject(handlers);
-            if(data!=IntPtr.Zero)Marshal.Release(data);
-            if(shellArray!=null)Marshal.ReleaseComObject(shellArray);
-            if(array!=IntPtr.Zero)Marshal.Release(array);
-            if(item!=IntPtr.Zero)Marshal.Release(item);
-        }
-    }
-}
-'@
-    $fixtureDirectory = Join-Path ([IO.Path]::GetTempPath()) ('GARbro ' + [char]0x6d4b + [char]0x8bd5 + ' test ' + [guid]::NewGuid())
+    Add-Type -TypeDefinition (Get-Content -Raw (Join-Path $PSScriptRoot 'installers/WindowsAssociation.cs'))
+    $fixtureDirectory = Join-Path ([IO.Path]::GetTempPath()) ('GARbro Русский 日本語 ' + [char]0x6d4b + [char]0x8bd5 + ' test ' + [guid]::NewGuid())
     New-Item -ItemType Directory $fixtureDirectory | Out-Null
-    $fixture = Join-Path $fixtureDirectory 'standard.xp3'
-    # Recognized XFL bytes under an associated game-specific extension.
+    foreach ($extension in @('xfl','xp3','zip','dat','bin')) {
+    $fixture = Join-Path $fixtureDirectory ('standard.'+$extension)
+    # Test the actual Open With handler, including the formerly excluded XFL/DAT/BIN/ZIP suffixes.
     Copy-Item 'tests/fixtures/generated/standard.xfl' $fixture
     [PackageActivation]::Open($fixture)
     $deadline = (Get-Date).AddSeconds(25)
     do {
         Start-Sleep -Milliseconds 250
-        $process = Get-Process -Name GARbro.Desktop -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like '*standard.xp3*' } | Select-Object -First 1
-        if ($process -and $process.MainWindowTitle -like '*standard.xp3*') { break }
+        $process = Get-Process -Name GARbro.Desktop -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like ('*standard.'+$extension+'*') } | Select-Object -First 1
+        if ($process -and $process.MainWindowTitle -like ('*standard.'+$extension+'*')) { break }
     } while ((Get-Date) -lt $deadline)
-    if (-not $process -or $process.MainWindowTitle -notlike '*standard.xp3*') {
+    if (-not $process -or $process.MainWindowTitle -notlike ('*standard.'+$extension+'*')) {
         Get-CimInstance Win32_Process | Where-Object { $_.Name -like '*GARbro*' } | Select-Object Name,ProcessId,SessionId,CommandLine | Format-List | Out-String | Write-Output
         Get-Process -Name GARbro.Desktop -ErrorAction SilentlyContinue | Select-Object Id,MainWindowTitle,Path | Format-List | Out-String | Write-Output
         $logs = @((Join-Path $env:LOCALAPPDATA 'GARbro\desktop.log'),
@@ -116,6 +58,7 @@ public static class PackageActivation {
         throw 'Packaged file activation failed.'
     }
     Stop-Process -Id $process.Id
+    }
     Remove-AppxPackage -Package $installed.PackageFullName
     if (Get-AppxPackage -Name $identity) { throw 'MSIX uninstall failed.' }
     Write-Output 'MSIX install, upgrade, associated-file activation and uninstall passed.'

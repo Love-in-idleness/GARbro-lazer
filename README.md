@@ -1,6 +1,6 @@
 # GARbro
 
-**简体中文** · [English](README.en.md) · [Русский](README.ru.md)
+**简体中文** · [English](README.en.md) · [Русский](README.ru.md) · [日本語](README.ja.md)
 
 打开游戏资源包，看看里面的图片、播放音视频，再把需要的文件提取出来。GARbro 提供图形界面，也可以在命令行中使用。
 
@@ -8,7 +8,7 @@
 
 ## 下载与启动
 
-到 [正式版下载页](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.2) 选择与你的系统和处理器对应的文件。普通 Intel、AMD 电脑选 **x64**；Windows on ARM、ARM Linux 和 Apple 芯片选 **arm64**。
+到 [正式版下载页](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.3) 选择与你的系统和处理器对应的文件。普通 Intel、AMD 电脑选 **x64**；Windows on ARM、ARM Linux 和 Apple 芯片选 **arm64**。
 
 | 系统 | 下载哪个 | 怎么打开 |
 | --- | --- | --- |
@@ -49,13 +49,17 @@
 
 macOS 可使用 Command 代替表中的 Ctrl。更多操作见[使用说明](docs/manual.zh-CN.md)。
 
+界面和 CLI 均支持中、英、俄、日。可在**设置 → 快捷键**中搜索命令、录入组合键、解除绑定或恢复默认值；菜单提示会同步更新。
+
+安装 DEB、MSIX、Flatpak 或 macOS 应用后，可在文件管理器的“打开方式”中选择 GARbro。安装不会改掉现有默认应用；ZIP/TAR 便携版不注册关联。
+
 ## 命令行怎么用
 
 CLI 在下载包的 `cli` 目录中。在这个目录打开终端即可运行。下面使用 Linux / macOS 的写法；Windows PowerShell 请把 `./garbro` 换成 `.\garbro.exe`。路径中有空格时保留引号。
 
 ```sh
 # 查看帮助
-./garbro help
+./garbro --language zh-CN help
 
 # 看看未加密 XP3 资源包里有什么
 ./garbro list "data.xp3" --scheme none

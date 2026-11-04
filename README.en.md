@@ -1,6 +1,6 @@
 # GARbro
 
-[简体中文](README.md) · **English** · [Русский](README.ru.md)
+[简体中文](README.md) · **English** · [Русский](README.ru.md) · [日本語](README.ja.md)
 
 Open a game's resource archives, browse pictures, play audio and video, and extract the files you need. GARbro has a desktop interface and a command-line tool.
 
@@ -8,7 +8,7 @@ Open a game's resource archives, browse pictures, play audio and video, and extr
 
 ## Download and start
 
-Choose a package from the [release download page](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.2). Use **x64** for most Intel and AMD computers, or **arm64** for Windows on ARM, ARM Linux, and Apple silicon.
+Choose a package from the [release download page](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.3). Use **x64** for most Intel and AMD computers, or **arm64** for Windows on ARM, ARM Linux, and Apple silicon.
 
 | System | Package | Open it |
 | --- | --- | --- |
@@ -49,13 +49,18 @@ If filenames or text look garbled, try GBK, Shift-JIS, or another encoding under
 
 On macOS, Command can replace Ctrl in this table. See the [user guide](docs/manual.en-US.md) for more.
 
+The interface and CLI support English, Simplified Chinese, Russian and Japanese. In **Settings → Keyboard shortcuts**, find a command, record a combination, add or remove bindings, or restore defaults. Menu hints update with your choices.
+
+Installed DEB, MSIX, Flatpak and macOS apps appear in the file manager’s **Open With** list. Installation preserves existing defaults; portable ZIP/TAR packages do not register associations.
+
+
 ## Using the command line
 
 The command-line tool is in the package's `cli` folder. Open a terminal there. The examples below use Linux/macOS syntax; in Windows PowerShell, replace `./garbro` with `.\garbro.exe`. Quote paths containing spaces.
 
 ```sh
 # Show help
-./garbro help
+./garbro --language en-US help
 
 # List an unencrypted XP3 archive's contents
 ./garbro list "data.xp3" --scheme none

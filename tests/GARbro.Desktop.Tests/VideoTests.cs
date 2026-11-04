@@ -52,7 +52,7 @@ public sealed class VideoTests
                 image.Render(window);image.Save(Path.Combine(snapshots,"video-"+language+".png"),new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
             }
             var before=Directory.Exists(DesktopServices.CacheDirectory)?Directory.GetDirectories(DesktopServices.CacheDirectory):Array.Empty<string>();
-            play.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            play.Command.Execute(null);
             for(int i=0;i<400&&preview.Source is not Avalonia.Media.Imaging.WriteableBitmap;i++)await Task.Delay(50,TestContext.Current.CancellationToken);
             Assert.IsType<Avalonia.Media.Imaging.WriteableBitmap>(preview.Source);
             var files=window.GetVisualDescendants().OfType<ListBox>().Single(l=>l.Name=="Files");
@@ -73,9 +73,9 @@ public sealed class VideoTests
             var image=window.GetLogicalDescendants().OfType<Image>().Single(i=>i.Name=="PreviewImage");
             for(int n=0;n<200&&image.Source==null;n++)await Task.Delay(20,TestContext.Current.CancellationToken);
             var play=window.GetVisualDescendants().OfType<Button>().Single(b=>b.Content as string==UiPlatform.CurrentText["Play"]);
-            play.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            play.Command.Execute(null);
             var hashes=new HashSet<string>();
-            for(int n=0;n<30;n++)
+            for(int n=0;n<150 && hashes.Count<6;n++)
             {
                 await Task.Delay(60,TestContext.Current.CancellationToken);
                 using var actual=window.DesktopHost.CaptureRenderedFrame();

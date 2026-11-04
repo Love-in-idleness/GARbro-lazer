@@ -7,7 +7,7 @@ on:
     inputs:
       package_version:
         type: string
-        default: 1.0.2
+        default: 1.0.3
 concurrency:
   group: portable-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
@@ -68,6 +68,7 @@ jobs:
         run: python tools/smoke-desktop.py
         env:
           GARBRO_CAPTION_SNAPSHOTS: '1'
+          GARBRO_LOCALIZATION_SNAPSHOTS: '1'
       - uses: actions/upload-artifact@v4
         if: always() && runner.os == 'Windows'
         with:
@@ -101,11 +102,17 @@ jobs:
         run: xvfb-run -a python tools/smoke-desktop.py --window-manager openbox
         env:
           GARBRO_BENCHMARKS: '1'
+          GARBRO_LOCALIZATION_SNAPSHOTS: '1'
           SDL_AUDIODRIVER: dummy
       - name: Exercise native desktop window
         if: runner.os == 'macOS'
         timeout-minutes: 2
         run: python tools/smoke-desktop.py
+      - uses: actions/upload-artifact@v4
+        if: always() && runner.os != 'macOS'
+        with:
+          name: localization-${{ matrix.rid }}
+          path: artifacts/native-desktop/localization/
       - name: Install headless Wayland test dependencies
         if: runner.os == 'Linux'
         timeout-minutes: 5
@@ -127,23 +134,23 @@ jobs:
           flags+=(--installer)
           python tools/package-release.py --rid ${{ matrix.rid }} "${flags[@]}"
         env:
-          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.2' }}
+          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.3' }}
       - run: python tools/smoke-package.py --rid ${{ matrix.rid }}
         env:
-          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.2' }}
+          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.3' }}
       - name: Mount and launch the macOS disk image
         if: runner.os == 'macOS'
-        run: python tools/smoke-macos.py artifacts/garbro-${{ inputs.package_version || '1.0.2' }}-${{ matrix.rid }}.dmg
+        run: python tools/smoke-macos.py artifacts/garbro-${{ inputs.package_version || '1.0.3' }}-${{ matrix.rid }}.dmg
       - name: Install and launch DEB on both supported distributions
         if: runner.os == 'Linux'
         timeout-minutes: 12
         shell: bash
-        run: python tools/smoke-deb.py artifacts/garbro-${{ inputs.package_version || '1.0.2' }}-${{ matrix.rid }}.deb
+        run: python tools/smoke-deb.py artifacts/garbro-${{ inputs.package_version || '1.0.3' }}-${{ matrix.rid }}.deb
       - name: Verify MSIX install, activation, upgrade and removal
         if: runner.os == 'Windows'
         timeout-minutes: 5
         shell: pwsh
-        run: tools/smoke-msix.ps1 -Output artifacts -Architecture ${{ matrix.rid == 'win-arm64' && 'arm64' || 'x64' }} -Version "${{ inputs.package_version || '1.0.2' }}"
+        run: tools/smoke-msix.ps1 -Output artifacts -Architecture ${{ matrix.rid == 'win-arm64' && 'arm64' || 'x64' }} -Version "${{ inputs.package_version || '1.0.3' }}"
       - uses: actions/upload-artifact@v4
         with:
           name: preview-${{ matrix.rid }}

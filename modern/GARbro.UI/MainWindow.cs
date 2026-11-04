@@ -124,19 +124,19 @@ public sealed partial class MainWindow : AppWindow
         var folderPanel = new DockPanel(); var foldersLabel = Label("Folders"); DockPanel.SetDock(foldersLabel, Dock.Top);
         folderPanel.Children.Add(foldersLabel); folderPanel.Children.Add(folders); browser.Children.Add(folderPanel); folderPanel.Classes.Add("surface");
         var list = new Grid { RowDefinitions = new("Auto,*"), RowSpacing = 6 };
-        var headings = new Grid { ColumnDefinitions = new("*,80,90"), Margin = new Thickness(10, 0) };
+        var headings = new Grid { ColumnDefinitions = new("*,140,90"), Margin = new Thickness(10, 0) };
         foreach (var item in new[] { ("Name", 0), ("Type", 1), ("Size", 2) })
         {
             var label = new Button { Classes = { "columnHeader" }, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left };
             label.Bind(ContentControl.ContentProperty, Bind(item.Item1));
-            string sort = item.Item1.ToLowerInvariant(); label.Click += (_, _) => { Settings.SortDescending = Settings.Sort == sort && !Settings.SortDescending; Settings.Sort = sort; ApplySettings(); };
+            string sort = item.Item1.ToLowerInvariant(); label.Click += (_, _) => SetSort(sort);
             Grid.SetColumn(label, item.Item2); headings.Children.Add(label);
         }
         list.Children.Add(headings);
         files.ItemTemplate = new FuncDataTemplate<BrowserEntry>((entry, _) =>
         {
             if (entry == null) return new Control();
-            var row = new Grid { ColumnDefinitions = new("*,80,90"), Margin = new Thickness(8, 6) };
+            var row = new Grid { ColumnDefinitions = new("*,140,90"), Margin = new Thickness(8, 6) };
             var name = new Grid { ColumnDefinitions = new("Auto,*"), ColumnSpacing = 10 };
             name.Children.Add(MaterialIcons.Create(entry.IsDirectory ? "Folders" : entry.Type switch { "image" => "Images", "audio" => "Audio", "video" => "Video", "script" => "Text", "archive" => "Process", _ => "Other" }, 20));
             var filename = new TextBlock { Text = entry.DisplayName, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center }; Grid.SetColumn(filename, 1); name.Children.Add(filename); row.Children.Add(name);
@@ -177,9 +177,9 @@ public sealed partial class MainWindow : AppWindow
             ArrangeBrowser();
         };
         footer.Children.Add(progress); footer.Children.Add(status); Grid.SetRow(footer, 4); layout.Children.Add(footer); Content = layout;
-        pageControls.Children.Add(ActionButton("PreviousPage", () => ShowPreviewPage(Math.Max(0, (preview?.Offset ?? 0) - 65536))));
-        pageControls.Children.Add(ActionButton("NextPage", () => ShowPreviewPage((preview?.Offset ?? 0) + 65536)));
-        pageControls.Children.Add(ActionButton("Copy", async () => { if (Clipboard != null) await Clipboard.SetTextAsync(text.Text ?? ""); }));
+        pageControls.Children.Add(Button("PreviousPage"));
+        pageControls.Children.Add(Button("NextPage"));
+        pageControls.Children.Add(Button("Copy"));
         var encodingRow=new Grid {ColumnDefinitions=new("*,140"),ColumnSpacing=8};
         var encodingLabel=Label("PreviewEncoding");encodingLabel.FontSize=12;encodingLabel.VerticalAlignment=VerticalAlignment.Center;
         encodingRow.Children.Add(encodingLabel);Grid.SetColumn(previewEncoding,1);encodingRow.Children.Add(previewEncoding);encodingControls.Children.Add(encodingRow);
@@ -234,7 +234,7 @@ public sealed partial class MainWindow : AppWindow
 
     Binding Bind(string key) => new("[" + key + "]") { Source = Text };
     TextBlock Label(string key) { var label = new TextBlock(); label.Bind(TextBlock.TextProperty, Bind(key)); return label; }
-    Button Button(string key, bool textContent = true) { var button = new Button { Command = commands[key], Name = key == "Open" ? "OpenArchive" : key == "Cancel" ? "CancelOperation" : null }; if (textContent) button.Bind(ContentControl.ContentProperty, Bind(key)); return button; }
+    Button Button(string key, bool textContent = true) { var button = new Button { Command = commands[key], Name = key == "Open" ? "OpenArchive" : key == "Cancel" ? "CancelOperation" : null }; if (textContent) button.Bind(ContentControl.ContentProperty, Bind(key)); ToolTip.SetTip(button, CommandTip(key)); return button; }
     internal Button ActionButton(string key, Func<Task> run) { var b = new Button(); b.Bind(ContentControl.ContentProperty, Bind(key)); b.Click += async (_, _) => await Guard(run); return b; }
     string compactPanel = "BrowsePanel";
     void ArrangeBrowser()
@@ -255,7 +255,7 @@ public sealed partial class MainWindow : AppWindow
     Button IconButton(string key)
     {
         var button = Button(key, false); button.Content = MaterialIcons.Create(key); button.Classes.Add("iconMenu");
-        button.Bind(ToolTip.TipProperty, Bind(key)); button.Bind(Avalonia.Automation.AutomationProperties.NameProperty, Bind(key)); return button;
+        ToolTip.SetTip(button, CommandTip(key)); button.Bind(Avalonia.Automation.AutomationProperties.NameProperty, Bind(key)); return button;
     }
     static Control GearIcon() => new PathIcon { Width = 20, Height = 20, Data = Geometry.Parse("M10,0 L14,0 L15,3 L18,4 L21,3 L24,7 L22,10 L22,13 L24,16 L21,20 L18,19 L15,21 L14,24 L10,24 L9,21 L6,19 L3,20 L0,16 L2,13 L2,10 L0,7 L3,3 L6,4 L9,3 Z M12,7 A5,5 0 1 0 12,17 A5,5 0 1 0 12,7") };
     static string FormatSize(long n) => n < 1024 ? n + " B" : n < 1048576 ? (n / 1024d).ToString("F1") + " KiB" : (n / 1048576d).ToString("F1") + " MiB";
@@ -345,12 +345,16 @@ public sealed partial class MainWindow : AppWindow
                 if (historyIndex + 1 < history.Count) history.RemoveRange(historyIndex + 1, history.Count - historyIndex - 1);
                 history.Add(listing.Location); historyIndex = history.Count - 1;
             }
-            status.Text = (listing.Physical ? Text["Folders"] : listing.Tag == "media" ? Text["Media"] : listing.Tag) + " · " + (listing.Entries.Length == 1 ? Text["OneEntry"] : Text.Format("EntryCount", listing.Entries.Length));
+            UpdateListingStatus();
         }
         finally
         {
             if (ReferenceEquals(navigationCancellation, operation)) { navigationCancellation = null; loading = false; progress.IsVisible = progress.IsIndeterminate = busy; UpdateCommands(); }
         }
+    }
+    void UpdateListingStatus()
+    {
+        if (listing != null) status.Text = (listing.Physical ? Text["Folders"] : listing.Tag == "media" ? Text["Media"] : listing.Tag) + " · " + (listing.Entries.Length == 1 ? Text["OneEntry"] : Text.Format("EntryCount", listing.Entries.Length));
     }
     sealed record FolderNode(string Title, ResourceLocation Location, bool Child = false);
     void BuildFolders()
@@ -505,7 +509,8 @@ public sealed partial class MainWindow : AppWindow
         image.Stretch = Settings.FitImage ? Stretch.Uniform : Stretch.None; text.TextWrapping = Settings.WrapText ? TextWrapping.Wrap : TextWrapping.NoWrap;
         imageScroll.HorizontalScrollBarVisibility = imageScroll.VerticalScrollBarVisibility = Settings.FitImage ?
             Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled : Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
-        if (save) store.Save(Settings); BuildMenus(); RefreshFiles(); BuildFolders();
+        if (languageChanged && !busy && !loading) UpdateListingStatus();
+        ApplyShortcutBindings(); if (save) store.Save(Settings); BuildMenus(); RefreshFiles(); BuildFolders();
     }
     void SetBusy(bool value)
     {

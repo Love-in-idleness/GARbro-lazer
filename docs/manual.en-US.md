@@ -67,7 +67,7 @@ Ctrl+O: open. Ctrl+P: settings. Ctrl+Q: quit. F3: create archive.
 F4: extract selected. F5: refresh. F6: convert. Enter: open selected.
 Backspace / Ctrl+PageUp: parent. Alt+Left/Right: navigation history.
 Ctrl+A: select all. Ctrl+C: copy selected filenames. Numpad +: select by wildcard.
-Alt+Shift+T/M/S: toggle toolbar/menu/status bar. Alt restores a hidden menu.
+Alt+Shift+T/M/S: toggle toolbar/menu/status bar.
 Text fields and input methods retain their normal editing shortcuts.
 
 ## Flatpak
@@ -77,3 +77,5 @@ source folder when a format needs sibling indexes or keys. The sandbox does not
 provide a host recycle-bin command. See flathub.md for packaging validation status.
 
 Choose **HEX (hexadecimal)** under **Preview encoding / HEX** to inspect any file, including images, audio and video. Each page contains up to 64 KiB with offsets, grouped bytes and ASCII. Pages can be copied. The choice affects only the current preview, resets on file selection and never changes filename decoding. Switching to HEX stops media playback. Loading and filtering run in the background; you can continue typing, cancel, or open another resource.
+
+In Settings → Keyboard shortcuts, search for a command, record and add combinations, remove bindings, or restore one command or all defaults. Multiple combinations per command are supported. Resolve conflicts before saving. Installed DEB, MSIX, Flatpak and macOS apps appear in Open With; installation preserves existing defaults. Portable ZIP/TAR packages do not register. The interface and CLI support English, Simplified Chinese, Russian and Japanese. Use `garbro --language ru-RU help` or `garbro help --language ja-JP` to select a CLI language; JSON keys and command names remain unchanged.

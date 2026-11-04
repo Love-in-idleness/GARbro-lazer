@@ -16,7 +16,7 @@ public sealed class SettingsWindow : AppWindow
 {
     public SettingsWindow(AppSettings settings, DesktopText text, ResourceFormatInfo[] formats, string section = "General")
     {
-        Title = text["Settings"]; Width = 720; Height = 680; WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        Title = text["Settings"]; Width = 820; Height = 720; WindowStartupLocation = WindowStartupLocation.CenterOwner;
         WaylandTextInput.Attach(this);
         var working = JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(settings));
         working.SessionFormatSettings = new(settings.SessionFormatSettings);
@@ -29,11 +29,11 @@ public sealed class SettingsWindow : AppWindow
         {
             var panel = key == "Theme" ? appearance : key == "Encoding" ? decoding : general;
             panel.Children.Add(Dialogs.Label(text, key));
-            var choices = values.Select(value => new UiChoice(value, value switch { "auto" => text["Auto"], "system" => text["System"], "light" => text["Light"], "dark" => text["Dark"], "en-US" => text["English"], "zh-CN" => text["Chinese"], _ => value })).ToArray();
+            var choices = values.Select(value => new UiChoice(value, value switch { "auto" => text["Auto"], "system" => text["System"], "light" => text["Light"], "dark" => text["Dark"], "en-US" => text["English"], "zh-CN" => text["Chinese"], "ru-RU" => text["Russian"], "ja-JP" => text["Japanese"], _ => value })).ToArray();
             var combo = new ComboBox { Name = key, ItemsSource = choices, SelectedItem = choices.FirstOrDefault(c => c.Value == selected) };
             panel.Children.Add(combo); return combo;
         }
-        var language = Choice("Language", new[] { "auto", "en-US", "zh-CN" }, working.Language);
+        var language = Choice("Language", new[] { "auto", "en-US", "zh-CN", "ru-RU", "ja-JP" }, working.Language);
         var theme = Choice("Theme", new[] { "system", "light", "dark" }, working.Theme);
         appearance.Children.Add(Dialogs.Label(text, "Color")); var color = new TextBox { Text = working.SeedColor, Name = "SeedColor" }; appearance.Children.Add(color);
         var dynamic = new CheckBox { Content = text["DynamicColors"], IsChecked = working.DynamicColors, IsEnabled = UiPlatform.DynamicColor != null };
@@ -120,6 +120,9 @@ public sealed class SettingsWindow : AppWindow
             }
         };
         tabs.Items.Add(new TabItem { Name = "Formats", Header = text["Formats"], Content = formatPanel });
+        var shortcuts = new ShortcutSettingsPanel(working, text);
+        tabs.Items.Add(new TabItem { Name = "Shortcuts", Header = text["Shortcuts"], Content = shortcuts });
+        foreach (var tab in tabs.Items.OfType<TabItem>()) { tab.FontSize = 14; tab.Padding = new Avalonia.Thickness(12, 8); }
         tabs.SelectedItem = tabs.Items.OfType<TabItem>().FirstOrDefault(t => t.Name == section) ?? tabs.Items[0];
         if (UiPlatform.IsMobile) { body.Children.Remove(tabs); body.Children.Insert(0, Dialogs.ResponsivePages(tabs)); }
         var error = new TextBlock { Name = "SettingsError", Classes = { "error" }, TextWrapping = Avalonia.Media.TextWrapping.Wrap }; body.Children.Add(error);
@@ -128,6 +131,7 @@ public sealed class SettingsWindow : AppWindow
             try
             {
                 if (invalidFields.Count > 0) { error.Text = text.Format("InvalidFormatValue", invalidFields.Values.First()); return; }
+                if (shortcuts.ValidationError is string conflict) { error.Text = conflict; return; }
                 working.SeedColor = color.Text; working.DynamicColors = dynamic.IsChecked == true;
                 working.Language = (language.SelectedItem as UiChoice)?.Value ?? "auto"; working.Theme = (theme.SelectedItem as UiChoice)?.Value ?? "system";
                 string code = encoding.Text ?? (encoding.SelectedItem as UiChoice)?.Value ?? "auto";
