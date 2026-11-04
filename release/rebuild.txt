@@ -1,1 +1,1 @@
-1.0.3: validate installed macOS application and standard Flatpak portal paths
+1.0.3: include offline help in the main UI assembly for all four languages

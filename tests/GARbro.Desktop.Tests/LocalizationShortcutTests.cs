@@ -18,6 +18,16 @@ using Xunit;
 public sealed class LocalizationShortcutTests
 {
     [Theory]
+    [InlineData("en-US", "# GARbro user guide", "# Troubleshooting")]
+    [InlineData("zh-CN", "# GARbro 使用说明", "# 故障排查")]
+    [InlineData("ru-RU", "# Руководство GARbro", "# Решение проблем")]
+    [InlineData("ja-JP", "# GARbro の使い方", "# トラブルシューティング")]
+    public void OfflineHelpIsReadableFromThePublishedUiAssembly(string language, string manual, string troubleshooting)
+    {
+        Assert.StartsWith(manual, DesktopServices.ReadResource("manual."+language+".md"));
+        Assert.StartsWith(troubleshooting, DesktopServices.ReadResource("troubleshoot."+language+".md"));
+    }
+    [Theory]
     [InlineData("ru-BY", "ru-RU")]
     [InlineData("ja", "ja-JP")]
     [InlineData("zh-TW", "zh-CN")]
