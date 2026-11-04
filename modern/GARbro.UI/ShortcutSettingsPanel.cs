@@ -45,6 +45,7 @@ public sealed class ShortcutSettingsPanel : UserControl
         var columns = new Grid { ColumnDefinitions = new("*,*"), ColumnSpacing = 16 }; Grid.SetRow(columns, 2); root.Children.Add(columns);
         commands.ItemTemplate = new FuncDataTemplate<UiChoice>((choice, _) =>
         {
+            if (choice == null) return new Control();
             var row = new Grid { ColumnDefinitions = new("Auto,*"), ColumnSpacing = 10, Margin = new Thickness(2, 4) };
             row.Children.Add(MaterialIcons.Create(choice.Value, 18));
             var label = new TextBlock { Text = choice.Label, TextWrapping = TextWrapping.Wrap, MaxWidth = 260, VerticalAlignment = VerticalAlignment.Center };
