@@ -395,5 +395,11 @@
   "Error.Unknown image format: ": "Unknown image format: ",
   "Error.Unknown or incompatible scheme for ": "Unknown or incompatible scheme for ",
   "Error.Unsafe archive entry path: ": "Unsafe archive entry path: ",
-  "Error.Unsupported audio parameters.": "Unsupported audio parameters."
+  "Error.Unsupported audio parameters.": "Unsupported audio parameters.",
+  "Error.Expected a JSON object.": "Expected a JSON object.",
+  "Error.Type metadata is not allowed.": "Type metadata is not allowed.",
+  "Error.No release is available for this update channel.": "No release is available for this update channel.",
+  "Error.Invalid update asset.": "Invalid update asset.",
+  "Error.Update exceeds the size limit.": "Update exceeds the size limit.",
+  "Error.Update checksum does not match.": "Update checksum does not match."
 }

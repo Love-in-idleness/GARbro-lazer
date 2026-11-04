@@ -395,5 +395,11 @@
   "Error.Unknown image format: ": "不明な画像形式：",
   "Error.Unknown or incompatible scheme for ": "不明または互換性のない設定：",
   "Error.Unsafe archive entry path: ": "アーカイブ項目のパスが安全ではありません：",
-  "Error.Unsupported audio parameters.": "この音声パラメーターには対応していません。"
+  "Error.Unsupported audio parameters.": "この音声パラメーターには対応していません。",
+  "Error.Expected a JSON object.": "JSON オブジェクトを指定してください。",
+  "Error.Type metadata is not allowed.": "型のメタデータは指定できません。",
+  "Error.No release is available for this update channel.": "この更新チャンネルに利用可能なリリースがありません。",
+  "Error.Invalid update asset.": "更新ファイルが無効です。",
+  "Error.Update exceeds the size limit.": "更新ファイルがサイズ上限を超えています。",
+  "Error.Update checksum does not match.": "更新ファイルのチェックサムが一致しません。"
 }

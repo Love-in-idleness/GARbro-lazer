@@ -13,15 +13,15 @@ public sealed class DesktopStorageAccess : IStorageAccess
     public async Task<ResourceSource[]> PickInputsAsync(bool folders, CancellationToken cancellation = default)
     {
         var storage = UiPlatform.ActivePage.StorageProvider;
-        var items = folders ? (await storage.OpenFolderPickerAsync(new() { AllowMultiple = true })).Cast<IStorageItem>() :
-            await storage.OpenFilePickerAsync(new() { AllowMultiple = true });
+        var items = folders ? (await storage.OpenFolderPickerAsync(new() { AllowMultiple = true, Title = UiPlatform.CurrentText["OpenFolder"] })).Cast<IStorageItem>() :
+            await storage.OpenFilePickerAsync(new() { AllowMultiple = true, Title = UiPlatform.CurrentText["Open"] });
         return items.Select(i => i.TryGetLocalPath()).Where(p => p != null).Select(Source).ToArray();
     }
     public async Task<ResourceSource> PickOutputAsync(bool folder, string suggestedName = null, CancellationToken cancellation = default)
     {
         var storage = UiPlatform.ActivePage.StorageProvider;
-        string path = folder ? (await storage.OpenFolderPickerAsync(new())).FirstOrDefault()?.TryGetLocalPath() :
-            (await storage.SaveFilePickerAsync(new() { SuggestedFileName = suggestedName }))?.TryGetLocalPath();
+        string path = folder ? (await storage.OpenFolderPickerAsync(new() { Title = UiPlatform.CurrentText["SelectOutput"] })).FirstOrDefault()?.TryGetLocalPath() :
+            (await storage.SaveFilePickerAsync(new() { SuggestedFileName = suggestedName, Title = UiPlatform.CurrentText["Save"] }))?.TryGetLocalPath();
         return path == null ? null : Source(path);
     }
     static ResourceSource Source(string path) => new(Path.GetFullPath(path), Path.GetFileName(path), Path.GetFullPath(path));

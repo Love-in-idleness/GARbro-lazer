@@ -395,5 +395,11 @@
   "Error.Unknown image format: ": "Неизвестный формат изображения: ",
   "Error.Unknown or incompatible scheme for ": "Неизвестная или несовместимая схема для ",
   "Error.Unsafe archive entry path: ": "Небезопасный путь элемента архива: ",
-  "Error.Unsupported audio parameters.": "Параметры аудио не поддерживаются."
+  "Error.Unsupported audio parameters.": "Параметры аудио не поддерживаются.",
+  "Error.Expected a JSON object.": "Ожидается объект JSON.",
+  "Error.Type metadata is not allowed.": "Метаданные типов запрещены.",
+  "Error.No release is available for this update channel.": "В этом канале обновлений нет доступных выпусков.",
+  "Error.Invalid update asset.": "Некорректный файл обновления.",
+  "Error.Update exceeds the size limit.": "Обновление превышает лимит размера.",
+  "Error.Update checksum does not match.": "Контрольная сумма обновления не совпадает."
 }

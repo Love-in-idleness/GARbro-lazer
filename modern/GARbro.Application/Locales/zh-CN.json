@@ -395,5 +395,11 @@
   "Error.Unknown image format: ": "未知图像格式：",
   "Error.Unknown or incompatible scheme for ": "方案未知或不兼容：",
   "Error.Unsafe archive entry path: ": "归档条目的路径不安全：",
-  "Error.Unsupported audio parameters.": "不支持此音频参数。"
+  "Error.Unsupported audio parameters.": "不支持此音频参数。",
+  "Error.Expected a JSON object.": "需要一个 JSON 对象。",
+  "Error.Type metadata is not allowed.": "不允许类型元数据。",
+  "Error.No release is available for this update channel.": "此更新通道暂无可用版本。",
+  "Error.Invalid update asset.": "更新文件无效。",
+  "Error.Update exceeds the size limit.": "更新文件超过大小上限。",
+  "Error.Update checksum does not match.": "更新文件校验值不匹配。"
 }

@@ -72,6 +72,8 @@ def mime_document(extensions):
     for ext in extensions:
         item = ET.SubElement(xml, 'mime-type', type='application/x-garbro-'+association_token(ext))
         ET.SubElement(item, 'comment').text = 'GARbro game resource (.'+ext+')'
+        for language,label in [('zh_CN','GARbro 游戏资源'),('ru','Игровые ресурсы GARbro'),('ja','GARbro ゲームリソース')]:
+            ET.SubElement(item, 'comment', {'{http://www.w3.org/XML/1998/namespace}lang':language}).text = label+' (.'+ext+')'
         ET.SubElement(item, 'sub-class-of', type='application/octet-stream')
         # Keep existing MIME recognition and defaults; desktop_entry also handles their types.
         ET.SubElement(item, 'glob', pattern='*.'+ext, weight='10')

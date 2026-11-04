@@ -63,7 +63,7 @@ public static class Dialogs
     {
         var window = Window(text, "MissingOptions"); var body = Panel(); body.Children.Add(new TextBlock { Text = notice, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
         var form = new ParameterForm(text, json, schemes); body.Children.Add(form); var error = new TextBlock(); body.Children.Add(error);
-        window.Content = Frame(window, body, Button(text, "Save", () => { try { window.Close(form.Value()); } catch (Exception e) { error.Text = e.Message; } }), Button(text, "Cancel", () => window.Close()));
+        window.Content = Frame(window, body, Button(text, "Save", () => { try { window.Close(form.Value()); } catch (Exception e) { error.Text = text["Error"] + ": " + text.ErrorMessage(e.Message); } }), Button(text, "Cancel", () => window.Close()));
         return await window.ShowDialog<string>(owner);
     }
     static StackPanel Output(AppWindow owner, DesktopText text, string initial, out TextBox path)
@@ -116,7 +116,7 @@ public static class Dialogs
                     DiscardChildArchives: recurse.IsChecked == true && discardArchives.IsChecked == true,
                     DiscardOriginalMedia: discardMedia.IsChecked == true), (OverwritePolicy)overwrite.SelectedIndex));
             }
-            catch (Exception e) { error.Text = e.Message; }
+            catch (Exception e) { error.Text = text["Error"] + ": " + text.ErrorMessage(e.Message); }
         }), Button(text, "Cancel", () => window.Close()));
         return await window.ShowDialog<ExtractionChoice>(owner);
     }
@@ -133,7 +133,7 @@ public static class Dialogs
         format.SelectionChanged += (_, _) => Change(); Change();
         body.Children.Add(Label(text, "Overwrite")); var overwrite = Overwrite(text); body.Children.Add(overwrite); var error = new TextBlock(); body.Children.Add(error);
         window.Content = Frame(window, body, Button(text, "Create", () =>
-        { try { if (!Path.IsPathFullyQualified(PathValue(output) ?? "")) throw new ArgumentException(text["Filename"]); window.Close(new CreationChoice(PathValue(output), ((ResourceFormatInfo)format.SelectedItem).Id, form.Value(), (OverwritePolicy)overwrite.SelectedIndex)); } catch (Exception e) { error.Text = e.Message; } }), Button(text, "Cancel", () => window.Close()));
+        { try { if (!Path.IsPathFullyQualified(PathValue(output) ?? "")) throw new ArgumentException(text["Filename"]); window.Close(new CreationChoice(PathValue(output), ((ResourceFormatInfo)format.SelectedItem).Id, form.Value(), (OverwritePolicy)overwrite.SelectedIndex)); } catch (Exception e) { error.Text = text["Error"] + ": " + text.ErrorMessage(e.Message); } }), Button(text, "Cancel", () => window.Close()));
         return await window.ShowDialog<CreationChoice>(owner);
     }
     public static async Task<ConversionChoice> Conversion(AppWindow owner, DesktopText text, ResourceFormatInfo[] formats, string initial)
