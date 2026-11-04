@@ -23,7 +23,7 @@ try {
     $activationLogs=@((Join-Path $env:LOCALAPPDATA 'GARbro\desktop.log'),
         (Join-Path $env:LOCALAPPDATA ('Packages\'+$installed.PackageFamilyName+'\LocalCache\Local\GARbro\desktop.log')),
         (Join-Path $env:LOCALAPPDATA ('Packages\'+$installed.PackageFamilyName+'\LocalCache\Roaming\GARbro\desktop.log')))
-    foreach($extension in @('xfl','zip','dat','bin')) {
+    foreach($extension in @('zip','xfl','dat','bin')) {
         $file=Join-Path $directory ('Русский 日本語 文件.'+$extension)
         $sample=if($extension -eq 'zip'){'tests/fixtures/generated/zip-stored.zip'}else{'tests/fixtures/generated/standard.xfl'}
         Copy-Item $sample $file
@@ -43,6 +43,10 @@ try {
             foreach($base in @($env:LOCALAPPDATA,(Join-Path $env:LOCALAPPDATA ('Packages\'+$installed.PackageFamilyName+'\LocalCache\Local')),(Join-Path $env:LOCALAPPDATA ('Packages\'+$installed.PackageFamilyName+'\LocalCache\Roaming')))) {
                 $log=Join-Path $base 'GARbro\desktop.log';if(Test-Path $log){Get-Content -Tail 30 $log | Write-Output}
             }
+            foreach($channel in @('Application','Microsoft-Windows-AppModel-Runtime/Admin','Microsoft-Windows-TWinUI/Operational')) {
+                Get-WinEvent -FilterHashtable @{LogName=$channel;StartTime=$started.LocalDateTime} -ErrorAction SilentlyContinue | Select-Object -First 12 TimeCreated,Id,ProviderName,Message | Format-List | Out-String | Write-Output
+            }
+            Get-ItemProperty ('Registry::HKEY_CLASSES_ROOT\.'+$extension+'\OpenWithProgids') -ErrorAction SilentlyContinue | Format-List | Out-String | Write-Output
             throw "Store Open With did not load .$extension"
         }
         if(-not $process.CloseMainWindow()){throw 'Cannot close the associated-file window.'}

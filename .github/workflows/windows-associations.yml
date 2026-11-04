@@ -1,0 +1,14 @@
+name: Windows archive associations
+on:
+  push:
+    paths:
+      - .github/workflows/windows-associations.yml
+      - tools/installers/WindowsAssociation.cs
+      - tools/installers/WindowsActivation.ps1
+      - tools/smoke-store.ps1
+      - tools/installer_support.py
+permissions:
+  contents: read
+jobs:
+  installed-store:
+    uses: ./.github/workflows/store.yml

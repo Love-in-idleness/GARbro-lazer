@@ -35,7 +35,7 @@ Before submitting to Flathub's `new-pr` branch, complete both architecture build
 run the current Flathub manifest and repository linters, validate metadata, and add
 publicly hosted screenshots of this build. Test portal selection of files and
 folders, drag/drop and file activation, extraction to an authorized destination,
-audio, worker cancellation/limits, Wayland text input, and both languages/themes.
+audio, worker cancellation/limits, Wayland text input, and all four languages in light/dark themes.
 Test with no host .NET installation and after a Flatpak upgrade. The preparation
 workflow does not submit or publish to Flathub. Existing installed application
 defaults remain unchanged. Android, F-Droid and IzzyOnDroid work is deferred.
@@ -57,7 +57,7 @@ Skia 在启动时死循环。普通 TTF/OTF 桌面字体仍可使用，不修改
 
 提交前仍须通过双架构构建、Flathub 官方检查器和元数据验证，并提供当前版本的公开截图。
 需实测文件门户、目录与拖放、文件关联、提取输出、音频、取消和资源限制、Wayland 输入法、
-中英文与深浅主题，以及无宿主 .NET 的启动和升级。工作流仅准备资产，不自动提交或发布。
+中英俄日四语言与深浅主题，以及无宿主 .NET 的启动和升级。工作流仅准备资产，不自动提交或发布。
 Android 开发及 F-Droid、IzzyOnDroid 的发布准备已暂缓。
 
 ## Submit the release bundle

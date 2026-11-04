@@ -1,6 +1,8 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Text;
+using System.Runtime.InteropServices.ComTypes;
 [ComImport, Guid("F04061AC-1659-4a3f-A954-775AA57FC083"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 interface IAssocHandler {
     void GetName([MarshalAs(UnmanagedType.LPWStr)] out string name);
@@ -59,6 +61,27 @@ public static class PackageActivation {
     static extern void SHCreateDataObject(IntPtr parent, uint count, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)] IntPtr[] children, IntPtr inner, ref Guid iid, out IntPtr data);
     [DllImport("shell32.dll", CharSet=CharSet.Unicode, PreserveSig=false)]
     static extern void SHAssocEnumHandlers(string extension, uint filter, out IEnumAssocHandlers handlers);
+    [DllImport("shell32.dll", CharSet=CharSet.Unicode)]
+    static extern uint DragQueryFile(IntPtr drop, uint index, StringBuilder name, uint length);
+    [DllImport("ole32.dll")]
+    static extern void ReleaseStgMedium(ref STGMEDIUM medium);
+    static void VerifySelection(IntPtr data, string path) {
+        var selection=(IDataObject)Marshal.GetObjectForIUnknown(data);
+        try {
+            var format=new FORMATETC {cfFormat=15,dwAspect=DVASPECT.DVASPECT_CONTENT,lindex=-1,tymed=TYMED.TYMED_HGLOBAL};
+            int available=selection.QueryGetData(ref format);
+            Console.WriteLine("Shell CF_HDROP HRESULT: 0x"+available.ToString("X8"));
+            Marshal.ThrowExceptionForHR(available);
+            STGMEDIUM medium;selection.GetData(ref format,out medium);
+            try {
+                uint count=DragQueryFile(medium.unionmember,uint.MaxValue,null,0);
+                var name=new StringBuilder(32768);DragQueryFile(medium.unionmember,0,name,(uint)name.Capacity);
+                bool matches=count==1 && string.Equals(name.ToString(),path,StringComparison.OrdinalIgnoreCase);
+                Console.WriteLine("Shell file selection: count="+count+"; expected file="+matches);
+                if(!matches)throw new InvalidOperationException("Shell selection is not the requested filesystem archive.");
+            } finally {ReleaseStgMedium(ref medium);}
+        } finally {Marshal.ReleaseComObject(selection);}
+    }
     static void OpenCore(string path) {
         IntPtr item=IntPtr.Zero, parent=IntPtr.Zero, data=IntPtr.Zero;
         IEnumAssocHandlers handlers=null;
@@ -70,6 +93,7 @@ public static class PackageActivation {
             SHParseDisplayName(path, IntPtr.Zero, out item, 0, out attributes);
             var dataId=new Guid("0000010e-0000-0000-C000-000000000046");
             SHCreateDataObject(parent, 1, new[]{ILFindLastID(item)}, IntPtr.Zero, ref dataId, out data);
+            VerifySelection(data,path);
             SHAssocEnumHandlers(System.IO.Path.GetExtension(path), 0, out handlers);
             IAssocHandler handler; uint fetched;
             while(handlers.Next(1,out handler,out fetched)==0 && fetched==1) {
@@ -77,7 +101,8 @@ public static class PackageActivation {
                     string name; handler.GetUIName(out name);
                     if(name.IndexOf("GARbro",StringComparison.OrdinalIgnoreCase)>=0) {
                         string id; handler.GetName(out id);
-                        Console.WriteLine("Open With candidate: " + name + " [" + id + "]");
+                        string icon; int iconIndex; handler.GetIconLocation(out icon,out iconIndex);
+                        Console.WriteLine("Open With candidate: " + name + " [" + id + "]; icon="+icon+"; recommended="+handler.IsRecommended());
                         int result=handler.Invoke(data);
                         Console.WriteLine("Shell Invoke HRESULT: 0x"+result.ToString("X8")+"; apartment="+Thread.CurrentThread.GetApartmentState());
                         Marshal.ThrowExceptionForHR(result);

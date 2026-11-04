@@ -50,9 +50,9 @@ app in Windows Settings; remove the test certificate from Trusted People when
 you no longer need it. Windows 10 2004 or later is required by the manifest;
 CI tests installation and activation on its Windows runner, not every Windows edition.
 
-Open With offers GARbro for game-specific extensions. Installation does not
-replace the current default application. Common media, general archive formats,
-DAT/BIN and executable types are deliberately excluded from registration.
+Open With offers GARbro for supported archives, including XFL, ZIP, DAT and BIN,
+and game-resource extensions. Installation preserves the current default
+application. Common media and executable types are not registered.
 
 The ZIP is an alternative that needs no certificate trust. Unpack all files and
 run `desktop\GARbro.Desktop.exe`; the CLI is `cli\garbro.exe`.
@@ -61,7 +61,8 @@ run `desktop\GARbro.Desktop.exe`; the CLI is `cli\garbro.exe`.
 
 macOS 14 or later is supported on Intel (`osx-x64`) and Apple silicon (`osx-arm64`).
 Install the matching .NET 10 Runtime, open the DMG and copy its whole GARbro folder
-to your Mac. Open `GARbro.app`; the `cli` directory contains the command-line tool.
+to `/Applications` or `~/Applications`. Open `GARbro.app`; the `cli` directory
+contains the command-line tool.
 Tarballs are also available. Keep the accompanying files together.
 
 The app has an ad-hoc signature for local integrity; it is not Apple Developer ID
@@ -75,7 +76,8 @@ replacing your defaults. Click Play for audio/video; files never autoplay.
 Settings use an atomic, versioned JSON file in the user's application-data
 directory. Passwords and keys stay in the session. Help → Export logs creates a
 local ZIP with redacted paths and environment information; it is never uploaded
-automatically. See the bundled English/Chinese manuals and compatibility ledger.
+automatically. The bundled manuals are available in English, Simplified Chinese,
+Russian and Japanese. The compatibility ledger lists format-specific limits.
 
 ## Flatpak / Flathub
 
