@@ -47,9 +47,11 @@ try {
         }
         if(-not $process.CloseMainWindow()){throw 'Cannot close the associated-file window.'}
         if(-not $process.WaitForExit(10000)){throw 'Previous Store test process did not exit.'}
+        [PackageActivation]::Complete()
     }
     Write-Output 'Registered Store identity, self-contained installation and actual Shell file activation passed.'
 } finally {
+    if('PackageActivation' -as [type]){[PackageActivation]::Complete()}
     Get-Process GARbro.Desktop -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
     Get-AppxPackage -Name $identity.name | Remove-AppxPackage
     if($trust){Remove-Item -LiteralPath $trust.PSPath}

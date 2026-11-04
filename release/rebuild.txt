@@ -1,1 +1,1 @@
-1.0.3: verify native archive selection and system macOS archive types
+1.0.3: exercise Shell handlers in a message-pumped STA

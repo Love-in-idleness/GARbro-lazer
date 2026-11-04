@@ -67,11 +67,13 @@ try {
     }
     if(-not $process.CloseMainWindow()){throw 'Cannot close the associated-file window.'}
     if(-not $process.WaitForExit(10000)){throw 'Previous MSIX test process did not exit.'}
+    [PackageActivation]::Complete()
     }
     Remove-AppxPackage -Package $installed.PackageFullName
     if (Get-AppxPackage -Name $identity) { throw 'MSIX uninstall failed.' }
     Write-Output 'MSIX install, upgrade, associated-file activation and uninstall passed.'
 } finally {
+    if('PackageActivation' -as [type]){[PackageActivation]::Complete()}
     Get-AppxPackage -Name $identity | Remove-AppxPackage
     if ($trusted) { Remove-Item -LiteralPath $trusted.PSPath }
     if ($root) { Remove-Item -LiteralPath $root.PSPath }
