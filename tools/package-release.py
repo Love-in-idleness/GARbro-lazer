@@ -17,6 +17,14 @@ from installer_support import associations
 ROOT=Path(__file__).resolve().parents[1]
 
 
+def write_zip(stage, archive):
+    # Deterministic dependencies can have a 1980-01-01 UTC timestamp,
+    # which is still 1979 in a Windows runner's local timezone.
+    with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED,strict_timestamps=False)as destination:
+        for file in sorted(stage.rglob('*')):
+            if file.is_file():destination.write(file,file.relative_to(stage.parent))
+
+
 def licenses(destination):
     records={}
     directory=destination/'licenses'
@@ -117,9 +125,7 @@ def main():
         'Run cli/garbro for commands, or the desktop executable / macOS app bundle.\n')
     archive=output/(stage.name+('.zip'if args.rid.startswith('win-')else '.tar.gz'))
     if archive.suffix=='.zip':
-        with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED)as z:
-            for file in sorted(stage.rglob('*')):
-                if file.is_file():z.write(file,file.relative_to(output))
+        write_zip(stage,archive)
     else:
         with tarfile.open(archive,'w:gz')as z:z.add(stage,arcname=stage.name)
     print(archive)

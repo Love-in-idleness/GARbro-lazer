@@ -81,7 +81,7 @@ def main():
         for mode,suffix in [('client-header','.h'),('private-code','.c')]:
             subprocess.run(['wayland-scanner',mode,'/usr/share/plasma-wayland-protocols/fake-input.xml',str(run/('fake-input'+suffix))],check=True)
         subprocess.run(['cc','-std=c11','-Wall','-Wextra','-Werror','-I',str(run),str(ROOT/'tests/wayland/kde-pointer.c'),
-                        str(run/'fake-input.c'),'-lwayland-client','-o',str(run/'pointer')],check=True)
+                        str(run/'fake-input.c'),'-lwayland-client','-lm','-o',str(run/'pointer')],check=True)
         try:
             with (output/'kwin.log').open('w')as kwinlog,(output/'application.log').open('w')as applog:
                 # A nested llvmpipe output enables KWin's actual screenshot
