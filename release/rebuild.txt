@@ -1,1 +1,1 @@
-1.0.3: exercise Shell handlers in a message-pumped STA
+1.0.3: final four-language desktop packages and verified native file-class activation
