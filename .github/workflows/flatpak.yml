@@ -71,8 +71,11 @@ jobs:
         run: |
           flatpak remote-add --user --no-gpg-verify --if-not-exists garbro-test "$PWD/artifacts/flatpak-repo"
           flatpak install --user --noninteractive -y garbro-test io.github.love_in_idleness.GARbro-no-wpf
-          test_runtime=$(mktemp -d)
-          chmod 700 "$test_runtime"
+          test_runtime="/run/user/$(id -u)"
+          # SDK checks use short-lived buses. Remove only the disposable runner's stale document mount.
+          fusermount3 -uz "$test_runtime/doc" 2>/dev/null || true
+          mkdir -p "$test_runtime/doc"
+          chmod 700 "$test_runtime" "$test_runtime/doc"
           XDG_RUNTIME_DIR="$test_runtime" XDG_CURRENT_DESKTOP=GNOME xvfb-run -a dbus-run-session -- python3 tools/smoke-flatpak-startup.py
       - name: Validate the built repository with Flathub tooling
         run: |

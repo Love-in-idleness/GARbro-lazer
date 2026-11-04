@@ -40,7 +40,8 @@ try {
     foreach ($extension in @('xfl','xp3','zip','dat','bin')) {
     $fixture = Join-Path $fixtureDirectory ('standard.'+$extension)
     # Test the actual Open With handler, including the formerly excluded XFL/DAT/BIN/ZIP suffixes.
-    Copy-Item 'tests/fixtures/generated/standard.xfl' $fixture
+    $sample=if($extension -eq 'zip'){'tests/fixtures/generated/zip-stored.zip'}else{'tests/fixtures/generated/standard.xfl'}
+    Copy-Item $sample $fixture
     [PackageActivation]::Open($fixture)
     $deadline = (Get-Date).AddSeconds(25)
     do {
@@ -58,6 +59,7 @@ try {
         throw 'Packaged file activation failed.'
     }
     Stop-Process -Id $process.Id
+    if(-not $process.WaitForExit(10000)){throw 'Previous MSIX test process did not exit.'}
     }
     Remove-AppxPackage -Package $installed.PackageFullName
     if (Get-AppxPackage -Name $identity) { throw 'MSIX uninstall failed.' }

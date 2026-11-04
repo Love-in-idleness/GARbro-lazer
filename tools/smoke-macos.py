@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+import uuid
 from pathlib import Path
 from macos_support import minimum_system_versions
 from macos_association_probe import handlers,default_handler
@@ -17,10 +18,17 @@ args=parser.parse_args()
 with tempfile.TemporaryDirectory(prefix='GARbro macOS 测试 ') as directory:
     root=Path(directory);mount=root/'mounted';mount.mkdir()
     subprocess.run(['hdiutil','attach','-readonly','-nobrowse','-mountpoint',str(mount),str(args.dmg.resolve())],check=True)
+    installation=Path.home()/'Applications'/('GARbro validation '+uuid.uuid4().hex)
+    app=installation/'GARbro.app'
+    register='/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister'
     try:
         mounted=mount/'GARbro/GARbro.app'
-        app=root/'installed/GARbro.app';app.parent.mkdir();shutil.copytree(mounted,app,symlinks=True)
-        register='/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister'
+        installation.mkdir(parents=True);shutil.copytree(mounted,app,symlinks=True)
+        # LaunchServices ignores some temporary locations and deduplicates equal bundle identities.
+        # Remove only this job's staging copies before registering the installed application.
+        for candidate in Path('artifacts').rglob('GARbro.app'):
+            if (candidate/'Contents/Info.plist').is_file():subprocess.run([register,'-u',str(candidate.resolve())],check=True)
+        subprocess.run([register,'-u',str(mounted)],check=True)
         previous_zip_default=default_handler('public.zip-archive')
         subprocess.run([register,'-f',str(app)],check=True)
         info=plistlib.loads((app/'Contents/Info.plist').read_bytes())
@@ -44,7 +52,7 @@ with tempfile.TemporaryDirectory(prefix='GARbro macOS 测试 ') as directory:
         for suffix in ('xfl','dat','bin','zip'):
             sample=fixture.with_suffix('.'+suffix);sample.write_bytes(fixture.read_bytes())
             available=handlers(sample)
-            assert str(app.resolve()) in available,(suffix,available)
+            assert app.resolve() in {Path(value).resolve()for value in available},(suffix,available)
         logs=[Path.home()/'Library/Application Support/GARbro/desktop.log',Path.home()/'.local/share/GARbro/desktop.log']
         starts={p:p.stat().st_size if p.exists()else 0 for p in logs}
         def wait_activation(count):
@@ -73,5 +81,11 @@ with tempfile.TemporaryDirectory(prefix='GARbro macOS 测试 ') as directory:
         for pid in processes:subprocess.run(['kill',pid],check=True)
         subprocess.run([register,'-u',str(app)],check=True)
         assert default_handler('public.zip-archive')==previous_zip_default
-    finally:subprocess.run(['hdiutil','detach',str(mount)],check=True)
+    finally:
+        if app.exists():
+            processes=subprocess.run(['pgrep','-f',str(app/'Contents/MacOS/GARbro.Desktop')],text=True,capture_output=True)
+            for pid in processes.stdout.splitlines():subprocess.run(['kill',pid],check=False)
+            subprocess.run([register,'-u',str(app)],check=False)
+            shutil.rmtree(installation,ignore_errors=True)
+        subprocess.run(['hdiutil','detach',str(mount)],check=True)
 print('macOS DMG, code signature, associations, app launch and Unicode worker passed.')

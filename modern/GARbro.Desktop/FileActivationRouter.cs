@@ -23,6 +23,7 @@ public sealed class FileActivationRouter
         if (!Dispatcher.UIThread.CheckAccess()) { Dispatcher.UIThread.Post(() => Open(values, startup)); return; }
         if (stopped) return;
         string[] files = Normalize(values);
+        DesktopServices.Activity("activation-request", $"arguments={values.Length}; resources={files.Length}; startup={startup}");
         if (files.Length == 0) return;
         string key = string.Join('\0', files);
         if (startup) { startupKey = key; startupTime = DateTime.UtcNow; }

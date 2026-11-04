@@ -1,1 +1,1 @@
-1.0.3: native shortcut configuration and isolated Flatpak portal validation
+1.0.3: validate installed macOS application and standard Flatpak portal paths

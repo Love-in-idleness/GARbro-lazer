@@ -32,7 +32,11 @@ def wait_window(title):
     while time.monotonic()<deadline:
         if visible(title):return
         time.sleep(.25)
-    raise TimeoutError('Installed Flatpak did not map '+title+': '+log.read_text())
+    diagnostics=subprocess.check_output(['xwininfo','-root','-tree'],text=True)
+    subprocess.run(['flatpak','ps'],check=False)
+    app_log=Path.home()/'.var/app'/APP/'data/GARbro/desktop.log'
+    if app_log.exists():diagnostics+='\n'+'\n'.join(app_log.read_text().splitlines()[-20:])
+    raise TimeoutError('Installed Flatpak did not map '+title+': '+log.read_text()+'\n'+diagnostics)
 
 with tempfile.TemporaryDirectory(prefix='GARbro 中文 Русский 日本語 ')as directory,log.open('w')as output:
     root=Path(directory)

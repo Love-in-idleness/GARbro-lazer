@@ -76,11 +76,22 @@ jobs:
           path: |
             artifacts/native-desktop/window-with-titlebar.png
             artifacts/native-desktop/captions/
+      - uses: actions/cache/restore@v4
+        if: runner.os != 'Linux'
+        id: media-cache
+        with:
+          path: artifacts/media/${{ matrix.rid }}
+          key: media-${{ runner.os }}-${{ runner.arch }}-${{ matrix.rid }}-${{ hashFiles('tools/build-media.py', 'tools/media-codecs.json') }}
       - name: Build redistributable video helpers
         if: runner.os != 'Linux'
         run: python tools/build-media.py --rid ${{ matrix.rid }}
         env:
           MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
+      - uses: actions/cache/save@v4
+        if: runner.os != 'Linux' && steps.media-cache.outputs.cache-hit != 'true'
+        with:
+          path: artifacts/media/${{ matrix.rid }}
+          key: media-${{ runner.os }}-${{ runner.arch }}-${{ matrix.rid }}-${{ hashFiles('tools/build-media.py', 'tools/media-codecs.json') }}
       - name: Use the packaged helpers for video regression tests
         if: runner.os != 'Linux'
         shell: bash

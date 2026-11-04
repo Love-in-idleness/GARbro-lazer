@@ -21,15 +21,24 @@ try {
     Add-Type -TypeDefinition (Get-Content -Raw (Join-Path $PSScriptRoot 'installers/WindowsAssociation.cs'))
     foreach($extension in @('xfl','zip','dat','bin')) {
         $file=Join-Path $directory ('Русский 日本語 文件.'+$extension)
-        Copy-Item 'tests/fixtures/generated/standard.xfl' $file
+        $sample=if($extension -eq 'zip'){'tests/fixtures/generated/zip-stored.zip'}else{'tests/fixtures/generated/standard.xfl'}
+        Copy-Item $sample $file
+        Write-Output ('Opening through Store Shell handler: .'+$extension)
         [PackageActivation]::Open($file)
         $deadline=(Get-Date).AddSeconds(25);$process=$null
         do {
             Start-Sleep -Milliseconds 200
             $process=Get-Process GARbro.Desktop -ErrorAction SilentlyContinue | Where-Object {$_.MainWindowTitle -like ('*.'+$extension)} | Select-Object -First 1
         } while(-not $process -and (Get-Date) -lt $deadline)
-        if(-not $process){throw "Store Open With did not load .$extension"}
+        if(-not $process){
+            Get-Process GARbro.Desktop -ErrorAction SilentlyContinue | Select-Object Id,MainWindowTitle,Path | Format-List | Out-String | Write-Output
+            foreach($base in @($env:LOCALAPPDATA,(Join-Path $env:LOCALAPPDATA ('Packages\'+$installed.PackageFamilyName+'\LocalCache\Local')),(Join-Path $env:LOCALAPPDATA ('Packages\'+$installed.PackageFamilyName+'\LocalCache\Roaming')))) {
+                $log=Join-Path $base 'GARbro\desktop.log';if(Test-Path $log){Get-Content -Tail 30 $log | Write-Output}
+            }
+            throw "Store Open With did not load .$extension"
+        }
         Stop-Process -Id $process.Id
+        if(-not $process.WaitForExit(10000)){throw 'Previous Store test process did not exit.'}
     }
     Write-Output 'Registered Store identity, self-contained installation and actual Shell file activation passed.'
 } finally {
