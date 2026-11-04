@@ -131,6 +131,7 @@ def main():
                 x11.XDestroyImage.argtypes=[C.POINTER(XImage)];x11.XFree.argtypes=[C.c_void_p]
                 fixes.XFixesGetCursorImage.argtypes=[C.c_void_p];fixes.XFixesGetCursorImage.restype=C.POINTER(XCursor)
                 def capture(name,cursor=False):
+                    nonlocal screenshot
                     if screenshot is None:
                         if cursor:
                             image=fixes.XFixesGetCursorImage(display);info=image.contents;width,height=info.width,info.height;stride=width*4
@@ -141,7 +142,14 @@ def main():
                             data=bytearray(C.string_at(info.data,stride*height));data[3::4]=b'\xff'*(len(data)//4);x11.XDestroyImage(image)
                         png(output/(name+'.png'),width,height,stride,data);return data,(width,height,stride)
                     with tempfile.TemporaryFile()as raw:
-                        metadata=screenshot.CaptureWorkspace(dbus.Dictionary({'include-cursor':dbus.Boolean(cursor)},signature='sv'),dbus.types.UnixFd(raw.fileno()))
+                        try:
+                            metadata=screenshot.CaptureWorkspace(dbus.Dictionary({'include-cursor':dbus.Boolean(cursor)},signature='sv'),dbus.types.UnixFd(raw.fileno()))
+                        except dbus.DBusException as error:
+                            # Newer KWin advertises ScreenShot2 even when its
+                            # QPainter backend cannot fulfill captures.
+                            if error.get_dbus_name()!='org.kde.KWin.ScreenShot2.Error.Cancelled':raise
+                            screenshot=None
+                            return capture(name,cursor)
                         width,height,stride=(int(metadata[k])for k in ('width','height','stride'));size=stride*height
                         deadline=time.monotonic()+5
                         while os.fstat(raw.fileno()).st_size<size:
