@@ -96,7 +96,8 @@ jobs:
         if: runner.os != 'Linux'
         shell: bash
         run: echo "${{ github.workspace }}/artifacts/media/${{ matrix.rid }}" >> "$GITHUB_PATH"
-      - run: dotnet test GARbro.NoWpf.slnx -c Release --no-build --logger "trx;LogFilePrefix=portable"
+      - run: dotnet test GARbro.NoWpf.slnx -c Release --no-build --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type mini --logger "trx;LogFilePrefix=portable"
+        timeout-minutes: 20
         env:
           SDL_AUDIODRIVER: dummy
           GARBRO_CREATED_ARCHIVES: ${{ matrix.rid == 'win-x64' && format('{0}/artifacts/created-archives', github.workspace) || '' }}
@@ -178,6 +179,8 @@ jobs:
           name: portable-tests-${{ matrix.os }}
           path: |
             tests/**/TestResults/*.trx
+            tests/**/TestResults/**/*Sequence.xml
+            tests/**/TestResults/**/*.dmp
             artifacts/native-video/
             artifacts/desktop-readiness/
             artifacts/native-desktop/video-window.png
