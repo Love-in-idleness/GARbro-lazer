@@ -42,6 +42,15 @@ class InstallerTests(unittest.TestCase):
         self.assertIn('public.zip-archive',documents[0]['LSItemContentTypes'])
         self.assertTrue(any('xfl' in t['UTTypeTagSpecification']['public.filename-extension'] for t in imports))
 
+    def test_mac_existing_archive_types_are_candidates_without_stealing_defaults(self):
+        documents,imports=installer.mac_document_types(['bin','xfl'],lambda extension: ['com.apple.macbinary-archive','dyn.unregistered'] if extension=='bin' else [])
+        document=documents[0]
+        self.assertIn('com.apple.macbinary-archive',document['LSItemContentTypes'])
+        self.assertNotIn('dyn.unregistered',document['LSItemContentTypes'])
+        self.assertEqual('Alternate',document['LSHandlerRank'])
+        self.assertEqual('Viewer',document['CFBundleTypeRole'])
+        self.assertTrue(any('xfl' in declaration['UTTypeTagSpecification']['public.filename-extension'] for declaration in imports))
+
     def test_msix_uses_gui_entry_and_quoted_file_activation(self):
         manifest=installer.msix_manifest('0.2.0-preview.1')
         root=ET.fromstring(manifest)

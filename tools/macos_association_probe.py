@@ -10,6 +10,7 @@ CF.CFStringGetCString.argtypes=[ctypes.c_void_p,ctypes.c_void_p,ctypes.c_long,ct
 CF.CFArrayGetCount.argtypes=[ctypes.c_void_p];CF.CFArrayGetCount.restype=ctypes.c_long
 CF.CFArrayGetValueAtIndex.argtypes=[ctypes.c_void_p,ctypes.c_long];CF.CFArrayGetValueAtIndex.restype=ctypes.c_void_p
 CF.CFRelease.argtypes=[ctypes.c_void_p]
+LS.UTTypeCreateAllIdentifiersForTag.argtypes=[ctypes.c_void_p,ctypes.c_void_p,ctypes.c_void_p];LS.UTTypeCreateAllIdentifiersForTag.restype=ctypes.c_void_p
 LS.LSCopyApplicationURLsForURL.argtypes=[ctypes.c_void_p,ctypes.c_uint];LS.LSCopyApplicationURLsForURL.restype=ctypes.c_void_p
 LS.LSCopyDefaultRoleHandlerForContentType.argtypes=[ctypes.c_void_p,ctypes.c_uint];LS.LSCopyDefaultRoleHandlerForContentType.restype=ctypes.c_void_p
 
@@ -39,3 +40,15 @@ def default_handler(uti):
     finally:
         if value:CF.CFRelease(value)
         CF.CFRelease(name)
+
+
+def filename_types(extension):
+    """Existing system UTIs for this suffix, without registering or changing defaults."""
+    tag=CF.CFStringCreateWithCString(None,b'public.filename-extension',0x08000100)
+    value=CF.CFStringCreateWithCString(None,extension.encode(),0x08000100)
+    array=LS.UTTypeCreateAllIdentifiersForTag(tag,value,None)
+    try:
+        return [string(CF.CFArrayGetValueAtIndex(array,i)) for i in range(CF.CFArrayGetCount(array)if array else 0)]
+    finally:
+        if array:CF.CFRelease(array)
+        CF.CFRelease(value);CF.CFRelease(tag)

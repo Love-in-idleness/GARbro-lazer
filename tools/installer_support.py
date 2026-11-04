@@ -6,6 +6,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -80,17 +81,25 @@ def mime_document(extensions):
     return ET.ElementTree(xml)
 
 
-def mac_document_types(extensions):
+def mac_document_types(extensions, filename_types=None):
+    if filename_types is None:
+        if sys.platform == 'darwin':
+            from macos_association_probe import filename_types
+        else:
+            filename_types = lambda extension: []
     aliases = json.loads((ROOT/'tools/installers/associations.json').read_text())['utiAliases']
     types, imports = [], []
     for ext in extensions:
         identifier = aliases.get(ext, 'org.garbro.resource.'+association_token(ext))
         types.append(identifier)
+        # Existing types (for example MacBinary .bin) take precedence over imported
+        # declarations. Advertise their Viewer role too, preserving default handlers.
+        types.extend(value for value in filename_types(ext) if value and not value.startswith('dyn.'))
         if ext not in aliases:
             imports.append({'UTTypeIdentifier':identifier, 'UTTypeDescription':'Game resource (.'+ext+')',
                 'UTTypeConformsTo':['public.data'], 'UTTypeTagSpecification':{'public.filename-extension':[ext]}})
     return ([{'CFBundleTypeName':'Game resources','CFBundleTypeRole':'Viewer','LSHandlerRank':'Alternate',
-              'CFBundleTypeExtensions':extensions,'LSItemContentTypes':types}], imports)
+              'CFBundleTypeExtensions':extensions,'LSItemContentTypes':sorted(set(types))}], imports)
 
 
 def desktop_entry(extensions):

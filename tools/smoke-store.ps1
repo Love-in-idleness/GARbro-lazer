@@ -19,18 +19,25 @@ try {
     $installed=Get-AppxPackage -Name $identity.name
     if(-not $installed -or $installed.PackageFamilyName -ne $identity.packageFamilyName){throw 'Installed Store PFN differs from the registered identity.'}
     Add-Type -TypeDefinition (Get-Content -Raw (Join-Path $PSScriptRoot 'installers/WindowsAssociation.cs'))
+    . (Join-Path $PSScriptRoot 'installers/WindowsActivation.ps1')
+    $activationLogs=@((Join-Path $env:LOCALAPPDATA 'GARbro\desktop.log'),
+        (Join-Path $env:LOCALAPPDATA ('Packages\'+$installed.PackageFamilyName+'\LocalCache\Local\GARbro\desktop.log')),
+        (Join-Path $env:LOCALAPPDATA ('Packages\'+$installed.PackageFamilyName+'\LocalCache\Roaming\GARbro\desktop.log')))
     foreach($extension in @('xfl','zip','dat','bin')) {
         $file=Join-Path $directory ('Русский 日本語 文件.'+$extension)
         $sample=if($extension -eq 'zip'){'tests/fixtures/generated/zip-stored.zip'}else{'tests/fixtures/generated/standard.xfl'}
         Copy-Item $sample $file
         Write-Output ('Opening through Store Shell handler: .'+$extension)
+        $started=[DateTimeOffset]::UtcNow
+        $archive=if($extension -eq 'zip'){'ZIP'}else{'XFL'}
         [PackageActivation]::Open($file)
         $deadline=(Get-Date).AddSeconds(25);$process=$null
         do {
             Start-Sleep -Milliseconds 200
             $process=Get-Process GARbro.Desktop -ErrorAction SilentlyContinue | Where-Object {$_.MainWindowTitle -like ('*.'+$extension)} | Select-Object -First 1
-        } while(-not $process -and (Get-Date) -lt $deadline)
-        if(-not $process){
+            $loaded=Test-AssociatedArchiveLoaded $activationLogs $started $archive
+        } while((-not $process -or -not $loaded) -and (Get-Date) -lt $deadline)
+        if(-not $process -or -not $loaded){
             Get-CimInstance Win32_Process | Where-Object {$_.Name -like '*GARbro*'} | Select-Object Name,ProcessId,ParentProcessId,CommandLine | Format-List | Out-String | Write-Output
             Get-Process GARbro.Desktop -ErrorAction SilentlyContinue | Select-Object Id,MainWindowTitle,Path | Format-List | Out-String | Write-Output
             foreach($base in @($env:LOCALAPPDATA,(Join-Path $env:LOCALAPPDATA ('Packages\'+$installed.PackageFamilyName+'\LocalCache\Local')),(Join-Path $env:LOCALAPPDATA ('Packages\'+$installed.PackageFamilyName+'\LocalCache\Roaming')))) {

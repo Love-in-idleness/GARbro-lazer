@@ -11,7 +11,7 @@ import time
 import uuid
 from pathlib import Path
 from macos_support import minimum_system_versions
-from macos_association_probe import handlers,default_handler
+from macos_association_probe import handlers,default_handler,filename_types
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('dmg',type=Path)
 args=parser.parse_args()
@@ -55,9 +55,11 @@ with tempfile.TemporaryDirectory(prefix='GARbro macOS 测试 ') as directory:
         fixture=root/'中文 Русский 日本語 文件.xfl';shutil.copy2('tests/fixtures/generated/standard.xfl',fixture)
         runtime=['--env','DOTNET_ROOT='+os.environ['DOTNET_ROOT']] if os.environ.get('DOTNET_ROOT')else[]
         for suffix in ('xfl','dat','bin','zip'):
-            sample=fixture.with_suffix('.'+suffix);sample.write_bytes(fixture.read_bytes())
+            sample=fixture.with_suffix('.'+suffix)
+            if sample!=fixture:
+                shutil.copy2('tests/fixtures/generated/zip-stored.zip' if suffix=='zip' else fixture,sample)
             available=handlers(sample)
-            assert app.resolve() in {Path(value).resolve()for value in available},(suffix,available)
+            assert app.resolve() in {Path(value).resolve()for value in available},(suffix,filename_types(suffix),available)
         logs=[Path.home()/'Library/Application Support/GARbro/desktop.log',Path.home()/'.local/share/GARbro/desktop.log']
         starts={p:p.stat().st_size if p.exists()else 0 for p in logs}
         def wait_activation(count):

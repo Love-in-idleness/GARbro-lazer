@@ -1,1 +1,1 @@
-1.0.3: include offline help in the main UI assembly for all four languages
+1.0.3: verify native archive selection and system macOS archive types

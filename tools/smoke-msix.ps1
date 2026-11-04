@@ -35,6 +35,10 @@ try {
     if ([version]$installed.Version -le [version]$before.Version) { throw 'MSIX upgrade did not advance the version.' }
     if ($installed.PackageFamilyName -ne $before.PackageFamilyName) { throw 'MSIX identity changed during upgrade.' }
     Add-Type -TypeDefinition (Get-Content -Raw (Join-Path $PSScriptRoot 'installers/WindowsAssociation.cs'))
+    . (Join-Path $PSScriptRoot 'installers/WindowsActivation.ps1')
+    $activationLogs=@((Join-Path $env:LOCALAPPDATA 'GARbro\desktop.log'),
+        (Join-Path $env:LOCALAPPDATA ('Packages\'+$installed.PackageFamilyName+'\LocalCache\Local\GARbro\desktop.log')),
+        (Join-Path $env:LOCALAPPDATA ('Packages\'+$installed.PackageFamilyName+'\LocalCache\Roaming\GARbro\desktop.log')))
     $fixtureDirectory = Join-Path ([IO.Path]::GetTempPath()) ('GARbro Русский 日本語 ' + [char]0x6d4b + [char]0x8bd5 + ' test ' + [guid]::NewGuid())
     New-Item -ItemType Directory $fixtureDirectory | Out-Null
     foreach ($extension in @('xfl','xp3','zip','dat','bin')) {
@@ -42,14 +46,17 @@ try {
     # Test the actual Open With handler, including the formerly excluded XFL/DAT/BIN/ZIP suffixes.
     $sample=if($extension -eq 'zip'){'tests/fixtures/generated/zip-stored.zip'}else{'tests/fixtures/generated/standard.xfl'}
     Copy-Item $sample $fixture
+    $started=[DateTimeOffset]::UtcNow
+    $archive=if($extension -eq 'zip'){'ZIP'}else{'XFL'}
     [PackageActivation]::Open($fixture)
     $deadline = (Get-Date).AddSeconds(25)
     do {
         Start-Sleep -Milliseconds 250
         $process = Get-Process -Name GARbro.Desktop -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like ('*standard.'+$extension+'*') } | Select-Object -First 1
-        if ($process -and $process.MainWindowTitle -like ('*standard.'+$extension+'*')) { break }
+        $loaded=Test-AssociatedArchiveLoaded $activationLogs $started $archive
+        if ($process -and $loaded) { break }
     } while ((Get-Date) -lt $deadline)
-    if (-not $process -or $process.MainWindowTitle -notlike ('*standard.'+$extension+'*')) {
+    if (-not $process -or -not $loaded -or $process.MainWindowTitle -notlike ('*standard.'+$extension+'*')) {
         Get-CimInstance Win32_Process | Where-Object { $_.Name -like '*GARbro*' } | Select-Object Name,ProcessId,SessionId,CommandLine | Format-List | Out-String | Write-Output
         Get-Process -Name GARbro.Desktop -ErrorAction SilentlyContinue | Select-Object Id,MainWindowTitle,Path | Format-List | Out-String | Write-Output
         $logs = @((Join-Path $env:LOCALAPPDATA 'GARbro\desktop.log'),
