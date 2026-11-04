@@ -21,14 +21,19 @@ with tempfile.TemporaryDirectory(prefix='GARbro macOS 测试 ') as directory:
     installation=Path.home()/'Applications'/('GARbro validation '+uuid.uuid4().hex)
     app=installation/'GARbro.app'
     register='/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister'
+    def unregister(path):
+        result=subprocess.run([register,'-u',str(path)],text=True,capture_output=True)
+        # kLSApplicationNotFoundErr is expected for a temporary copy LS never registered.
+        if result.returncode and '-10814' not in result.stdout+result.stderr:
+            raise RuntimeError('Cannot unregister the test application: '+result.stdout+result.stderr)
     try:
         mounted=mount/'GARbro/GARbro.app'
         installation.mkdir(parents=True);shutil.copytree(mounted,app,symlinks=True)
         # LaunchServices ignores some temporary locations and deduplicates equal bundle identities.
         # Remove only this job's staging copies before registering the installed application.
         for candidate in Path('artifacts').rglob('GARbro.app'):
-            if (candidate/'Contents/Info.plist').is_file():subprocess.run([register,'-u',str(candidate.resolve())],check=True)
-        subprocess.run([register,'-u',str(mounted)],check=True)
+            if (candidate/'Contents/Info.plist').is_file():unregister(candidate.resolve())
+        unregister(mounted)
         previous_zip_default=default_handler('public.zip-archive')
         subprocess.run([register,'-f',str(app)],check=True)
         info=plistlib.loads((app/'Contents/Info.plist').read_bytes())
