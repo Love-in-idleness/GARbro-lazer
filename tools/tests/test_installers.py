@@ -57,10 +57,12 @@ class InstallerTests(unittest.TestCase):
         for prefix in root.get('IgnorableNamespaces').split():self.assertIn('xmlns:'+prefix+'=',manifest)
         ns={'m':'http://schemas.microsoft.com/appx/manifest/foundation/windows10','u':'http://schemas.microsoft.com/appx/manifest/uap/windows10','u2':'http://schemas.microsoft.com/appx/manifest/uap/windows10/2','u3':'http://schemas.microsoft.com/appx/manifest/uap/windows10/3'}
         self.assertEqual('desktop/GARbro.Desktop.exe',root.find('.//m:Application',ns).get('Executable'))
-        self.assertEqual('"%1"',root.find('.//u3:Verb',ns).get('Parameters'))
         self.assertEqual('"%1"',root.find('.//u3:FileTypeAssociation',ns).get('Parameters'))
         self.assertIsNotNone(root.find('.//u3:FileTypeAssociation/u:SupportedFileTypes/u:FileType',ns))
-        self.assertIsNotNone(root.find('.//u3:FileTypeAssociation/u2:SupportedVerbs/u3:Verb',ns))
+        association=root.find('.//u:Extension[@Category="windows.fileTypeAssociation"]/u3:FileTypeAssociation',ns)
+        self.assertIsNotNone(association)
+        self.assertEqual('Player',association.get('MultiSelectModel'))
+        self.assertIsNone(association.find('u2:SupportedVerbs',ns))
         identity=root.find('m:Identity',ns)
         self.assertEqual(installer.PUBLISHER,identity.get('Publisher'))
 

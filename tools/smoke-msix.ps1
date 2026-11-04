@@ -41,7 +41,18 @@ try {
         (Join-Path $env:LOCALAPPDATA ('Packages\'+$installed.PackageFamilyName+'\LocalCache\Roaming\GARbro\desktop.log')))
     $fixtureDirectory = Join-Path ([IO.Path]::GetTempPath()) ('GARbro Русский 日本語 ' + [char]0x6d4b + [char]0x8bd5 + ' test ' + [guid]::NewGuid())
     New-Item -ItemType Directory $fixtureDirectory | Out-Null
-    foreach ($extension in @('xfl','xp3','zip','dat','bin')) {
+    $retained=@()
+    $scenarios=@(
+        @{Extension='xfl';KeepOpen=$false},
+        @{Extension='xp3';KeepOpen=$false},
+        @{Extension='zip';KeepOpen=$false},
+        @{Extension='dat';KeepOpen=$false},
+        @{Extension='bin';KeepOpen=$false},
+        @{Extension='xfl';KeepOpen=$true},
+        @{Extension='zip';KeepOpen=$false}
+    )
+    foreach($scenario in $scenarios) {
+    $extension=$scenario.Extension
     $fixture = Join-Path $fixtureDirectory ('standard.'+$extension)
     # Test the actual Open With handler, including the formerly excluded XFL/DAT/BIN/ZIP suffixes.
     $sample=if($extension -eq 'zip'){'tests/fixtures/generated/zip-stored.zip'}else{'tests/fixtures/generated/standard.xfl'}
@@ -65,9 +76,15 @@ try {
         foreach($log in $logs){if(Test-Path $log){Get-Content -Tail 30 $log | Write-Output}}
         throw 'Packaged file activation failed.'
     }
+    if($scenario.KeepOpen){$retained+=$process;[PackageActivation]::Complete();continue}
     if(-not $process.CloseMainWindow()){throw 'Cannot close the associated-file window.'}
     if(-not $process.WaitForExit(10000)){throw 'Previous MSIX test process did not exit.'}
     [PackageActivation]::Complete()
+    }
+    foreach($retainedProcess in $retained) {
+        if(-not $retainedProcess.HasExited) {
+            if(-not $retainedProcess.CloseMainWindow() -or -not $retainedProcess.WaitForExit(10000)){throw 'Warm activation window did not close.'}
+        }
     }
     Remove-AppxPackage -Package $installed.PackageFullName
     if (Get-AppxPackage -Name $identity) { throw 'MSIX uninstall failed.' }

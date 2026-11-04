@@ -23,7 +23,17 @@ try {
     $activationLogs=@((Join-Path $env:LOCALAPPDATA 'GARbro\desktop.log'),
         (Join-Path $env:LOCALAPPDATA ('Packages\'+$installed.PackageFamilyName+'\LocalCache\Local\GARbro\desktop.log')),
         (Join-Path $env:LOCALAPPDATA ('Packages\'+$installed.PackageFamilyName+'\LocalCache\Roaming\GARbro\desktop.log')))
-    foreach($extension in @('zip','xfl','dat','bin')) {
+    $retained=@()
+    $scenarios=@(
+        @{Extension='zip';KeepOpen=$false},
+        @{Extension='xfl';KeepOpen=$false},
+        @{Extension='dat';KeepOpen=$false},
+        @{Extension='bin';KeepOpen=$false},
+        @{Extension='xfl';KeepOpen=$true},
+        @{Extension='zip';KeepOpen=$false}
+    )
+    foreach($scenario in $scenarios) {
+    $extension=$scenario.Extension
         $file=Join-Path $directory ('Русский 日本語 文件.'+$extension)
         $sample=if($extension -eq 'zip'){'tests/fixtures/generated/zip-stored.zip'}else{'tests/fixtures/generated/standard.xfl'}
         Copy-Item $sample $file
@@ -49,9 +59,15 @@ try {
             Get-ItemProperty ('Registry::HKEY_CLASSES_ROOT\.'+$extension+'\OpenWithProgids') -ErrorAction SilentlyContinue | Format-List | Out-String | Write-Output
             throw "Store Open With did not load .$extension"
         }
+        if($scenario.KeepOpen){$retained+=$process;[PackageActivation]::Complete();continue}
         if(-not $process.CloseMainWindow()){throw 'Cannot close the associated-file window.'}
         if(-not $process.WaitForExit(10000)){throw 'Previous Store test process did not exit.'}
         [PackageActivation]::Complete()
+    }
+    foreach($retainedProcess in $retained) {
+        if(-not $retainedProcess.HasExited) {
+            if(-not $retainedProcess.CloseMainWindow() -or -not $retainedProcess.WaitForExit(10000)){throw 'Warm activation window did not close.'}
+        }
     }
     Write-Output 'Registered Store identity, self-contained installation and actual Shell file activation passed.'
 } finally {

@@ -194,12 +194,11 @@ def msix_manifest(version, rid='win-x64', channel='preview'):
     if channel == 'store': number = store_version()
     namespaces = {'': 'http://schemas.microsoft.com/appx/manifest/foundation/windows10',
         'uap': 'http://schemas.microsoft.com/appx/manifest/uap/windows10',
-        'uap2': 'http://schemas.microsoft.com/appx/manifest/uap/windows10/2',
         'uap3': 'http://schemas.microsoft.com/appx/manifest/uap/windows10/3',
         'rescap': 'http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities'}
     def tag(prefix, name): return '{'+namespaces[prefix]+'}'+name
     for prefix, uri in namespaces.items(): ET.register_namespace(prefix, uri)
-    root = ET.Element(tag('', 'Package'), IgnorableNamespaces='uap uap2 uap3 rescap')
+    root = ET.Element(tag('', 'Package'), IgnorableNamespaces='uap uap3 rescap')
     ET.SubElement(root, tag('', 'Identity'), Name=identity['name'], Publisher=identity['publisher'], Version=number, ProcessorArchitecture=architecture)
     properties = ET.SubElement(root, tag('', 'Properties'))
     for key, value in [('DisplayName','GARbro' if channel == 'store' or '-' not in version else 'GARbro Preview'),('PublisherDisplayName',identity['publisherDisplayName']),('Logo','Assets/StoreLogo.png')]: ET.SubElement(properties, tag('', key)).text = value
@@ -212,14 +211,12 @@ def msix_manifest(version, rid='win-x64', channel='preview'):
     ET.SubElement(app, tag('uap', 'VisualElements'), DisplayName='GARbro', Description='Game resource browser',
         BackgroundColor='transparent', Square150x150Logo='Assets/Square150x150Logo.png', Square44x44Logo='Assets/Square44x44Logo.png')
     extensions = ET.SubElement(app, tag('', 'Extensions'))
-    extension = ET.SubElement(extensions, tag('uap3', 'Extension'), Category='windows.fileTypeAssociation',
-        Executable='desktop/GARbro.Desktop.exe', EntryPoint='Windows.FullTrustApplication')
+    # A standard desktop association inherits the application's full-trust target.
+    extension = ET.SubElement(extensions, tag('uap', 'Extension'), Category='windows.fileTypeAssociation')
     association = ET.SubElement(extension, tag('uap3', 'FileTypeAssociation'), Name='garbroresources', Parameters='"%1"', MultiSelectModel='Player')
     ET.SubElement(association, tag('uap', 'DisplayName')).text = 'GARbro game resources'
     types = ET.SubElement(association, tag('uap', 'SupportedFileTypes'))
     for ext in associations(): ET.SubElement(types, tag('uap', 'FileType')).text = '.'+ext
-    verbs = ET.SubElement(association, tag('uap2', 'SupportedVerbs'))
-    ET.SubElement(verbs, tag('uap3', 'Verb'), Id='open', Parameters='"%1"', MultiSelectModel='Player').text = 'Open with GARbro'
     capabilities = ET.SubElement(root, tag('', 'Capabilities'))
     ET.SubElement(capabilities, tag('rescap', 'Capability'), Name='runFullTrust')
     return ET.tostring(root, encoding='unicode', xml_declaration=False)
