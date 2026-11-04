@@ -1,8 +1,8 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Text;
-using System.Runtime.InteropServices.ComTypes;
+using System.ComponentModel;
+using Microsoft.Win32;
 [ComImport, Guid("F04061AC-1659-4a3f-A954-775AA57FC083"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 interface IAssocHandler {
     void GetName([MarshalAs(UnmanagedType.LPWStr)] out string name);
@@ -40,11 +40,11 @@ public static class PackageActivation {
         if(!apartment.Join(5000))throw new TimeoutException("Shell activation apartment did not stop.");
         apartment=null; invoked.Dispose(); completed.Dispose();
     }
-    public static void Open(string path) {
+    public static void Open(string path, string appUserModelId) {
         Complete(); failure=null;
         invoked=new ManualResetEventSlim(); completed=new ManualResetEventSlim();
         apartment=new Thread(()=>{
-            try { OpenCore(path); }
+            try { OpenCore(path,appUserModelId); }
             catch(Exception error){failure=error;}
             finally {invoked.Set();}
         });
@@ -54,75 +54,60 @@ public static class PackageActivation {
     }
 
     [DllImport("shell32.dll", CharSet=CharSet.Unicode, PreserveSig=false)]
-    static extern void SHParseDisplayName(string path, IntPtr context, out IntPtr item, uint mask, out uint attributes);
-    [DllImport("shell32.dll")]
-    static extern IntPtr ILFindLastID(IntPtr item);
-    [DllImport("shell32.dll", PreserveSig=false)]
-    static extern void SHCreateDataObject(IntPtr parent, uint count, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)] IntPtr[] children, IntPtr inner, ref Guid iid, out IntPtr data);
-    [DllImport("shell32.dll", CharSet=CharSet.Unicode, PreserveSig=false)]
     static extern void SHAssocEnumHandlers(string extension, uint filter, out IEnumAssocHandlers handlers);
-    [DllImport("shell32.dll", CharSet=CharSet.Unicode)]
-    static extern uint DragQueryFile(IntPtr drop, uint index, StringBuilder name, uint length);
-    [DllImport("ole32.dll")]
-    static extern void ReleaseStgMedium(ref STGMEDIUM medium);
-    static void VerifySelection(IntPtr data, string path) {
-        var selection=(IDataObject)Marshal.GetObjectForIUnknown(data);
-        try {
-            var format=new FORMATETC {cfFormat=15,dwAspect=DVASPECT.DVASPECT_CONTENT,lindex=-1,tymed=TYMED.TYMED_HGLOBAL};
-            int available=selection.QueryGetData(ref format);
-            Console.WriteLine("Shell CF_HDROP HRESULT: 0x"+available.ToString("X8"));
-            Marshal.ThrowExceptionForHR(available);
-            STGMEDIUM medium;selection.GetData(ref format,out medium);
-            try {
-                uint count=DragQueryFile(medium.unionmember,uint.MaxValue,null,0);
-                var name=new StringBuilder(32768);DragQueryFile(medium.unionmember,0,name,(uint)name.Capacity);
-                bool matches=count==1 && string.Equals(name.ToString(),path,StringComparison.OrdinalIgnoreCase);
-                Console.WriteLine("Shell file selection: count="+count+"; expected file="+matches);
-                if(!matches)throw new InvalidOperationException("Shell selection is not the requested filesystem archive.");
-            } finally {ReleaseStgMedium(ref medium);}
-        } finally {Marshal.ReleaseComObject(selection);}
+    [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)]
+    struct ShellExecuteInfo {
+        public uint Size,Mask;public IntPtr Window;
+        public string Verb,File,Parameters,Directory;public int Show;
+        public IntPtr Instance,Item;public string Class;public IntPtr ClassKey;
+        public uint HotKey;public IntPtr Icon,Process;
     }
-    static void OpenCore(string path) {
-        IntPtr item=IntPtr.Zero, parent=IntPtr.Zero, data=IntPtr.Zero;
+    [DllImport("shell32.dll",CharSet=CharSet.Unicode,SetLastError=true)]
+    [return:MarshalAs(UnmanagedType.Bool)]
+    static extern bool ShellExecuteEx(ref ShellExecuteInfo info);
+    [DllImport("kernel32.dll")]
+    static extern bool CloseHandle(IntPtr handle);
+    static string RegisteredClass(string extension,string appUserModelId) {
+        using(var candidates=Registry.ClassesRoot.OpenSubKey(extension+@"\OpenWithProgids")) {
+            if(candidates!=null)foreach(string id in candidates.GetValueNames()) {
+                using(var app=Registry.ClassesRoot.OpenSubKey(id+@"\Application")) {
+                    if(string.Equals(app==null?null:app.GetValue("AppUserModelID")as string,appUserModelId,StringComparison.OrdinalIgnoreCase))return id;
+                }
+            }
+        }
+        throw new InvalidOperationException("The installed package has no registered Open With ProgID for "+extension);
+    }
+    static void OpenCore(string path,string appUserModelId) {
         IEnumAssocHandlers handlers=null;
         try {
-            // Pass a filesystem selection from its containing folder. Binding a ZIP
-            // shell item itself may bind to the compressed-folder namespace instead.
-            uint attributes;
-            SHParseDisplayName(System.IO.Path.GetDirectoryName(path), IntPtr.Zero, out parent, 0, out attributes);
-            SHParseDisplayName(path, IntPtr.Zero, out item, 0, out attributes);
-            var dataId=new Guid("0000010e-0000-0000-C000-000000000046");
-            SHCreateDataObject(parent, 1, new[]{ILFindLastID(item)}, IntPtr.Zero, ref dataId, out data);
-            VerifySelection(data,path);
-            SHAssocEnumHandlers(System.IO.Path.GetExtension(path), 0, out handlers);
-            IAssocHandler handler; uint fetched;
+            SHAssocEnumHandlers(System.IO.Path.GetExtension(path),0,out handlers);
+            IAssocHandler handler;uint fetched;bool found=false;
             while(handlers.Next(1,out handler,out fetched)==0 && fetched==1) {
                 try {
-                    string name; handler.GetUIName(out name);
-                    if(name.IndexOf("GARbro",StringComparison.OrdinalIgnoreCase)>=0) {
-                        string id; handler.GetName(out id);
-                        string icon; int iconIndex; handler.GetIconLocation(out icon,out iconIndex);
-                        Console.WriteLine("Open With candidate: " + name + " [" + id + "]; icon="+icon+"; recommended="+handler.IsRecommended());
-                        int result=handler.Invoke(data);
-                        Console.WriteLine("Shell Invoke HRESULT: 0x"+result.ToString("X8")+"; apartment="+Thread.CurrentThread.GetApartmentState());
-                        Marshal.ThrowExceptionForHR(result);
-                        invoked.Set();
-                        while(!completed.Wait(10)) {
-                            Message message;
-                            while(PeekMessage(out message,IntPtr.Zero,0,0,1)) {
-                                TranslateMessage(ref message);DispatchMessage(ref message);
-                            }
-                        }
-                        return;
-                    }
-                } finally { Marshal.ReleaseComObject(handler); }
+                    string name;handler.GetUIName(out name);
+                    if(name.IndexOf("GARbro",StringComparison.OrdinalIgnoreCase)<0)continue;
+                    string id;handler.GetName(out id);
+                    Console.WriteLine("Open With candidate: "+name+" ["+id+"]");found=true;break;
+                } finally {Marshal.ReleaseComObject(handler);}
             }
-            throw new InvalidOperationException("GARbro is missing from Windows Open With handlers.");
-        } finally {
-            if(handlers!=null)Marshal.ReleaseComObject(handlers);
-            if(data!=IntPtr.Zero)Marshal.Release(data);
-            if(parent!=IntPtr.Zero)Marshal.FreeCoTaskMem(parent);
-            if(item!=IntPtr.Zero)Marshal.FreeCoTaskMem(item);
-        }
+            if(!found)throw new InvalidOperationException("GARbro is missing from Windows Open With handlers.");
+            string registered=RegisteredClass(System.IO.Path.GetExtension(path),appUserModelId);
+            // Execute the registered file-class verb, as Open With does. No executable
+            // path, command-line reconstruction, AUMID activation or default change.
+            var info=new ShellExecuteInfo {
+                Size=(uint)Marshal.SizeOf(typeof(ShellExecuteInfo)),Mask=0x1|0x40|0x100|0x400,
+                Verb="open",File=path,Class=registered,Show=1
+            };
+            if(!ShellExecuteEx(ref info))throw new Win32Exception(Marshal.GetLastWin32Error());
+            if(info.Process!=IntPtr.Zero)CloseHandle(info.Process);
+            Console.WriteLine("Shell registered file class opened: "+registered);
+            invoked.Set();
+            while(!completed.Wait(10)) {
+                Message message;
+                while(PeekMessage(out message,IntPtr.Zero,0,0,1)) {
+                    TranslateMessage(ref message);DispatchMessage(ref message);
+                }
+            }
+        } finally {if(handlers!=null)Marshal.ReleaseComObject(handlers);}
     }
 }

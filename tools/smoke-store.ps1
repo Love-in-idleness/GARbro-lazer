@@ -40,7 +40,7 @@ try {
         Write-Output ('Opening through Store Shell handler: .'+$extension)
         $started=[DateTimeOffset]::UtcNow
         $archive=if($extension -eq 'zip'){'ZIP'}else{'XFL'}
-        [PackageActivation]::Open($file)
+        [PackageActivation]::Open($file,($installed.PackageFamilyName+'!GARbro'))
         $deadline=(Get-Date).AddSeconds(25);$process=$null
         do {
             Start-Sleep -Milliseconds 200

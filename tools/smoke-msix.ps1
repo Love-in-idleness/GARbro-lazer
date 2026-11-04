@@ -59,7 +59,7 @@ try {
     Copy-Item $sample $fixture
     $started=[DateTimeOffset]::UtcNow
     $archive=if($extension -eq 'zip'){'ZIP'}else{'XFL'}
-    [PackageActivation]::Open($fixture)
+    [PackageActivation]::Open($fixture,($installed.PackageFamilyName+'!GARbro'))
     $deadline = (Get-Date).AddSeconds(25)
     do {
         Start-Sleep -Milliseconds 250
