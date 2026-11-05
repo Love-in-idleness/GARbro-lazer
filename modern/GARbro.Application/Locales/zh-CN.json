@@ -429,5 +429,6 @@
   "NoConversionMatched": "所选项目没有启用对应的转换格式。",
   "Error.Select at least one resource type.": "请至少选择一种资源类型。",
   "Error.No audio stream was found.": "未找到音频流。",
-  "Error.Audio duration exceeds the preview limit.": "音频时长超出预览上限。"
+  "Error.Audio duration exceeds the preview limit.": "音频时长超出预览上限。",
+  "Error.Depth limit: ": "达到递归层数上限："
 }

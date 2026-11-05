@@ -429,5 +429,6 @@
   "NoConversionMatched": "Для выбранных элементов не включён подходящий формат преобразования.",
   "Error.Select at least one resource type.": "Выберите хотя бы один тип ресурсов.",
   "Error.No audio stream was found.": "Аудиопоток не найден.",
-  "Error.Audio duration exceeds the preview limit.": "Длительность аудио превышает предел предпросмотра."
+  "Error.Audio duration exceeds the preview limit.": "Длительность аудио превышает предел предпросмотра.",
+  "Error.Depth limit: ": "Достигнут предел глубины: "
 }

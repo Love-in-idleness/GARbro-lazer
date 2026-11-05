@@ -126,7 +126,7 @@ public static class Dialogs
     public static Task ExtractionErrors(AppWindow owner,DesktopText text,string[] failures)
     {
         var window=Window(text,"TaskErrors",700,480);var body=Panel();body.Children.Add(Label(text,"TaskErrorsHint"));
-        string Detail(string value){int separator=value.IndexOf(": ",StringComparison.Ordinal);return separator<0?text.ErrorMessage(value):value[..(separator+2)]+text.ErrorMessage(value[(separator+2)..]);}
+        string Detail(string value){string translated=text.ErrorMessage(value);if(translated!=value)return translated;int separator=value.IndexOf(": ",StringComparison.Ordinal);return separator<0?translated:value[..(separator+2)]+text.ErrorMessage(value[(separator+2)..]);}
         body.Children.Add(new TextBox {Text=string.Join(Environment.NewLine+Environment.NewLine,failures.Select(Detail)),IsReadOnly=true,AcceptsReturn=true,TextWrapping=Avalonia.Media.TextWrapping.Wrap,MinHeight=220});
         window.Content=Frame(window,body,Button(text,"Close",()=>window.Close()));return window.ShowDialog(owner);
     }

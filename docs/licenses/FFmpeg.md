@@ -10,3 +10,5 @@ Each redistributed helper directory includes `COPYING.LGPLv2.1`, `LICENSE.md`, t
 Linux DEB/portable editions use the system FFmpeg package under that distribution's license terms. Flatpak builds the pinned source from the manifest; its source is available through the Flatpak source mechanisms.
 
 The native conversion recipe enables MPEG-4/AAC MP4, Matroska stream copy, WAV, FLAC and M4A output using FFmpeg’s built-in LGPL codecs and muxers. No external codec library is added.
+
+The AV1 parser also enables the coded-bitstream metadata required by this FFmpeg version's MOV/MP4 muxer. This keeps its bitstream-type table nonempty in the minimal profile, including MSVC builds; it does not add an AV1 encoder or an external dependency.

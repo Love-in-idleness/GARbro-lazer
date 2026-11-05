@@ -21,7 +21,7 @@ and show per-file errors.
 | Desktop suite, including modal selection changes and media choices | 70 passed |
 | CLI smoke checks | Passed |
 | Python packaging/tool tests | 24 passed |
-| Four-language key and placeholder checks | 431 matching keys per language |
+| Four-language key and placeholder checks | 432 matching keys per language |
 | Native Linux X11 window, fixture listing and extraction | Passed |
 | Continuous native video rendering | 22 distinct captured frame regions |
 | Extraction dialogs: EN/ZH/RU/JA, light/dark | Eight native screenshots reviewed |

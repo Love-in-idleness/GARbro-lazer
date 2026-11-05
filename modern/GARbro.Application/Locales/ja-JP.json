@@ -429,5 +429,6 @@
   "NoConversionMatched": "選択した項目に対応する変換形式が有効になっていません。",
   "Error.Select at least one resource type.": "少なくとも一種類のリソースを選択してください。",
   "Error.No audio stream was found.": "音声ストリームが見つかりません。",
-  "Error.Audio duration exceeds the preview limit.": "音声の長さがプレビューの上限を超えています。"
+  "Error.Audio duration exceeds the preview limit.": "音声の長さがプレビューの上限を超えています。",
+  "Error.Depth limit: ": "再帰の深さの上限："
 }

@@ -429,5 +429,6 @@
   "NoConversionMatched": "None of the selected items has a conversion format enabled.",
   "Error.Select at least one resource type.": "Select at least one resource type.",
   "Error.No audio stream was found.": "No audio stream was found.",
-  "Error.Audio duration exceeds the preview limit.": "Audio duration exceeds the preview limit."
+  "Error.Audio duration exceeds the preview limit.": "Audio duration exceeds the preview limit.",
+  "Error.Depth limit: ": "Depth limit: "
 }
