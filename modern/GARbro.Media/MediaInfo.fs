@@ -23,6 +23,19 @@ type MediaInfo private () =
         | ".flv" | ".vob" | ".3gp" | ".ivf" -> true
         | _ -> false
 
+    static member IsAudioName(name: string) =
+        match Path.GetExtension(name).ToLowerInvariant() with
+        | ".wav" | ".mp3" | ".ogg" | ".opus" | ".aif" | ".aiff" | ".flac" | ".aac" | ".m4a" | ".wma" -> true
+        | _ -> false
+
+    static member HasAudioHeader(header: byte[]) =
+        let at offset (text: string) =
+            header.Length >= offset + text.Length &&
+            System.Text.Encoding.ASCII.GetString(header,offset,text.Length) = text
+        at 0 "ID3" || at 0 "fLaC" || at 0 "OggS" ||
+        (at 0 "RIFF" && at 8 "WAVE") || (at 0 "FORM" && (at 8 "AIFF" || at 8 "AIFC")) ||
+        (header.Length >= 4 && header[0] = 0xffuy && header[1] &&& 0xe0uy = 0xe0uy && header[2] &&& 0x0cuy <> 0x0cuy)
+
     static member HasVideoHeader(name: string, header: byte[]) =
         let starts (bytes: byte[]) = bytes.Length <= header.Length && (bytes |> Seq.indexed |> Seq.forall (fun (i, b) -> header[i] = b))
         let at offset (text: string) =
@@ -81,3 +94,33 @@ type MediaInfo private () =
               FrameRate = if fps > 0.0 then min 30.0 fps else 25.0
               HasAudio = audio.IsSome; VideoCodec = text video "codec_name"
               AudioCodec = audio |> Option.map (fun node -> text node "codec_name") |> Option.defaultValue "" }
+
+[<CLIMutable>]
+type AudioInfo = { SampleRate: int; Channels: int; Duration: float; Codec: string }
+
+[<AbstractClass; Sealed>]
+type AudioMetadata private () =
+    static member Parse(json: string) : AudioInfo =
+        use document = JsonDocument.Parse(json, JsonDocumentOptions(MaxDepth = 32))
+        let property (node: JsonElement) (name: string) =
+            match (if node.ValueKind = JsonValueKind.Object then node.TryGetProperty(name) else (false, Unchecked.defaultof<JsonElement>)) with
+            | true, value -> value
+            | _ -> Unchecked.defaultof<JsonElement>
+        let text node name =
+            let value = property node name
+            if value.ValueKind = JsonValueKind.Undefined then "" else value.ToString()
+        let number (value: string) =
+            match Double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture) with
+            | true, result when Double.IsFinite(result) -> result
+            | _ -> 0.0
+        let streams = property document.RootElement "streams"
+        if streams.ValueKind <> JsonValueKind.Array then raise (InvalidDataException("No audio stream was found."))
+        let stream = streams.EnumerateArray() |> Seq.tryFind (fun node -> text node "codec_type" = "audio")
+        match stream with
+        | None -> raise (InvalidDataException("No audio stream was found."))
+        | Some audio ->
+            let rate, channels = int (number (text audio "sample_rate")), int (number (text audio "channels"))
+            if rate < 1000 || rate > 384000 || channels < 1 || channels > 8 then raise (InvalidDataException("Unsupported audio parameters."))
+            let duration = max (number (text audio "duration")) (number (text (property document.RootElement "format") "duration"))
+            if duration > 604800.0 then raise (InvalidDataException("Audio duration exceeds the preview limit."))
+            { SampleRate=rate; Channels=channels; Duration=max 0.0 duration; Codec=text audio "codec_name" }

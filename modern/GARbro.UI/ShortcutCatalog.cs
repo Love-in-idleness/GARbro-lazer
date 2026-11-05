@@ -14,7 +14,7 @@ public static class ShortcutCatalog
         string primary = OperatingSystem.IsMacOS() ? "Meta" : "Ctrl";
         var result = new Dictionary<string, string[]>(StringComparer.Ordinal);
         foreach (string key in new[] { "Open", "OpenFolder", "Exit", "Cancel", "Back", "Forward", "Parent", "Refresh", "Settings", "General", "Appearance", "Decoding", "Formats", "Shortcuts",
-            "ExtractAll", "ExtractSelected", "Recursive", "Create", "Convert", "OpenSelected", "SelectAll", "CopyNames", "Mask", "Explore", "Trash", "FitWindow", "Toolbar", "Menubar", "Statusbar", "FitImage",
+            "ExtractAll", "ExtractSelected", "Create", "Convert", "OpenSelected", "SelectAll", "CopyNames", "Mask", "Explore", "Trash", "FitWindow", "Toolbar", "Menubar", "Statusbar", "FitImage",
             "Feedback", "Manual", "Troubleshoot", "Updates", "License", "ExportLogs", "About", "FocusMenu", "NextSelection", "SortName", "SortType", "SortSize", "SortNone", "Play", "Pause", "Stop", "NextPage", "PreviousPage", "Copy", "Wrap" }) result[key] = Array.Empty<string>();
         void Bind(string command, params string[] values) => result[command] = values;
         Bind("Open", primary + "+O"); Bind("Settings", primary + "+P"); Bind("Exit", primary + "+Q");

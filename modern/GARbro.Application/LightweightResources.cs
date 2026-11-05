@@ -11,11 +11,11 @@ public static class LightweightResources
 {
     public static bool IsTextName(string name) => Path.GetExtension(name).ToLowerInvariant() is
         ".txt" or ".json" or ".xml" or ".csv" or ".ini" or ".log" or ".md" or ".yaml" or ".yml" or ".ks" or ".lua" or ".js" or ".css" or ".html";
-    public static bool IsOrdinaryName(string name) => IsTextName(name) || MediaInfo.IsVideoName(name) || Path.GetExtension(name).ToLowerInvariant() is
+    public static bool IsOrdinaryName(string name) => IsTextName(name) || MediaInfo.IsVideoName(name) || MediaInfo.IsAudioName(name) || Path.GetExtension(name).ToLowerInvariant() is
         ".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif" or ".webp" or ".wav" or ".mp3" or ".ogg" or ".opus" or ".flac" or ".aiff";
     static System.Collections.Generic.Dictionary<string,string> registered = new(StringComparer.OrdinalIgnoreCase);
     public static void RegisterTypes(System.Collections.Generic.Dictionary<string,string> types) => registered=new(types,StringComparer.OrdinalIgnoreCase);
-    public static string Type(string name) => registered.TryGetValue(Path.GetExtension(name).TrimStart('.'),out string kind) && !MediaInfo.IsVideoName(name)?kind:CommonType(name);
+    public static string Type(string name) => MediaInfo.IsVideoName(name)?"video":MediaInfo.IsAudioName(name)?"audio":registered.TryGetValue(Path.GetExtension(name).TrimStart('.'),out string kind)?kind:CommonType(name);
     static string CommonType(string name) => MediaInfo.IsVideoName(name) ? "video" : IsTextName(name) ? "script" : Path.GetExtension(name).ToLowerInvariant() switch
     { ".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif" or ".webp" => "image", ".wav" or ".mp3" or ".ogg" or ".opus" or ".flac" or ".aiff" => "audio", _ => "" };
     public static bool IsPlainTextFile(string path)

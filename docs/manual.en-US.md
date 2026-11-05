@@ -79,3 +79,12 @@ provide a host recycle-bin command. See flathub.md for packaging validation stat
 Choose **HEX (hexadecimal)** under **Preview encoding / HEX** to inspect any file, including images, audio and video. Each page contains up to 64 KiB with offsets, grouped bytes and ASCII. Pages can be copied. The choice affects only the current preview, resets on file selection and never changes filename decoding. Switching to HEX stops media playback. Loading and filtering run in the background; you can continue typing, cancel, or open another resource.
 
 In Settings → Keyboard shortcuts, search for a command, record and add combinations, remove bindings, or restore one command or all defaults. Multiple combinations per command are supported. Resolve conflicts before saving. Installed DEB, MSIX, Flatpak and macOS apps appear in Open With; installation preserves existing defaults. Portable ZIP/TAR packages do not register. The interface and CLI support English, Simplified Chinese, Russian and Japanese. Use `garbro --language ru-RU help` or `garbro help --language ja-JP` to select a CLI language; JSON keys and command names remain unchanged.
+
+
+### Extraction scope and output formats
+
+Select the items first, then choose **Extract selected** (F4). **Extract all** processes the current directory, including items hidden by search. Enable recursive unpacking in the extraction dialog to enter subfolders and nested archives. For a selection, recursion stays inside those items and never adds their siblings.
+
+Images, audio and video have separate output choices. Audio supports automatic common format, WAV, FLAC and M4A; video supports MP4 or MKV with the original streams. Keep original format copies without conversion. Ordinary files go directly into the output folder; archives expand into their `.unpacked` folders.
+
+Discard options affect output copies only. Game source files are preserved. Failures list the affected items and retain recoverable copies. A “no matching files” result does not mean files were extracted. Batch media conversion uses the same format choices.

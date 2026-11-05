@@ -41,6 +41,15 @@ internal static class LocalizationSnapshots
                     var completion=dialog.ShowDialog<bool>(page);await Ready();
                     Capture(dialog.DesktopHost,Path.Combine(directory,$"shortcuts-{language}-{theme}.png"));
                     dialog.Close(false);await completion;
+                    var extraction=Dialogs.Extraction(page,new DesktopText(language),Program.Output,true,2);await Ready();
+                    var extractHost=page.DesktopHost.OwnedWindows.Single();
+                    var controls=extractHost.GetVisualDescendants().ToArray();
+                    controls.OfType<CheckBox>().Single(c=>c.Name=="RecursiveExtraction").IsChecked=true;
+                    foreach(var pair in new[]{("AudioOutputFormat","WAV"),("VideoOutputFormat","MP4")})
+                    {
+                        var picker=controls.OfType<ComboBox>().Single(c=>c.Name==pair.Item1);picker.SelectedItem=picker.Items.OfType<UiChoice>().Single(c=>c.Value==pair.Item2);
+                    }
+                    await Ready();Capture(extractHost,Path.Combine(directory,$"extraction-{language}-{theme}.png"));extractHost.Close();await extraction;
                 }
         }
         finally{page.Width=width;page.Height=height;CaptionVisuals.Appearance(page,"system","auto",true);await page.LoadArchiveAsync(Program.Fixture);}

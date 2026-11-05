@@ -17,6 +17,7 @@ public sealed class ResourceSession : IDisposable
     readonly ArchiveService.DecoderScope scope;
     readonly bool physical;
     readonly bool previousNestedMode;
+    readonly ArcFile standalone;
     readonly ILocatedOptionsProvider scoped;
     Dictionary<string, Entry[]> index;
     internal bool Retained;
@@ -24,7 +25,7 @@ public sealed class ResourceSession : IDisposable
     public ArcFile Archive { get; }
     public bool Physical => physical;
     public bool Synthetic => Archive?.Tag == "DAT/BOGUS";
-    public ResourceSession(ResourceLocation location, IOptionsProvider options = null)
+    public ResourceSession(ResourceLocation location, IOptionsProvider options = null, bool allowPlainFile = false, bool forcePlainFile = false)
     {
         scoped = options as ILocatedOptionsProvider;
         Location = location with { RootPath = Path.GetFullPath(location.RootPath) };
@@ -43,21 +44,32 @@ public sealed class ResourceSession : IDisposable
             VFS.Flush();
             if (!physical)
             {
-                for (int depth = 0; depth <= Location.Chain.Length; depth++)
+                ArcFile PlainFile()
+                {
+                    if(new FileInfo(Location.RootPath).Length>uint.MaxValue)throw new InvalidDataException("Resource exceeds the size limit.");
+                    return new GameRes.Formats.WrapSingleFileArchive(new ArcView(Location.RootPath),Path.GetFileName(Location.RootPath));
+                }
+                if(allowPlainFile && Location.Chain.Length==0 && (forcePlainFile || MediaInfo.IsAudioName(Location.RootPath) || MediaInfo.IsVideoName(Location.RootPath)))standalone=PlainFile();
+                for (int depth = 0; standalone==null && depth <= Location.Chain.Length; depth++)
                 {
                     var current = Location with { Archives = Location.Chain.Take(depth).ToArray(), Directory = "" };
                     scoped?.SetLocation(current);
-                    VFS.FullPath = new[] { current.RootPath }.Concat(current.Chain).Append("").ToArray();
+                    try {VFS.FullPath = new[] { current.RootPath }.Concat(current.Chain).Append("").ToArray();}
+                    catch(UnknownFormatException)when(allowPlainFile && depth==0 && Location.Chain.Length==0 && scope.MissingOptions==null && FormatCatalog.Instance.LastError is not ResourceParametersRequiredException)
+                    {
+                        VFS.FullPath=new[]{root};VFS.Flush();
+                        standalone=PlainFile();break;
+                    }
                     if (VFS.CurrentArchive?.Tag == "DAT/BOGUS" && depth < Location.Chain.Length)
                         throw new UnknownFormatException();
                 }
-                Archive = VFS.CurrentArchive ?? throw new UnknownFormatException();
+                Archive = standalone ?? VFS.CurrentArchive ?? throw new UnknownFormatException();
             }
         }
         catch
         {
             VFS.PreserveNestedArchives = previousNestedMode;
-            scope.Dispose();
+            standalone?.Dispose();scope.Dispose();
             if (scope.MissingOptions != null) throw scope.MissingOptions;
             throw;
         }
@@ -68,7 +80,7 @@ public sealed class ResourceSession : IDisposable
         if (physical)
         {
             var items = new DirectoryInfo(Location.RootPath).EnumerateFileSystemInfos().Select(f =>
-                new BrowserEntry(f.Name, f.Name, f is DirectoryInfo ? "directory" : MediaInfo.IsVideoName(f.Name) ? "video" : FormatCatalog.Instance.GetTypeFromName(f.Name),
+                new BrowserEntry(f.Name, f.Name, f is DirectoryInfo ? "directory" : MediaInfo.IsVideoName(f.Name) ? "video" : MediaInfo.IsAudioName(f.Name)?"audio":FormatCatalog.Instance.GetTypeFromName(f.Name),
                     f is FileInfo file ? file.Length : 0, f is DirectoryInfo)).ToArray();
             return new(Location, "directory", true, items);
         }
@@ -89,7 +101,7 @@ public sealed class ResourceSession : IDisposable
                 string directory = prefix + rest[..slash];
                 if (dirs.Add(directory)) entries.Add(new(directory, rest[..slash], "directory", 0, true));
             }
-            else entries.Add(new(entry.Name, rest, MediaInfo.IsVideoName(entry.Name) ? "video" : entry.Type, entry.Size, false, id));
+            else entries.Add(new(entry.Name, rest, MediaInfo.IsVideoName(entry.Name) ? "video" : MediaInfo.IsAudioName(entry.Name)?"audio":entry.Type, entry.Size, false, id));
         }
         return new(Location with { Fingerprint = ArchiveFingerprint.Read(Location.RootPath) }, Synthetic ? "media" : Archive.Tag, false, entries.ToArray(), FormatIdentity.Of(Archive.Format));
     }
@@ -121,7 +133,7 @@ public sealed class ResourceSession : IDisposable
             VFS.FullPath = new[] { physical ? Location.RootPath : Path.GetDirectoryName(Location.RootPath) };
             VFS.Flush();
         }
-        finally { VFS.PreserveNestedArchives = previousNestedMode; scope.Dispose(); }
+        finally { standalone?.Dispose(); VFS.PreserveNestedArchives = previousNestedMode; scope.Dispose(); }
     }
 }
 
@@ -184,6 +196,7 @@ public static partial class ResourceService
                 using var input = File.OpenRead(path);
                 return LightweightResources.ReadPage(input, name, offset, forcedType == "binary", previewEncoding ?? context.TextEncoding);
             }
+            if(forcedType==null && MediaInfo.IsAudioName(name))forcedType="audio";
             if (forcedType is not ("script" or "binary" or "image" or "audio"))
             {
                 byte[] signature = new byte[(int)Math.Min(256, new FileInfo(path).Length)];
@@ -209,6 +222,11 @@ public static partial class ResourceService
                 using var audio = AudioFormat.Read(audioInput);
                 if (audio != null)
                     return new("audio", name, $"{audio.SourceFormat.ToUpperInvariant()} · {audio.Format.SamplesPerSecond} Hz · {audio.Format.Channels} ch · {audio.PcmSize / (double)Math.Max(1, audio.Format.AverageBytesPerSecond):F1} s");
+                if(forcedType=="audio")
+                {
+                    var info=MediaTools.ProbeAudio(path);
+                    return new("audio",name,$"{info.Codec.ToUpperInvariant()} · {info.SampleRate} Hz · {info.Channels} ch · {info.Duration:F1} s");
+                }
             }
             if (forcedType != "binary")
             {

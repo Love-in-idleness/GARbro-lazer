@@ -58,7 +58,9 @@ public static class WorkerExecutor
                         case "resource-convert":
                             using(var resource=new ResourceSession(request.Location,provider))
                             {
-                                var converted=ResourceService.ConvertFile(resource,request.Entry,request.Output,request.FormatId,request.Overwrite);
+                                var target=request.FormatId=="MEDIA"?ResourceService.MediaConversionTarget(resource,request.Entry,request.Output,request.ResourceOptions??new()):(request.FormatId,request.Output);
+                                if(target.Item1==null){value=new ResourceConversion(null,0,false);break;}
+                                var converted=ResourceService.ConvertFile(resource,request.Entry,target.Item2,target.Item1,request.Overwrite);
                                 if(converted.Written && request.ResourceOptions?.DiscardOriginalMedia==false)
                                     ResourceService.CopyOriginalMedia(resource,request.Entry,converted.Path,request.Overwrite);
                                 value=converted;

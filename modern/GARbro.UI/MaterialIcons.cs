@@ -19,7 +19,7 @@ public static class MaterialIcons
         "FolderPanel" => "folder", "BrowsePanel" => "description", "PreviewPanel" => "image",
         "Settings" => "settings", "Shortcuts" => "tune", "General" or "Formats" => "tune", "Appearance" => "palette", "Decoding" => "text_fields", "Help" => "help", "Back" => "arrow_back", "Forward" => "arrow_forward",
         "Parent" => "arrow_upward", "Refresh" => "refresh", "Create" => "archive",
-        "ExtractAll" or "ExtractSelected" or "Recursive" => "unarchive", "Convert" => "transform",
+        "ExtractAll" => "unarchive", "ExtractSelected" => "download", "Convert" => "transform",
         "Cancel" or "Exit" or "Close" => "close", "SelectAll" => "select_all", "CopyNames" or "Copy" => "content_copy",
         "Explore" => "open_in_new", "Trash" => "delete", "SortName" or "SortType" or "SortSize" or "SortNone" or "Sort" or "Name" or "Size" or "Type" or "Unsorted" => "sort",
         "FitWindow" or "FitImage" => "fit_screen", "Images" => "image", "Audio" => "music_note", "Video" => "movie", "Search" => "search",

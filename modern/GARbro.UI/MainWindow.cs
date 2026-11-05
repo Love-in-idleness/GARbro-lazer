@@ -111,7 +111,7 @@ public sealed partial class MainWindow : AppWindow
         Grid.SetColumn(menu, 1); menu.VerticalAlignment = VerticalAlignment.Center;
         heading.Children.Add(menu); BuildMenus();
         var operations = new StackPanel { Spacing = 8 };
-        foreach (string key in new[] { "Back", "Forward", "Parent", "Open", "OpenFolder", "ExtractAll", "Recursive", "Cancel" }) toolbar.Children.Add(IconButton(key));
+        foreach (string key in new[] { "Back", "Forward", "Parent", "Open", "OpenFolder", "ExtractSelected", "ExtractAll", "Cancel" }) toolbar.Children.Add(IconButton(key));
         search.Bind(TextBox.PlaceholderTextProperty, Bind("Search")); operations.Children.Add(new ScrollViewer { Content = toolbar, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled });
         path.KeyDown += async (_, e) => { if (!busy && e.Key == Key.Enter) { e.Handled = true; await Guard(() => LoadInputsAsync(new[] { path.Text })); } };
         var locationRow = new Grid { ColumnDefinitions = new("*,220"), RowDefinitions = new("Auto,Auto"), ColumnSpacing = 8, RowSpacing = 8 };
@@ -254,7 +254,7 @@ public sealed partial class MainWindow : AppWindow
     }
     Button IconButton(string key)
     {
-        var button = Button(key, false); button.Content = MaterialIcons.Create(key); button.Classes.Add("iconMenu");
+        var button = Button(key, false); if(key is "ExtractSelected" or "ExtractAll")button.Name=key; button.Content = MaterialIcons.Create(key); button.Classes.Add("iconMenu");
         ToolTip.SetTip(button, CommandTip(key)); button.Bind(Avalonia.Automation.AutomationProperties.NameProperty, Bind(key)); return button;
     }
     static Control GearIcon() => new PathIcon { Width = 20, Height = 20, Data = Geometry.Parse("M10,0 L14,0 L15,3 L18,4 L21,3 L24,7 L22,10 L22,13 L24,16 L21,20 L18,19 L15,21 L14,24 L10,24 L9,21 L6,19 L3,20 L0,16 L2,13 L2,10 L0,7 L3,3 L6,4 L9,3 Z M12,7 A5,5 0 1 0 12,17 A5,5 0 1 0 12,7") };

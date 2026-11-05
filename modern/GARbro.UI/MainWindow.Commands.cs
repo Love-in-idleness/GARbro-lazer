@@ -60,11 +60,10 @@ public sealed partial class MainWindow
         Register("Settings", () => ShowSettings());
         foreach (string section in new[] { "General", "Appearance", "Decoding", "Formats", "Shortcuts" })
             Register(section, () => ShowSettings(section));
-        Register("ExtractAll", () => ExtractPicker(false, false), () => !busy && listing != null);
-        Register("ExtractSelected", () => ExtractPicker(true, false), () => !busy && listing != null && files.SelectedItems.Count > 0);
-        Register("Recursive", () => ExtractPicker(false, true), () => !busy && listing != null);
+        Register("ExtractAll", () => ExtractPicker(false), () => !busy && !loading && listing != null);
+        Register("ExtractSelected", () => ExtractPicker(true), () => !busy && !loading && listing != null && files.SelectedItems.Count > 0);
         Register("Create", CreateArchive, () => !busy && listing?.Physical == true);
-        Register("Convert", ConvertSelected, () => !busy && listing != null && files.SelectedItems.Cast<BrowserEntry>().Any(e => !e.IsDirectory));
+        Register("Convert", ConvertSelected, () => !busy && !loading && listing != null && files.SelectedItems.Cast<BrowserEntry>().Any(e => !e.IsDirectory));
         Register("OpenSelected", OpenSelected, () => !busy && listing != null);
         Register("SelectAll", () => { files.SelectAll(); return Task.CompletedTask; });
         Register("CopyNames", async () => { if (Clipboard != null) await Clipboard.SetTextAsync(string.Join(Environment.NewLine, files.SelectedItems.Cast<BrowserEntry>().Select(e => e.Name))); });
@@ -122,11 +121,11 @@ public sealed partial class MainWindow
         menu.Children.Clear();
         ContextMenu GroupMenu(params string[] keys)
         { var popup = new ContextMenu(); foreach (string key in keys) popup.Items.Add(Item(key)); return popup; }
-        var file = GroupMenu("Open", "OpenFolder");
+        var file = GroupMenu("Open", "OpenFolder", "Create", "Convert");
         var recent = Group("Recent"); foreach (string filename in Settings.Recent)
         { var item = new MenuItem { Header = UiPlatform.Storage.DisplayPath(filename), Icon = MaterialIcons.Create("Recent") }; item.Click += async (_, _) => await Guard(() => LoadInputsAsync(new[] { filename })); recent.Items.Add(item); }
         file.Items.Add(recent); if (!UiPlatform.IsMobile) file.Items.Add(Item("Exit"));
-        var process = GroupMenu("ExtractAll", "ExtractSelected", "Recursive", "Create", "Convert", "Cancel");
+        var process = GroupMenu("ExtractSelected", "ExtractAll");
         var selection = BuildContextMenu(true);
         var view = GroupMenu("Back", "Forward", "Parent", "Refresh", "FitWindow");
         var fit = Item("FitImage"); fit.ToggleType = MenuItemToggleType.CheckBox; fit.IsChecked = Settings.FitImage; view.Items.Add(fit);
@@ -152,7 +151,7 @@ public sealed partial class MainWindow
     ContextMenu BuildContextMenu(bool selectionOnly = false)
     {
         var context = new ContextMenu();
-        foreach (string key in selectionOnly ? new[] { "SelectAll", "Mask", "CopyNames", "Explore", "Trash" } : new[] { "OpenSelected", "ExtractSelected", "Recursive", "Create", "Convert", "SelectAll", "Mask", "CopyNames", "Explore", "Trash", "Refresh" }) context.Items.Add(Item(key));
+        foreach (string key in selectionOnly ? new[] { "SelectAll", "Mask", "CopyNames", "Explore", "Trash" } : new[] { "OpenSelected", "ExtractSelected", "ExtractAll", "Create", "Convert", "SelectAll", "Mask", "CopyNames", "Explore", "Trash", "Refresh" }) context.Items.Add(Item(key));
         var type = Group("AssignType"); foreach (var pair in new[] { ("Automatic", ""), ("Images", "image"), ("Audio", "audio"), ("Video", "video"), ("Scripts", "script"), ("Binary", "binary") })
         {
             var item = Group(pair.Item1); item.Click += async (_, _) =>
@@ -206,31 +205,42 @@ public sealed partial class MainWindow
         catalog ??= await Request<ResourceFormatInfo[]>(new("resource-catalog", null));
         await new HelpWindow(Text, Settings, catalog, page, store).ShowDialog(this);
     }
-    async Task ExtractPicker(bool selectedOnly, bool recursive)
+    sealed record ExtractionSource(ResourceLocation Location,string[] Selection,Dictionary<string,string> Overrides,bool Physical,string Tag);
+    ExtractionSource CaptureExtraction(bool selectedOnly)
     {
-        if (listing == null) return;
-        var choice = await Dialogs.Extraction(this, Text, Settings.OutputDirectory, recursive);
-        if (choice == null) return;
-        string output = listing.Physical ? choice.Output : Path.Combine(choice.Output,
-            Path.GetFileName(listing.Location.Chain.LastOrDefault() ?? listing.Location.RootPath) + ".unpacked");
-        await ExtractInternal(output, selectedOnly, choice.Options, choice.Overwrite);
+        if(listing==null)throw new InvalidOperationException("Open a resource first.");
+        return new(listing.Location,selectedOnly?files.SelectedItems.Cast<BrowserEntry>().Select(e=>e.Name).ToArray():null,
+            new(typeOverrides),listing.Physical,listing.Tag);
     }
-    public Task ExtractToAsync(string root, bool selectedOnly = false) => ExtractInternal(root, selectedOnly, new(), OverwritePolicy.Fail);
-    async Task ExtractInternal(string root, bool selectedOnly, ResourceExtractionOptions extraction, OverwritePolicy overwrite)
+    async Task ExtractPicker(bool selectedOnly)
     {
-        if (listing == null) throw new InvalidOperationException("Open a resource first.");
-        string[] selection = selectedOnly ? files.SelectedItems.Cast<BrowserEntry>().Select(e => e.Name).ToArray() : null;
-        if (selectedOnly && selection.Length == 0) { status.Text = Text["SelectFiles"]; return; }
-        previewCancellation?.Cancel(); StopAudio(); using var operation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token); active = operation; SetBusy(true);
-        var updates = new Progress<ExtractionProgress>(p => { progress.IsIndeterminate = false; progress.Value = p.Total == 0 ? 0 : (double)p.Completed / p.Total; status.Text = $"{p.Completed}/{p.Total} · {p.Entry}"; });
+        if(listing==null)return;
+        var source=CaptureExtraction(selectedOnly);int ticket=navigationGeneration;
+        if(source.Selection is {Length:0}){status.Text=Text["SelectFiles"];return;}
+        var choice=await Dialogs.Extraction(this,Text,Settings.OutputDirectory,selectedOnly,source.Selection?.Length??0);
+        if(choice==null)return;
+        if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return;}
+        string output=source.Physical || source.Tag=="media"?choice.Output:Path.Combine(choice.Output,
+            Path.GetFileName(source.Location.Chain.LastOrDefault()??source.Location.RootPath)+".unpacked");
+        await ExtractInternal(output,source,choice.Options,choice.Overwrite);
+    }
+    public Task ExtractToAsync(string root,bool selectedOnly=false,ResourceExtractionOptions extraction=null,OverwritePolicy overwrite=OverwritePolicy.Fail)
+        =>ExtractInternal(root,CaptureExtraction(selectedOnly),extraction??new(),overwrite);
+    async Task ExtractInternal(string root,ExtractionSource source,ResourceExtractionOptions extraction,OverwritePolicy overwrite)
+    {
+        if(source.Selection is {Length:0}){status.Text=Text["SelectFiles"];return;}
+        previewCancellation?.Cancel();StopAudio();using var operation=CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);active=operation;SetBusy(true);
+        var updates=new Progress<ExtractionProgress>(p=>{progress.IsIndeterminate=false;progress.Value=p.Total==0?0:(double)p.Completed/p.Total;status.Text=$"{p.Completed}/{p.Total} · {p.Entry}";});
+        ResourceJobReport report=null;
         try
         {
-            var report = await Request<ResourceJobReport>(new("resource-extract", null, Location: listing.Location, Output: Path.GetFullPath(root),
-                Selection: selection, ResourceOptions: extraction with { TypeOverrides = new(typeOverrides) }, Overwrite: overwrite), operation.Token, updates);
-            status.Text = Text.Format("Completed", report.Files.Length, report.Errors.Length);
-            foreach (string error in report.Errors) DesktopServices.Log(new IOException(error));
+            report=await Request<ResourceJobReport>(new("resource-extract",null,Location:source.Location,Output:Path.GetFullPath(root),
+                Selection:source.Selection,ResourceOptions:extraction with {TypeOverrides=source.Overrides},Overwrite:overwrite),operation.Token,updates);
+            status.Text=report.Files.Length==0 && report.Errors.Length==0?Text["NoExtractableFiles"]:Text.Format("Completed",report.Files.Length,report.Errors.Length);
+            foreach(string error in report.Errors)DesktopServices.Log(new IOException(error));
         }
-        finally { if (ReferenceEquals(active, operation)) active = null; SetBusy(false); }
+        finally {if(ReferenceEquals(active,operation))active=null;SetBusy(false);}
+        if(report?.Errors.Length>0)await Dialogs.ExtractionErrors(this,Text,report.Errors);
     }
     async Task CreateArchive()
     {
@@ -246,32 +256,34 @@ public sealed partial class MainWindow
     }
     async Task ConvertSelected()
     {
-        var selected = files.SelectedItems.Cast<BrowserEntry>().Where(e => !e.IsDirectory).ToArray(); if (selected.Length == 0) { status.Text = Text["SelectFiles"]; return; }
-        catalog ??= await Request<ResourceFormatInfo[]>(new("resource-catalog", null));
-        var choice = await Dialogs.Conversion(this, Text, catalog.Where(f => f.Type == "image" && f.CanWrite).ToArray(), Settings.OutputDirectory);
-        if (choice == null) return;
-        StopAudio();
-        using var operation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token); active = operation; SetBusy(true);
+        var selected=files.SelectedItems.Cast<BrowserEntry>().Where(e=>!e.IsDirectory).ToArray();
+        if(selected.Length==0){status.Text=Text["SelectFiles"];return;}
+        var source=listing.Location;var overrides=new Dictionary<string,string>(typeOverrides);int ticket=navigationGeneration;
+        catalog??=await Request<ResourceFormatInfo[]>(new("resource-catalog",null));
+        var choice=await Dialogs.Conversion(this,Text,catalog.Where(f=>f.Type=="image" && f.CanWrite).ToArray(),Settings.OutputDirectory);
+        if(choice==null)return;
+        if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return;}
+        StopAudio();using var operation=CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);active=operation;SetBusy(true);
+        var failures=new List<string>();
         try
         {
-            int done = 0; var failures = new List<string>();
-            foreach (var entry in selected)
+            int done=0;
+            foreach(var entry in selected)
             {
                 try
                 {
-                    string format = typeOverrides.GetValueOrDefault(entry.Name, entry.Type) == "audio" ? "AUDIO" : choice.FormatId;
-                    string extension = format == "AUDIO" ? "wav" : catalog.Single(f => f.Id == format).Extensions.FirstOrDefault() ?? "png";
-                    string target = ExtractionPath.Resolve(choice.Output, Path.ChangeExtension(entry.Name, extension));
-                    Directory.CreateDirectory(Path.GetDirectoryName(target));
-                    await Request<ResourceConversion>(new("resource-convert", null, Location: listing.Location, Entry: entry.Name, Output: target, FormatId: format, Overwrite: choice.Overwrite,
-                        ResourceOptions: new(DiscardOriginalMedia: choice.DiscardOriginalMedia)), operation.Token);
-                    done++;
+                    string target=ExtractionPath.Resolve(choice.Output,entry.Name);
+                    var result=await Request<ResourceConversion>(new("resource-convert",null,Location:source,Entry:entry.Name,Output:target,FormatId:"MEDIA",Overwrite:choice.Overwrite,
+                        ResourceOptions:new(ImageFormat:choice.FormatId,AudioFormat:choice.AudioFormat,VideoFormat:choice.VideoFormat,
+                            TypeOverrides:overrides,DiscardOriginalMedia:choice.DiscardOriginalMedia)),operation.Token);
+                    if(result.Path!=null)done++;
                 }
-                catch (WorkerOperationException e) { failures.Add(e.Message); DesktopServices.Log(e); }
+                catch(WorkerOperationException e){failures.Add(entry.DisplayName+": "+e.Message);DesktopServices.Log(e);}
             }
-            status.Text = Text.Format("Completed", done, failures.Count);
+            status.Text=done==0 && failures.Count==0?Text["NoConversionMatched"]:Text.Format("Completed",done,failures.Count);
         }
-        finally { active = null; SetBusy(false); }
+        finally {active=null;SetBusy(false);}
+        if(failures.Count>0)await Dialogs.ExtractionErrors(this,Text,failures.ToArray());
     }
     async void OnKeyDown(object sender, KeyEventArgs e)
     {
