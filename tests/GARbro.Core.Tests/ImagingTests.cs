@@ -68,6 +68,7 @@ public sealed class ImagingTests
     [InlineData("PNG")]
     [InlineData("BMP")]
     [InlineData("TIFF")]
+    [InlineData("WEBP")]
     public void LosslessCodecsRetainNormalizedPixels(string format)
     {
         var bytes = new byte[]

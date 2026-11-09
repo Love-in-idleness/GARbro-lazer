@@ -69,10 +69,16 @@ public static class Dialogs
     static StackPanel Output(AppWindow owner, DesktopText text, string initial, out TextBox path)
     {
         var row = new StackPanel { Spacing = 6 }; row.Children.Add(Label(text, "Output"));
-        var input = PathBox(initial); path = input; row.Children.Add(input);
+        var input = PathBox(initial); path = input;
         var browse = new Button { Content = text["Browse"] }; browse.Click += async (_, _) =>
         { var selected = await UiPlatform.Storage.PickOutputAsync(true); if (selected != null) SetPath(input, selected.LocalPath); };
-        row.Children.Add(browse); return row;
+        row.Children.Add(PathRow(input,browse));return row;
+    }
+    static Control PathRow(TextBox input,Button browse)
+    {
+        var row=new Grid {ColumnDefinitions=new("*,Auto"),ColumnSpacing=10};
+        input.HorizontalAlignment=HorizontalAlignment.Stretch;browse.VerticalAlignment=VerticalAlignment.Center;
+        row.Children.Add(input);Grid.SetColumn(browse,1);row.Children.Add(browse);return row;
     }
     public static TextBox PathBox(string path)
     {
@@ -134,23 +140,33 @@ public static class Dialogs
     public static async Task<CreationChoice> Creation(AppWindow owner, DesktopText text, ResourceFormatInfo[] formats)
     {
         var window = Window(text, "Create", 650, 650); var body = Panel();
-        body.Children.Add(Label(text, "Format")); var format = FormatPicker(formats); body.Children.Add(format);
-        body.Children.Add(Label(text, "Filename")); var output = PathBox(""); body.Children.Add(output);
+        body.Children.Add(Label(text, "Format")); var format = FormatPicker(formats);format.Name="ArchiveOutputFormat";body.Children.Add(format);
+        body.Children.Add(Label(text, "Filename")); var output = PathBox("");output.Name="ArchiveOutputPath";
         var browse = new Button { Content = text["Browse"] }; browse.Click += async (_, _) =>
-        { var f = (ResourceFormatInfo)format.SelectedItem; var selected = await UiPlatform.Storage.PickOutputAsync(false, "archive." + f.Extensions.FirstOrDefault()); if (selected != null) SetPath(output, selected.LocalPath); }; body.Children.Add(browse);
+        { var f = (ResourceFormatInfo)format.SelectedItem; var selected = await UiPlatform.Storage.PickOutputAsync(false, "archive." + f.Extensions.FirstOrDefault()); if (selected != null) SetPath(output, selected.LocalPath); }; body.Children.Add(PathRow(output,browse));
         var host = new ContentControl(); body.Children.Add(host); ParameterForm form = null;
-        void Change() { var selected = format.SelectedItem as ResourceFormatInfo; form = new(text, selected?.OptionsJson, selected?.Schemes); host.Content = form; }
+        void Change()
+        {
+            var selected=format.SelectedItem as ResourceFormatInfo;
+            bool hasOptions=!string.IsNullOrWhiteSpace(selected?.OptionsJson) && selected.OptionsJson.Trim()!="null";
+            form=hasOptions?new(text,selected.OptionsJson,selected.Schemes):null;
+            host.Content=form is null?Label(text,"NoCreationOptions"):form;
+            window.Height=hasOptions?650:440;
+        }
         format.SelectionChanged += (_, _) => Change(); Change();
         body.Children.Add(Label(text, "Overwrite")); var overwrite = Overwrite(text); body.Children.Add(overwrite); var error = new TextBlock(); body.Children.Add(error);
         window.Content = Frame(window, body, Button(text, "Create", () =>
-        { try { if (!Path.IsPathFullyQualified(PathValue(output) ?? "")) throw new ArgumentException(text["Filename"]); window.Close(new CreationChoice(PathValue(output), ((ResourceFormatInfo)format.SelectedItem).Id, form.Value(), (OverwritePolicy)overwrite.SelectedIndex)); } catch (Exception e) { error.Text = text["Error"] + ": " + text.ErrorMessage(e.Message); } }), Button(text, "Cancel", () => window.Close()));
+        { try { if (!Path.IsPathFullyQualified(PathValue(output) ?? "")) throw new ArgumentException(text["Filename"]); window.Close(new CreationChoice(PathValue(output), ((ResourceFormatInfo)format.SelectedItem).Id, form?.Value(), (OverwritePolicy)overwrite.SelectedIndex)); } catch (Exception e) { error.Text = text["Error"] + ": " + text.ErrorMessage(e.Message); } }), Button(text, "Cancel", () => window.Close()));
         return await window.ShowDialog<CreationChoice>(owner);
     }
-    public static async Task<ConversionChoice> Conversion(AppWindow owner,DesktopText text,ResourceFormatInfo[] formats,string initial)
+    public static async Task<ConversionChoice> Conversion(AppWindow owner,DesktopText text,ResourceFormatInfo[] formats,string initial,int selectedCount=0)
     {
-        var window=Window(text,"Convert",780,540);var body=Panel();body.Children.Add(Output(owner,text,initial,out var path));
+        var window=Window(text,"Convert",780,580);var body=Panel();
+        if(selectedCount>0)body.Children.Add(new TextBlock {Text=text.Format("ConversionSelectionScope",selectedCount),TextWrapping=Avalonia.Media.TextWrapping.Wrap,Classes={"muted"}});
+        body.Children.Add(Output(owner,text,initial,out var path));
         var conversion=new MediaConversionPanel(text,formats,true);body.Children.Add(conversion);
         var discard=new CheckBox {Content=new TextBlock {Text=text["DiscardOriginalMedia"],TextWrapping=Avalonia.Media.TextWrapping.Wrap},IsChecked=true};body.Children.Add(discard);
+        conversion.Changed+=()=>discard.IsEnabled=conversion.HasConversion;
         body.Children.Add(new TextBlock {Text=text["SourceMediaPreserved"],TextWrapping=Avalonia.Media.TextWrapping.Wrap,Classes={"muted"}});
         body.Children.Add(Label(text,"Overwrite"));var overwrite=Overwrite(text);body.Children.Add(overwrite);var error=new TextBlock {TextWrapping=Avalonia.Media.TextWrapping.Wrap};body.Children.Add(error);
         window.Content=Frame(window,body,Button(text,"Start",()=>

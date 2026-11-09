@@ -163,9 +163,15 @@ public sealed class PortableRasterCodec : IRasterCodec
             writer.Write(0x00ff0000u); writer.Write(0x0000ff00u); writer.Write(0x000000ffu); writer.Write(0xff000000u); writer.Write(0x73524742u);
             for (int i = 0; i < 12; i++) writer.Write(0); writer.Write(bytes); return;
         }
-        SKEncodedImageFormat encoded = format.ToUpperInvariant() switch { "PNG" => SKEncodedImageFormat.Png, "JPEG" or "JPG" => SKEncodedImageFormat.Jpeg, _ => throw new NotSupportedException("Unknown output image format: " + format) };
         using var bitmap = new SKBitmap(new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Unpremul));
         Marshal.Copy(bytes, 0, bitmap.GetPixels(), bytes.Length);
+        if(format.Equals("WEBP",StringComparison.OrdinalIgnoreCase))
+        {
+            using var pixels=bitmap.PeekPixels();
+            using var webp=pixels.Encode(new SKWebpEncoderOptions(SKWebpEncoderCompression.Lossless,100));
+            webp.SaveTo(output);return;
+        }
+        SKEncodedImageFormat encoded = format.ToUpperInvariant() switch { "PNG" => SKEncodedImageFormat.Png, "JPEG" or "JPG" => SKEncodedImageFormat.Jpeg, _ => throw new NotSupportedException("Unknown output image format: " + format) };
         using var image = SKImage.FromBitmap(bitmap); using var data = image.Encode(encoded, Math.Clamp(quality, 1, 100));
         data.SaveTo(output);
     }

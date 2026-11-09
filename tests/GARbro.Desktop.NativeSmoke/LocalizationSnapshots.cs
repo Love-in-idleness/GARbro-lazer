@@ -21,6 +21,7 @@ internal static class LocalizationSnapshots
             File.Copy(Path.Combine(Path.GetDirectoryName(Program.Fixture),source),Path.Combine(demo,target),true);
         File.WriteAllText(Path.Combine(demo,"Notes.txt"),"GARbro — game resource browser\n");
         double width=page.Width,height=page.Height;page.Width=1440;page.Height=810;
+        var catalog=await WorkerArchiveSession.RequestAsync<ResourceFormatInfo[]>(Path.Combine(AppContext.BaseDirectory,"GARbro.Worker.dll"),new("resource-catalog",null),new WorkerLimits(),null,default);
         try
         {
             await page.LoadInputsAsync(new[]{demo});
@@ -45,11 +46,19 @@ internal static class LocalizationSnapshots
                     var extractHost=page.DesktopHost.OwnedWindows.Single();
                     var controls=extractHost.GetVisualDescendants().ToArray();
                     controls.OfType<CheckBox>().Single(c=>c.Name=="RecursiveExtraction").IsChecked=true;
-                    foreach(var pair in new[]{("AudioOutputFormat","WAV"),("VideoOutputFormat","MP4")})
+                    foreach(var pair in new[]{("ImageOutputFormat","WEBP"),("AudioOutputFormat","WAV"),("VideoOutputFormat","MP4")})
                     {
                         var picker=controls.OfType<ComboBox>().Single(c=>c.Name==pair.Item1);picker.SelectedItem=picker.Items.OfType<UiChoice>().Single(c=>c.Value==pair.Item2);
                     }
                     await Ready();Capture(extractHost,Path.Combine(directory,$"extraction-{language}-{theme}.png"));extractHost.Close();await extraction;
+                    var conversion=Dialogs.Conversion(page,new DesktopText(language),catalog.Where(f=>f.Type=="image"&&f.CanWrite).ToArray(),Program.Output,2);await Ready();
+                    var convertHost=page.DesktopHost.OwnedWindows.Single();
+                    var image=convertHost.GetVisualDescendants().OfType<ComboBox>().Single(c=>c.Name=="ImageOutputFormat");image.SelectedItem=image.Items.OfType<UiChoice>().Single(c=>c.Value==catalog.Single(f=>f.Tag=="WEBP").Id);
+                    await Ready();Capture(convertHost,Path.Combine(directory,$"conversion-{language}-{theme}.png"));convertHost.Close();await conversion;
+                    var creation=Dialogs.Creation(page,new DesktopText(language),catalog.Where(f=>f.Type=="archive"&&f.CanWrite).ToArray());await Ready();
+                    var createHost=page.DesktopHost.OwnedWindows.Single();
+                    var archive=createHost.GetVisualDescendants().OfType<ComboBox>().Single(c=>c.Name=="ArchiveOutputFormat");archive.SelectedItem=archive.Items.OfType<ResourceFormatInfo>().Single(f=>f.Tag=="XFL");
+                    await Ready();Capture(createHost,Path.Combine(directory,$"creation-{language}-{theme}.png"));createHost.Close();await creation;
                 }
         }
         finally{page.Width=width;page.Height=height;CaptionVisuals.Appearance(page,"system","auto",true);await page.LoadArchiveAsync(Program.Fixture);}

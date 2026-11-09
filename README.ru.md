@@ -8,7 +8,7 @@
 
 ## Скачать и запустить
 
-Выберите пакет на [странице выпуска](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.3). Для большинства компьютеров Intel и AMD нужен **x64**, для Windows on ARM, Linux на ARM и компьютеров Apple Silicon — **arm64**.
+Выберите пакет на [странице выпуска](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.4). Для большинства компьютеров Intel и AMD нужен **x64**, для Windows on ARM, Linux на ARM и компьютеров Apple Silicon — **arm64**.
 
 | Система | Какой пакет выбрать | Как запустить |
 | --- | --- | --- |
@@ -68,6 +68,16 @@
 
 # Преобразовать поддерживаемое изображение в PNG
 ./garbro convert "image.tlg" -o "image.png"
+
+# WebP без потерь с сохранением прозрачности
+./garbro convert "image.png" -o "image.webp"
+
+# Аудио в FLAC и видео в MP4
+./garbro convert "voice.ogg" -o "voice.flac"
+./garbro convert "movie.mpg" -o "movie.mp4"
+
+# Параметры извлечения, преобразования и очистки выходных копий
+./garbro extract --help
 ```
 
 Параметр `--scheme none` отключает схему шифрования и подходит для незашифрованных XP3. Для зашифрованных ресурсов нужны подходящие `--scheme` или `--options`. При неправильных именах файлов добавьте `--encoding gbk` или `--encoding shift_jis`. По умолчанию существующие выходные файлы вызывают ошибку конфликта: `--overwrite skip` пропускает их, а `--overwrite replace` заменяет. Для обработки результатов в скрипте добавьте `--json`.

@@ -23,6 +23,15 @@ type ExtractionScope private () =
 /// Stable format identifiers shared by extraction and batch conversion.
 [<AbstractClass; Sealed>]
 type MediaOutputFormats private () =
+    static member Normalize(format: string) =
+        if String.IsNullOrWhiteSpace format then raise (ArgumentException("Choose an output format."))
+        elif format.Contains(':') then format.Trim()
+        else
+            match format.Trim().TrimStart('.').ToUpperInvariant() with
+            | "JPG" -> "JPEG"
+            | "TIF" -> "TIFF"
+            | "AAC" -> "M4A"
+            | value -> value
     static member Audio = [| "AUTO"; "WAV"; "FLAC"; "M4A" |]
     static member Video = [| "MP4"; "MKV" |]
     static member Extension(format: string) =
@@ -33,3 +42,7 @@ type MediaOutputFormats private () =
         | "MP4" -> "mp4"
         | "MKV" -> "mkv"
         | _ -> raise (ArgumentException("Unsupported media output format."))
+
+[<AbstractClass; Sealed>]
+type ImageOutputFormats private () =
+    static member Common = [| "PNG"; "WEBP"; "BMP"; "JPEG"; "TIFF"; "TGA" |]

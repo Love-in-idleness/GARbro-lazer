@@ -51,12 +51,18 @@ namespace GARbro.Imaging
             image.ReadPixels(buffer.ToBgra32(), new PixelReadSettings((uint)buffer.PixelWidth, (uint)buffer.PixelHeight, StorageType.Char, "BGRA"));
             image.Depth = 8;
             image.Quality = (uint)Math.Clamp(quality, 1, 100);
+            if (format.Equals("WEBP", StringComparison.OrdinalIgnoreCase))
+            {
+                image.Settings.SetDefine(MagickFormat.WebP, "lossless", true);
+                image.Settings.SetDefine(MagickFormat.WebP, "exact", true);
+            }
             image.Write(output, format.ToUpperInvariant() switch
             {
                 "PNG" => MagickFormat.Png32,
                 "BMP" => MagickFormat.Bmp,
                 "JPEG" or "JPG" => MagickFormat.Jpeg,
                 "TIFF" or "TIF" => MagickFormat.Tiff,
+                "WEBP" => MagickFormat.WebP,
                 _ => throw new NotSupportedException("Unknown output image format: " + format)});
         }
     }

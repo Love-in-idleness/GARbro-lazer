@@ -1,4 +1,4 @@
-param([string]$Output = 'artifacts', [string]$Version = '1.0.3', [ValidateSet('x64','arm64')][string]$Architecture = 'x64')
+param([string]$Output = 'artifacts', [string]$Version = '1.0.4', [ValidateSet('x64','arm64')][string]$Architecture = 'x64')
 $ErrorActionPreference = 'Stop'
 $package = (Resolve-Path (Join-Path $Output "garbro-$Version-win-$Architecture.msix")).Path
 $certificate = (Resolve-Path (Join-Path $Output "garbro-$Version-win-$Architecture.cer")).Path

@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference></PropertyGroup>
-  <ItemGroup><Compile Include="ThemeColors.fs" /><Compile Include="LanguageCatalog.fs" /><Compile Include="ShortcutRules.fs" /><Compile Include="MessageTranslation.fs" /><Compile Include="FormatSettingValues.fs" /><Compile Include="WindowGeometry.fs" /><Compile Include="BrowsePlanning.fs" /><Compile Include="ExtractionScope.fs" /></ItemGroup>
+  <ItemGroup><Compile Include="ThemeColors.fs" /><Compile Include="LanguageCatalog.fs" /><Compile Include="ShortcutRules.fs" /><Compile Include="MessageTranslation.fs" /><Compile Include="FormatSettingValues.fs" /><Compile Include="WindowGeometry.fs" /><Compile Include="BrowsePlanning.fs" /><Compile Include="ExtractionScope.fs" /><Compile Include="CliArguments.fs" /></ItemGroup>
   <ItemGroup><PackageReference Include="FSharp.Core" /><PackageReference Include="MaterialColorUtilities" /></ItemGroup>
 </Project>

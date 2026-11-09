@@ -88,3 +88,11 @@ Select the items first, then choose **Extract selected** (F4). **Extract all** p
 Images, audio and video have separate output choices. Audio supports automatic common format, WAV, FLAC and M4A; video supports MP4 or MKV with the original streams. Keep original format copies without conversion. Ordinary files go directly into the output folder; archives expand into their `.unpacked` folders.
 
 Discard options affect output copies only. Game source files are preserved. Failures list the affected items and retain recoverable copies. A “no matching files” result does not mean files were extracted. Batch media conversion uses the same format choices.
+
+## WebP and command-line conversion
+
+Choose **WebP (lossless)** under Image output format when extracting or converting. Transparency is retained. The conversion dialog reports converted, skipped and failed files separately; types set to Keep original format are skipped. Creating an archive, extracting and converting all keep the selection captured when the command starts.
+
+`garbro convert image.png -o image.webp` chooses WebP from the output extension. WAV, FLAC, M4A, MP4 and MKV work in the same way. Use `garbro extract --help` for media conversion during extraction, including `--image-format webp`, `--audio-format wav`, `--video-format mp4`, `--discard-original-media` and `--discard-child-archives`. The last option requires `--nested`. Source files are preserved.
+
+`--recursive` traverses disk folders; `--nested` expands child archives. Ordinary recursive disk scans skip unrecognized files and keep relative directories. Global options may precede the command; `--` protects input filenames beginning with a dash. Existing single-archive extraction and JSON field names remain supported.

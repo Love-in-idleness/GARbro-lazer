@@ -14,6 +14,16 @@ namespace GARbro.Application;
 
 public static partial class ResourceService
 {
+    public static ImageFormat ResolveImageOutput(string format)
+    {
+        ArchiveService.EnsureFormats();
+        string normalized=MediaOutputFormats.Normalize(format);
+        var writer=FormatCatalog.Instance.ImageFormats.FirstOrDefault(f=>FormatIdentity.Of(f)==format ||
+            f.Tag.Equals(normalized,StringComparison.OrdinalIgnoreCase) || f.Extensions.Contains(normalized,StringComparer.OrdinalIgnoreCase))
+            ?? throw new ArgumentException("Unknown output image format: "+format);
+        if(!writer.CanWrite)throw new NotSupportedException("This image format is read-only.");
+        return writer;
+    }
     sealed record ExtractionNode(ResourceLocation Location,string Output,int Depth,string[] Selection,bool Required,
         string Copy=null,bool FromDirectory=false,bool DefiniteArchive=false);
 
@@ -25,9 +35,12 @@ public static partial class ResourceService
         if (options.MaxDepth is < 0 or > 64 || limits.MaxEntries < 1 || limits.MaxEntryBytes < 0 || limits.MaxTotalBytes < 0
             || !double.IsFinite(limits.MaxExpansionRatio) || limits.MaxExpansionRatio <= 0) throw new ArgumentException("Invalid extraction limits.");
         if(options.Types is {Length:0})throw new ArgumentException("Select at least one resource type.");
-        string audioFormat=options.AudioFormat ?? (options.ConvertAudio?"AUTO":null);
+        string imageFormat=options.ImageFormat==null?null:ResolveImageOutput(options.ImageFormat).Tag;
+        string audioFormat=options.AudioFormat==null?(options.ConvertAudio?"AUTO":null):MediaOutputFormats.Normalize(options.AudioFormat);
+        string videoFormat=options.VideoFormat==null?null:MediaOutputFormats.Normalize(options.VideoFormat);
         if(audioFormat!=null && !MediaOutputFormats.Audio.Contains(audioFormat))throw new ArgumentException("Unsupported media output format.");
-        if(options.VideoFormat!=null && !MediaOutputFormats.Video.Contains(options.VideoFormat))throw new ArgumentException("Unsupported media output format.");
+        if(videoFormat!=null && !MediaOutputFormats.Video.Contains(videoFormat))throw new ArgumentException("Unsupported media output format.");
+        bool recurseDirectories=options.RecurseDirectories??options.Recursive;
         var files=new List<ExtractedFile>();var errors=new List<string>();var queue=new Queue<ExtractionNode>();
         var removals=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var claimed=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
@@ -75,9 +88,9 @@ public static partial class ResourceService
                         if(item is DirectoryInfo)
                         {
                             if(outputWithinInput && Inside(output,item.FullName) || inPlace && item.Name.EndsWith(".unpacked",StringComparison.OrdinalIgnoreCase))continue;
-                            if((options.Recursive || task.Selection!=null) && task.Depth<options.MaxDepth)
+                            if((recurseDirectories || task.Selection!=null) && task.Depth<options.MaxDepth)
                                 queue.Enqueue(new(new(item.FullName),Path.Combine(task.Output,item.Name),task.Depth+1,null,false));
-                            else if(options.Recursive)errors.Add("Depth limit: "+item.Name);
+                            else if(recurseDirectories)errors.Add("Depth limit: "+item.Name);
                         }
                         else queue.Enqueue(new(new(item.FullName),Path.Combine(task.Output,item.Name+".unpacked"),task.Depth,null,false,FromDirectory:true));
                     }
@@ -105,12 +118,12 @@ public static partial class ResourceService
                     throw new InvalidDataException("The archive could not be recognized.");
                 string Conversion(Entry entry)=>entry.Type switch
                 {
-                    "image"=>options.ImageFormat,
+                    "image"=>imageFormat,
                     "audio"=>audioFormat,
-                    "video"=>options.VideoFormat,
+                    "video"=>videoFormat,
                     _=>null
                 };
-                string Extension(Entry entry,string format)=>entry.Type=="image"?format.ToLowerInvariant():MediaOutputFormats.Extension(format);
+                string Extension(Entry entry,string format)=>entry.Type=="image"?ResolveImageOutput(format).Extensions.FirstOrDefault()??"png":MediaOutputFormats.Extension(format);
                 var targets=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach(var entry in entries)
                 {
@@ -224,9 +237,17 @@ public static partial class ResourceService
     public static void CreateArchive(string source, string[] inputs, string output, string formatId,
         string optionsJson, string scheme, OverwritePolicy overwrite, IProgress<ExtractionProgress> progress)
     {
-        ArchiveService.Formats();
+        ArchiveService.EnsureFormats();
         var format = FormatCatalog.Instance.ArcFormats.Single(f => FormatIdentity.Of(f) == formatId);
         if (!format.CanWrite) throw new NotSupportedException("This format is read-only.");
+        var options=format.GetDefaultOptions();
+        bool hasOptions=!string.IsNullOrWhiteSpace(optionsJson) && optionsJson.Trim()!="null";
+        if(options==null)
+        {
+            if(scheme is not (null or "none") || hasOptions && Newtonsoft.Json.Linq.JObject.Parse(optionsJson).HasValues)
+                throw new ArgumentException("This archive format has no creation parameters.");
+        }
+        else if(hasOptions || scheme!=null)options=new JsonOptionsProvider(hasOptions?optionsJson:"{}",scheme).GetOptions(format,"Create archive");
         source = Path.GetFullPath(source); output = Path.GetFullPath(output);
         if (File.Exists(output) && overwrite == OverwritePolicy.Fail) throw new IOException("Output exists: " + output);
         if (File.Exists(output) && overwrite == OverwritePolicy.Skip) return;
@@ -259,9 +280,6 @@ public static partial class ResourceService
             if (entries.Count == 0) throw new ArgumentException("Select at least one regular file to create an archive.");
             using var scope = new ArchiveService.DecoderScope(stage, null);
             VFS.FullPath = new[] { stage };
-            var options = format.GetDefaultOptions();
-            if (!string.IsNullOrWhiteSpace(optionsJson) || scheme != null)
-                options = new JsonOptionsProvider(optionsJson ?? "{}", scheme).GetOptions(format, "Create archive");
             System.IO.Directory.CreateDirectory(Path.GetDirectoryName(output));
             temporary = WorkerTemporaryFiles.Create(Path.GetDirectoryName(output));
             using (var file = new FileStream(temporary, FileMode.CreateNew, FileAccess.ReadWrite))
@@ -298,12 +316,14 @@ public static partial class ResourceService
         string kind=MediaKind(session,name,options.TypeOverrides?.GetValueOrDefault(name));
         string format=kind switch {"image"=>options.ImageFormat,"audio"=>options.AudioFormat,"video"=>options.VideoFormat,_=>null};
         if(format==null)return (null,null);
-        string extension=kind=="image"?FormatCatalog.Instance.ImageFormats.Single(f=>FormatIdentity.Of(f)==format || f.Tag==format).Extensions.FirstOrDefault()??"png":MediaOutputFormats.Extension(format);
+        format=MediaOutputFormats.Normalize(format);
+        string extension=kind=="image"?ResolveImageOutput(format).Extensions.FirstOrDefault()??"png":MediaOutputFormats.Extension(format);
         return (format,Path.ChangeExtension(output,extension));
     }
 
     public static ResourceConversion ConvertFile(ResourceSession session, string name, string output, string formatId, OverwritePolicy overwrite, long maxBytes = 2L << 30, ISet<string> completed = null, bool adjustImageOffset = false, ISet<string> prohibited = null)
     {
+        formatId=MediaOutputFormats.Normalize(formatId);
         if (formatId == "AUTO") formatId = "AUDIO";
         if (formatId is "FLAC" or "M4A" or "MP4" or "MKV")
             return ConvertStandardMedia(session,name,output,formatId,overwrite,maxBytes,completed,prohibited);
@@ -349,8 +369,7 @@ public static partial class ResourceService
                     using var decoder = !session.Physical ? session.Archive.OpenImage(session.Find(name)) : null;
                     var image = decoder?.Image ?? ImageFormat.Read(input) ?? throw new UnknownFormatException();
                     if (adjustImageOffset) image = AdjustOffset(image);
-                    var format = FormatCatalog.Instance.ImageFormats.Single(f => FormatIdentity.Of(f) == formatId || f.Tag == formatId);
-                    if (!format.CanWrite) throw new NotSupportedException("This image format is read-only.");
+                    var format = ResolveImageOutput(formatId);
                     format.Write(bounded, image);
                 }
             }
@@ -489,7 +508,7 @@ public static partial class ResourceService
         }
     }
 
-    sealed class BoundedOutput(Stream inner, long limit) : Stream
+    internal sealed class BoundedOutput(Stream inner, long limit) : Stream
     {
         public override bool CanRead => inner.CanRead;
         public override bool CanSeek => true;

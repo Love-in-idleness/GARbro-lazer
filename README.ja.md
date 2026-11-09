@@ -8,7 +8,7 @@
 
 ## ダウンロードと起動
 
-[リリースページ](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.3)で、システムと CPU に合ったファイルを選んでください。一般的な Intel・AMD の PC は **x64**、Windows on ARM、ARM Linux、Apple シリコンは **arm64** です。
+[リリースページ](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.4)で、システムと CPU に合ったファイルを選んでください。一般的な Intel・AMD の PC は **x64**、Windows on ARM、ARM Linux、Apple シリコンは **arm64** です。
 
 | システム | ダウンロード | 起動方法 |
 | --- | --- | --- |
@@ -59,6 +59,16 @@ DEB、MSIX、Flatpak、macOS アプリをインストールすると、対応す
 ./garbro extract "data.xp3" --scheme none -o "output"
 ./garbro extract "game-data" --recursive --nested --encoding shift_jis -o "output"
 ./garbro convert "image.tlg" -o "image.png"
+
+# 透明度を保持する可逆 WebP に変換
+./garbro convert "image.png" -o "image.webp"
+
+# 音声を FLAC、動画を MP4 に変換
+./garbro convert "voice.ogg" -o "voice.flac"
+./garbro convert "movie.mpg" -o "movie.mp4"
+
+# 抽出時の変換・出力コピー削除オプションを表示
+./garbro extract --help
 ```
 
 `--scheme none` は暗号化されていない XP3 用です。暗号化されたリソースには適切な `--scheme` や `--options` が必要です。`--overwrite skip` は既存の出力をスキップし、`--overwrite replace` は置換します。スクリプト向けの結果には `--json` を使用できます。`--language` はコマンドの前後どちらにも指定できます。

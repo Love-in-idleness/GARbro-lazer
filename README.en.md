@@ -8,7 +8,7 @@ Open a game's resource archives, browse pictures, play audio and video, and extr
 
 ## Download and start
 
-Choose a package from the [release download page](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.3). Use **x64** for most Intel and AMD computers, or **arm64** for Windows on ARM, ARM Linux, and Apple silicon.
+Choose a package from the [release download page](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.4). Use **x64** for most Intel and AMD computers, or **arm64** for Windows on ARM, ARM Linux, and Apple silicon.
 
 | System | Package | Open it |
 | --- | --- | --- |
@@ -73,6 +73,16 @@ The command-line tool is in the package's `cli` folder. Open a terminal there. T
 
 # Convert a supported image to PNG
 ./garbro convert "image.tlg" -o "image.png"
+
+# Convert to lossless WebP with transparency
+./garbro convert "image.png" -o "image.webp"
+
+# Convert audio to FLAC and video to MP4
+./garbro convert "voice.ogg" -o "voice.flac"
+./garbro convert "movie.mpg" -o "movie.mp4"
+
+# See extraction, conversion and output cleanup options
+./garbro extract --help
 ```
 
 `--scheme none` disables encryption schemes and works for unencrypted XP3 archives. Encrypted resources need the appropriate `--scheme` or `--options`. Use `--encoding gbk` or `--encoding shift_jis` for garbled filenames. Existing outputs cause a conflict by default; add `--overwrite skip` to skip them or `--overwrite replace` to replace them. Add `--json` when processing results in a script.

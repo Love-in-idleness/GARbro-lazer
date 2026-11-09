@@ -99,12 +99,12 @@ namespace GARbro.Application
         {
             get
             {
-                Formats();
+                EnsureFormats();
                 return bundledSchemes;
             }
         }
 
-        public static IReadOnlyList<FormatInfo> Formats()
+        internal static void EnsureFormats()
         {
             // Keep the provider in the dependency graph even when discovered through MEF.
             _ = typeof(GameRes.Formats.Liar.XflOpener).Assembly;
@@ -123,13 +123,18 @@ namespace GARbro.Application
                     bundledSchemesLoaded = true;
                 }
 
-                return FormatCatalog.Instance.Formats.Select(f => new FormatInfo(f.Tag, f.Type, f.Description, f.CanWrite, f.GetType().FullName, f.GetType().Assembly.GetName().Name)).OrderBy(f => f.Type).ThenBy(f => f.Tag).ToArray();
             }
+        }
+
+        public static IReadOnlyList<FormatInfo> Formats()
+        {
+            EnsureFormats();
+            lock(Gate)return FormatCatalog.Instance.Formats.Select(f=>new FormatInfo(f.Tag,f.Type,f.Description,f.CanWrite,f.GetType().FullName,f.GetType().Assembly.GetName().Name)).OrderBy(f=>f.Type).ThenBy(f=>f.Tag).ToArray();
         }
 
         public static SchemeImportReport LoadSchemes(string path)
         {
-            Formats();
+            EnsureFormats();
             lock (Gate)
                 return ReadSchemesFile(path);
         }
@@ -143,7 +148,7 @@ namespace GARbro.Application
 
         public static ArchiveSession Open(string path, string formatTag = null, IOptionsProvider options = null)
         {
-            Formats();
+            EnsureFormats();
             path = Path.GetFullPath(path);
             lock (Gate)
             {
@@ -182,13 +187,18 @@ namespace GARbro.Application
             }
         }
 
-        public static object ProbeResource(string path)
+        public static object ProbeResource(string path,IOptionsProvider options=null)
         {
-            Formats();
             path = Path.GetFullPath(path);
+            if(GARbro.Media.MediaInfo.IsVideoName(path))
+            {
+                var video=MediaTools.Probe(path);
+                return new {Input=path,Type="video",Format=video.VideoCodec,video.Width,video.Height,video.Duration,video.FrameRate,video.HasAudio,video.AudioCodec};
+            }
+            EnsureFormats();
             lock (Gate)
             {
-                using var scope = new DecoderScope(Path.GetDirectoryName(path), null);
+                using var scope = new DecoderScope(Path.GetDirectoryName(path), options);
                 using var input = BinaryStream.FromFile(path);
                 var image = ImageFormat.FindFormat(input);
                 if (image != null)
@@ -212,13 +222,19 @@ namespace GARbro.Application
                         Channels = audio.Format.Channels,
                         SampleRate = audio.Format.SamplesPerSecond
                     };
+                if(GARbro.Media.MediaInfo.IsAudioName(path))
+                {
+                    var info=MediaTools.ProbeAudio(path);
+                    return new {Input=path,Type="audio",Format=info.Codec,info.Channels,SampleRate=info.SampleRate,info.Duration};
+                }
+                if(scope.MissingOptions!=null)throw scope.MissingOptions;
                 throw new UnknownFormatException();
             }
         }
 
         public static void ConvertAudio(string path, string output, OverwritePolicy overwrite = OverwritePolicy.Fail, CancellationToken cancellation = default, long maxBytes = 2L << 30)
         {
-            Formats();
+            EnsureFormats();
             path = Path.GetFullPath(path);
             output = Path.GetFullPath(output);
             lock (Gate)
@@ -263,13 +279,13 @@ namespace GARbro.Application
             }
         }
 
-        public static ImageData ReadImage(string path, string formatTag = null, long maxPixels = 100000000)
+        public static ImageData ReadImage(string path, string formatTag = null, long maxPixels = 100000000,IOptionsProvider options=null)
         {
-            Formats();
+            EnsureFormats();
             path = Path.GetFullPath(path);
             lock (Gate)
             {
-                using var scope = new DecoderScope(Path.GetDirectoryName(path), null);
+                using var scope = new DecoderScope(Path.GetDirectoryName(path), options);
                 using var input = BinaryStream.FromFile(path);
                 ImageFormat format;
                 ImageMetaData info;
@@ -292,12 +308,12 @@ namespace GARbro.Application
             }
         }
 
-        public static void WriteImage(ImageData image, string output, string formatTag = "PNG", OverwritePolicy overwrite = OverwritePolicy.Fail)
+        public static void WriteImage(ImageData image, string output, string formatTag = "PNG", OverwritePolicy overwrite = OverwritePolicy.Fail, long maxBytes = 2L << 30)
         {
-            Formats();
+            EnsureFormats();
             lock (Gate)
             {
-                var encoder = ImageFormat.FindByTag(formatTag) ?? throw new ArgumentException("Unknown image format: " + formatTag);
+                var encoder = ResourceService.ResolveImageOutput(formatTag);
                 output = Path.GetFullPath(output);
                 Directory.CreateDirectory(Path.GetDirectoryName(output));
                 if (File.Exists(output) && overwrite == OverwritePolicy.Skip)
@@ -305,8 +321,9 @@ namespace GARbro.Application
                 var temporary = WorkerTemporaryFiles.Create(Path.GetDirectoryName(output));
                 try
                 {
-                    using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write))
-                        encoder.Write(stream, image);
+                    using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.ReadWrite))
+                    using (var bounded = new ResourceService.BoundedOutput(stream,maxBytes))
+                        encoder.Write(bounded, image);
                     File.Move(temporary, output, overwrite == OverwritePolicy.Replace);
                 }
                 finally

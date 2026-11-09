@@ -141,14 +141,14 @@ public static partial class ResourceService
 {
     public static BrowserListing List(ResourceLocation location, IOptionsProvider options)
     {
-        ArchiveService.Formats();
+        ArchiveService.EnsureFormats();
         using var session = BrowserDecoderSession.Open(location, options);
         return session.List();
     }
 
     public static ResourceFormatInfo[] Catalog()
     {
-        ArchiveService.Formats();
+        ArchiveService.EnsureFormats();
         return FormatCatalog.Instance.Formats.Select(format => new ResourceFormatInfo(FormatIdentity.Of(format), format.Tag,
             format is ArchiveFormat ? "archive" : format is ImageFormat ? "image" : format is AudioFormat ? "audio" : "script", format.Description, format.Extensions.ToArray(), format.CanWrite,
             (format.Settings ?? Array.Empty<IResourceSetting>()).Select(s =>

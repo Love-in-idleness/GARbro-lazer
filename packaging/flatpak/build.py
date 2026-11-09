@@ -24,7 +24,7 @@ ET.SubElement(feeds,'clear');ET.SubElement(feeds,'add',key='offline',value=str(o
 offline_config=root/'.flatpak-nuget.config'
 ET.ElementTree(configuration).write(offline_config,encoding='utf-8',xml_declaration=True)
 rid={'x86_64':'linux-x64','aarch64':'linux-arm64'}[platform.machine()]
-version=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.3')
+version=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.4')
 for project,folder in [('GARbro.Desktop','desktop'),('GARbro.Worker','desktop'),('GARbro.Cli','cli')]:
     path=f'modern/{project}/{project}.csproj'
     options=['-r',rid,'-p:SelfContained=true','-p:RuntimeFrameworkVersion=10.0.14','-p:NuGetAudit=false']

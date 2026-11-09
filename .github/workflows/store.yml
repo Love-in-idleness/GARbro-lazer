@@ -6,7 +6,7 @@ on:
     inputs:
       package_version:
         type: string
-        default: 1.0.3
+        default: 1.0.4
 jobs:
   build:
     runs-on: windows-latest
@@ -35,7 +35,7 @@ jobs:
           path: artifacts/media/win-*
           key: media-store-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/build-media.py', 'tools/media-codecs.json') }}
       - name: Verify registered identity and build self-contained Store bundle
-        run: python tools/package-store.py --version ${{ inputs.package_version || '1.0.3' }}
+        run: python tools/package-store.py --version ${{ inputs.package_version || '1.0.4' }}
         env:
           MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
       - uses: actions/cache/save@v4
@@ -46,7 +46,7 @@ jobs:
       - name: Install a disposable signed Store copy and verify Shell file activation
         shell: pwsh
         timeout-minutes: 5
-        run: tools/smoke-store.ps1 -Version "${{ inputs.package_version || '1.0.3' }}"
+        run: tools/smoke-store.ps1 -Version "${{ inputs.package_version || '1.0.4' }}"
       - uses: actions/upload-artifact@v4
         with:
           name: store-upload

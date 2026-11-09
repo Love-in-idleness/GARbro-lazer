@@ -12,6 +12,7 @@ using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using GARbro.Application;
+using GARbro.Domain;
 
 namespace GARbro.Desktop;
 
@@ -60,10 +61,10 @@ public sealed partial class MainWindow
         Register("Settings", () => ShowSettings());
         foreach (string section in new[] { "General", "Appearance", "Decoding", "Formats", "Shortcuts" })
             Register(section, () => ShowSettings(section));
-        Register("ExtractAll", () => ExtractPicker(false), () => !busy && !loading && listing != null);
-        Register("ExtractSelected", () => ExtractPicker(true), () => !busy && !loading && listing != null && files.SelectedItems.Count > 0);
-        Register("Create", CreateArchive, () => !busy && listing?.Physical == true);
-        Register("Convert", ConvertSelected, () => !busy && !loading && listing != null && files.SelectedItems.Cast<BrowserEntry>().Any(e => !e.IsDirectory));
+        Register("ExtractAll", () => ExtractPicker(false), () => !busy && !loading && !choosingOperation && listing != null);
+        Register("ExtractSelected", () => ExtractPicker(true), () => !busy && !loading && !choosingOperation && listing != null && files.SelectedItems.Count > 0);
+        Register("Create", CreateArchive, () => !busy && !loading && !choosingOperation && listing?.Physical == true);
+        Register("Convert", ConvertSelected, () => !busy && !loading && !choosingOperation && listing != null && files.SelectedItems.Cast<BrowserEntry>().Any(e => !e.IsDirectory));
         Register("OpenSelected", OpenSelected, () => !busy && listing != null);
         Register("SelectAll", () => { files.SelectAll(); return Task.CompletedTask; });
         Register("CopyNames", async () => { if (Clipboard != null) await Clipboard.SetTextAsync(string.Join(Environment.NewLine, files.SelectedItems.Cast<BrowserEntry>().Select(e => e.Name))); });
@@ -206,6 +207,14 @@ public sealed partial class MainWindow
         await new HelpWindow(Text, Settings, catalog, page, store).ShowDialog(this);
     }
     sealed record ExtractionSource(ResourceLocation Location,string[] Selection,Dictionary<string,string> Overrides,bool Physical,string Tag);
+    bool choosingOperation;
+    async Task<T> ChooseOperation<T>(Func<Task<T>> choose) where T:class
+    {
+        if(choosingOperation)return null;
+        choosingOperation=true;UpdateCommands();
+        try {return await choose();}
+        finally {choosingOperation=false;UpdateCommands();}
+    }
     ExtractionSource CaptureExtraction(bool selectedOnly)
     {
         if(listing==null)throw new InvalidOperationException("Open a resource first.");
@@ -217,7 +226,7 @@ public sealed partial class MainWindow
         if(listing==null)return;
         var source=CaptureExtraction(selectedOnly);int ticket=navigationGeneration;
         if(source.Selection is {Length:0}){status.Text=Text["SelectFiles"];return;}
-        var choice=await Dialogs.Extraction(this,Text,Settings.OutputDirectory,selectedOnly,source.Selection?.Length??0);
+        var choice=await ChooseOperation(()=>Dialogs.Extraction(this,Text,Settings.OutputDirectory,selectedOnly,source.Selection?.Length??0));
         if(choice==null)return;
         if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return;}
         string output=source.Physical || source.Tag=="media"?choice.Output:Path.Combine(choice.Output,
@@ -244,14 +253,20 @@ public sealed partial class MainWindow
     }
     async Task CreateArchive()
     {
-        catalog ??= await Request<ResourceFormatInfo[]>(new("resource-catalog", null));
-        var choice = await Dialogs.Creation(this, Text, catalog.Where(f => f.Type == "archive" && f.CanWrite).ToArray());
-        if (choice == null) return;
-        StopAudio();
-        string[] inputs = files.SelectedItems.Cast<BrowserEntry>().Select(e => e.Name).ToArray();
-        if (inputs.Length == 0) inputs = listing.Entries.Select(e => e.Name).ToArray();
+        var source=listing.Location;int ticket=navigationGeneration;
+        string[] inputs=files.SelectedItems.Cast<BrowserEntry>().Select(e=>e.Name).ToArray();
+        if(inputs.Length==0)inputs=listing.Entries.Select(e=>e.Name).ToArray();
+        var choice=await ChooseOperation(async()=>
+        {
+            catalog??=await Request<ResourceFormatInfo[]>(new("resource-catalog",null));
+            if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return (CreationChoice)null;}
+            return await Dialogs.Creation(this,Text,catalog.Where(f=>f.Type=="archive"&&f.CanWrite).ToArray());
+        });
+        if(choice==null)return;
+        if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return;}
+        previewCancellation?.Cancel();StopAudio();
         using var operation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token); active = operation; SetBusy(true);
-        try { await Request<string>(new("resource-create", listing.Location.RootPath, Output: choice.Output, Inputs: inputs, FormatId: choice.FormatId, OptionsJson: choice.OptionsJson, Overwrite: choice.Overwrite), operation.Token); }
+        try { await Request<string>(new("resource-create", source.RootPath, Output: choice.Output, Inputs: inputs, FormatId: choice.FormatId, OptionsJson: choice.OptionsJson, Overwrite: choice.Overwrite), operation.Token);status.Text=Text.Format("Completed",1,0); }
         finally { active = null; SetBusy(false); }
     }
     async Task ConvertSelected()
@@ -259,28 +274,36 @@ public sealed partial class MainWindow
         var selected=files.SelectedItems.Cast<BrowserEntry>().Where(e=>!e.IsDirectory).ToArray();
         if(selected.Length==0){status.Text=Text["SelectFiles"];return;}
         var source=listing.Location;var overrides=new Dictionary<string,string>(typeOverrides);int ticket=navigationGeneration;
-        catalog??=await Request<ResourceFormatInfo[]>(new("resource-catalog",null));
-        var choice=await Dialogs.Conversion(this,Text,catalog.Where(f=>f.Type=="image" && f.CanWrite).ToArray(),Settings.OutputDirectory);
+        var choice=await ChooseOperation(async()=>
+        {
+            catalog??=await Request<ResourceFormatInfo[]>(new("resource-catalog",null));
+            if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return (ConversionChoice)null;}
+            return await Dialogs.Conversion(this,Text,catalog.Where(f=>f.Type=="image"&&f.CanWrite).ToArray(),Settings.OutputDirectory,selected.Length);
+        });
         if(choice==null)return;
         if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return;}
-        StopAudio();using var operation=CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);active=operation;SetBusy(true);
+        previewCancellation?.Cancel();StopAudio();using var operation=CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);active=operation;SetBusy(true);
         var failures=new List<string>();
         try
         {
-            int done=0;
+            int done=0,skipped=0,processed=0;
+            progress.IsIndeterminate=false;progress.Value=0;
             foreach(var entry in selected)
             {
+                operation.Token.ThrowIfCancellationRequested();
+                status.Text=Text.Format("ConversionProgress",processed+1,selected.Length,entry.DisplayName);
                 try
                 {
-                    string target=ExtractionPath.Resolve(choice.Output,entry.Name);
+                    string target=ExtractionPath.Resolve(choice.Output,ExtractionScope.RelativeName(source.Directory,entry.Name));
                     var result=await Request<ResourceConversion>(new("resource-convert",null,Location:source,Entry:entry.Name,Output:target,FormatId:"MEDIA",Overwrite:choice.Overwrite,
                         ResourceOptions:new(ImageFormat:choice.FormatId,AudioFormat:choice.AudioFormat,VideoFormat:choice.VideoFormat,
                             TypeOverrides:overrides,DiscardOriginalMedia:choice.DiscardOriginalMedia)),operation.Token);
-                    if(result.Path!=null)done++;
+                    if(result.Path!=null && result.Written)done++;else skipped++;
                 }
                 catch(WorkerOperationException e){failures.Add(entry.DisplayName+": "+e.Message);DesktopServices.Log(e);}
+                processed++;progress.Value=processed/(double)selected.Length;
             }
-            status.Text=done==0 && failures.Count==0?Text["NoConversionMatched"]:Text.Format("Completed",done,failures.Count);
+            status.Text=Text.Format("ConversionCompleted",done,skipped,failures.Count);
         }
         finally {active=null;SetBusy(false);}
         if(failures.Count>0)await Dialogs.ExtractionErrors(this,Text,failures.ToArray());

@@ -3,6 +3,8 @@
 import argparse
 import json
 import subprocess
+import shutil
+import hashlib
 import tempfile
 from pathlib import Path
 
@@ -13,8 +15,8 @@ parser.add_argument('--cli',type=Path,help='Use a published or unpacked CLI inst
 args=parser.parse_args()
 CLI=args.cli.resolve()if args.cli else ROOT/'modern/GARbro.Cli/bin/Release/net10.0/garbro.dll'
 FIX=ROOT/'tests/fixtures/generated'
-def run(*arguments,code=0):
- result=subprocess.run([args.dotnet,str(CLI),*map(str,arguments),'--json'],capture_output=True,text=True,cwd=ROOT)
+def run(*arguments,code=0,cwd=ROOT):
+ result=subprocess.run([args.dotnet,str(CLI),'--json',*map(str,arguments)],capture_output=True,text=True,cwd=cwd)
  if result.returncode!=code:raise AssertionError((arguments,result.returncode,result.stdout,result.stderr))
  return json.loads(result.stdout)
 formats=run('formats')
@@ -38,6 +40,14 @@ for language,word in [('en-US','Commands'),('zh-CN','命令'),('ru-RU','Кома
  assert run('--language',language,'list',FIX/'standard.xfl')==run('list',FIX/'standard.xfl','--language',language)
  error=subprocess.run([args.dotnet,str(CLI),'extract','--language',language],text=True,capture_output=True)
  assert error.returncode==2 and error.stderr.strip()
+ for command in ('convert','extract'):
+  help=subprocess.check_output([args.dotnet,str(CLI),'help',command,'--language='+language],text=True)
+  assert 'WEBP' in help,(language,command,help)
+assert 'version' in run('--version')
+assert any(f['tag']=='WEBP' and f['canWrite'] for f in run('--timeout','30','formats','--type=image'))
+run('convert','--nested','unused.png','-o','unused.png',code=2)
+run('extract','unused.xfl','--discard-child-archives','-o','unused',code=2)
+run('extract','unused.xfl','-o','first','--output','second',code=2)
 with tempfile.TemporaryDirectory(prefix='garbro-cli-')as folder:
  root=Path(folder)
  run('extract',FIX/'standard.xp3','--scheme','none','-o',root/'output')
@@ -50,6 +60,36 @@ with tempfile.TemporaryDirectory(prefix='garbro-cli-')as folder:
  assert (root/'image.png').read_bytes().startswith(b'\x89PNG\r\n\x1a\n')
  run('convert',FIX/'obfuscated.bbm','-o',root/'bbm.png')
  assert (root/'bbm.png').read_bytes().startswith(b'\x89PNG\r\n\x1a\n')
+ run('convert',FIX/'colors-rgba.png','--to=webp','-o',root/'image.webp')
+ webp=(root/'image.webp').read_bytes();assert webp[:4]==b'RIFF' and webp[8:12]==b'WEBP'
+ assert run('probe',root/'image.webp')[0]['format']=='WEBP'
+ run('convert',FIX/'tone.aiff','-o',root/'voice.flac')
+ assert run('probe',root/'voice.flac')[0]['type']=='audio'
+ run('convert',FIX/'movie.mpg','--to=mp4','-o',root/'movie.mp4')
+ assert run('probe',root/'movie.mp4')[0]['type']=='video'
+ # -- protects filenames beginning with a dash, including in the supervised child.
+ literal=root/'-literal.xfl';shutil.copy2(FIX/'standard.xfl',literal)
+ assert run('list','--',literal.name,cwd=root)[0]['format']=='XFL'
+ before=hashlib.sha256((FIX/'colors-rgba.png').read_bytes()).hexdigest()
+ run('convert',FIX/'colors-rgba.png','-o',FIX/'colors-rgba.png','--overwrite','replace',code=5)
+ assert hashlib.sha256((FIX/'colors-rgba.png').read_bytes()).hexdigest()==before
+ images=root/'images';images.mkdir();shutil.copy2(FIX/'colors-rgba.png',images/'image.png')
+ report=run('extract',images,'--recursive','--image-format','webp','--discard-original-media','-o',root/'converted')
+ assert len(report[0]['files'])==1 and (root/'converted/image.webp').exists()
+ assert not (root/'converted/image.png').exists() and (images/'image.png').exists()
+ # Repeated archive names in different disk subfolders retain their relative paths.
+ disks=root/'scan'
+ for name in ('first','second'):
+  (disks/name).mkdir(parents=True);shutil.copy2(FIX/'standard.xfl',disks/name/'data.xfl')
+ (disks/'readme.txt').write_text('ordinary file, not an archive')
+ scanned=run('extract',disks,'--recursive','-o',root/'scanned')
+ assert len(scanned)==2
+ for name in ('first','second'):assert (root/'scanned'/name/'data.xfl.unpacked/hello.txt').read_text()=='Hello, GARbro!\n'
+ # The output budget is shared across positional archive inputs.
+ first=root/'one.xfl';second=root/'two.xfl'
+ shutil.copy2(FIX/'standard.xfl',first);shutil.copy2(FIX/'standard.xfl',second)
+ size=sum(e['size'] for e in run('list',first)[0]['entries'])
+ run('extract',first,second,'-o',root/'limited','--max-total',size+1,code=3)
  run('extract',FIX/'unsafe.xfl','-o',root/'unsafe',code=3)
  assert not (root/'escape.txt').exists()
  run('extract',FIX/'standard.xp3','-o',root/'missing-key',code=4)

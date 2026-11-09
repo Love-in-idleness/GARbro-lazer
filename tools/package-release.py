@@ -71,7 +71,7 @@ def main():
     parser.add_argument('--rid',required=True,choices=['linux-x64','linux-arm64','win-x64','win-arm64','osx-x64','osx-arm64'])
     parser.add_argument('--output',default='artifacts')
     parser.add_argument('--dotnet',default='dotnet')
-    parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.3'))
+    parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.4'))
     parser.add_argument('--installer',action='store_true',help='Also build DEB or signed test MSIX for the selected architecture')
     args=parser.parse_args()
     if not re.fullmatch(r'\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?',args.version):parser.error('Invalid package version')

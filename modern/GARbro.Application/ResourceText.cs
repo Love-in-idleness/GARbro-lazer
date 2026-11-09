@@ -31,6 +31,13 @@ public sealed class ResourceText
         if (string.IsNullOrEmpty(message)) return message;
         foreach (string key in errorKeys)
             if (message.StartsWith(key[6..], StringComparison.Ordinal)) return this[key] + message[(key.Length - 6)..];
+        int separator=message.IndexOf(": ",StringComparison.Ordinal);
+        if(separator>=0)
+        {
+            string detail=message[(separator+2)..];
+            foreach(string key in errorKeys)
+                if(detail.StartsWith(key[6..],StringComparison.Ordinal))return message[..(separator+2)]+this[key]+detail[(key.Length-6)..];
+        }
         return message;
     }
 }

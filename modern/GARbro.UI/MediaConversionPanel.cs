@@ -6,6 +6,7 @@ using Avalonia.Controls.Templates;
 using Avalonia.Layout;
 using Avalonia.Media;
 using GARbro.Application;
+using GARbro.Domain;
 
 namespace GARbro.Desktop;
 
@@ -31,8 +32,11 @@ public sealed class MediaConversionPanel : StackPanel
             selector.SelectionChanged+=(_,_)=>Changed?.Invoke();field.Children.Add(selector);return selector;
         }
         var original=new UiChoice("",text["KeepOriginalFormat"]);
-        var images=imageFormats==null?new[]{"PNG","BMP","JPEG","TIFF","TGA"}.Select(f=>new UiChoice(f,f)):
-            imageFormats.Select(f=>new UiChoice(f.Id,f.Tag));
+        string ImageLabel(string tag)=>tag=="WEBP"?text["WebpLossless"]:tag;
+        var common=ImageOutputFormats.Common;
+        var images=imageFormats==null?common.Select(f=>new UiChoice(f,ImageLabel(f))):
+            imageFormats.OrderBy(f=>Array.IndexOf(common,f.Tag) is int index && index>=0?index:int.MaxValue).ThenBy(f=>f.Tag,StringComparer.Ordinal)
+                .Select(f=>new UiChoice(f.Id,ImageLabel(f.Tag)));
         image=Selector("ImageOutputFormat","ImageFormat",new[]{original}.Concat(images).ToArray(),batch?1:0);
         audio=Selector("AudioOutputFormat","AudioFormat",new[]{original,new UiChoice("AUTO",text["AudioAuto"]),new UiChoice("WAV","WAV"),new UiChoice("FLAC","FLAC"),new UiChoice("M4A","M4A (AAC)")},batch?1:0);
         video=Selector("VideoOutputFormat","VideoFormat",new[]{original,new UiChoice("MP4","MP4 (MPEG-4/AAC)"),new UiChoice("MKV",text["VideoMkv"])},batch?1:0);

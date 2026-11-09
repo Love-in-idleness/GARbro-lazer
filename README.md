@@ -8,7 +8,7 @@
 
 ## 下载与启动
 
-到 [正式版下载页](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.3) 选择与你的系统和处理器对应的文件。普通 Intel、AMD 电脑选 **x64**；Windows on ARM、ARM Linux 和 Apple 芯片选 **arm64**。
+到 [正式版下载页](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.4) 选择与你的系统和处理器对应的文件。普通 Intel、AMD 电脑选 **x64**；Windows on ARM、ARM Linux 和 Apple 芯片选 **arm64**。
 
 | 系统 | 下载哪个 | 怎么打开 |
 | --- | --- | --- |
@@ -72,6 +72,16 @@ CLI 在下载包的 `cli` 目录中。在这个目录打开终端即可运行。
 
 # 将支持的图像转换为 PNG
 ./garbro convert "image.tlg" -o "image.png"
+
+# 转成无损 WebP，保留透明通道
+./garbro convert "image.png" -o "image.webp"
+
+# 音频转 FLAC，视频转 MP4
+./garbro convert "voice.ogg" -o "voice.flac"
+./garbro convert "movie.mpg" -o "movie.mp4"
+
+# 查看提取时的转换与清理选项
+./garbro extract --help
 ```
 
 `--scheme none` 表示不使用加密方案，适用于未加密的 XP3；加密资源需要指定自己的 `--scheme` 或 `--options` 参数。文件名乱码可加 `--encoding gbk` 或 `--encoding shift_jis`。已有输出默认会报冲突；加 `--overwrite skip` 可跳过，`--overwrite replace` 可替换。脚本处理结果时可加 `--json`。

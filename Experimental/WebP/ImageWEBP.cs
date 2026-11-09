@@ -72,6 +72,9 @@ namespace GameRes.Formats.Google
         public override string         Tag { get { return "WEBP"; } }
         public override string Description { get { return "Google WebP image format"; } }
         public override uint     Signature { get { return 0; } }
+#if NET8_0_OR_GREATER
+        public override bool      CanWrite { get { return true; } }
+#endif
 
         public override ImageMetaData ReadMetaData (IBinaryStream stream)
         {
@@ -112,7 +115,8 @@ namespace GameRes.Formats.Google
                     info.DataSize = aligned_size;
                     if (!found_vp8x)
                     {
-                        if (chunk_size < 10 || 10 != stream.Read (header, 0, 10))
+                        int header_size = info.IsLossless ? 5 : 10;
+                        if (chunk_size < header_size || header_size != stream.Read (header, 0, header_size))
                             return null;
                         if (info.IsLossless)
                         {
@@ -185,7 +189,13 @@ namespace GameRes.Formats.Google
 
         public override void Write (Stream file, ImageData image)
         {
+#if NET8_0_OR_GREATER
+            if (image.Width > 16383 || image.Height > 16383)
+                throw new InvalidDataException ("WebP dimensions exceed the encoder limit.");
+            RasterCodec.Encode (image.Bitmap, file, "WEBP");
+#else
             throw new NotImplementedException ("WebPFormat.Write not implemented");
+#endif
         }
 
         [DllImport ("libwebp.dll", EntryPoint = "WebPDecodeBGRAInto", CallingConvention = CallingConvention.Cdecl)]

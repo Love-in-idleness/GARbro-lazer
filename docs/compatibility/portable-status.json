@@ -18742,10 +18742,12 @@
       "raw_extract": "not-applicable",
       "conversion": "fixture-verified",
       "evidence": [
-        "tests/GARbro.Core.Tests/ExperimentalFormatTests.cs"
+        "tests/GARbro.Core.Tests/ExperimentalFormatTests.cs",
+        "tests/GARbro.Core.Tests/WebpWorkflowTests.cs"
       ],
       "fixtures": [
-        "slice.webp"
+        "slice.webp",
+        "colors-rgba.png"
       ]
     },
     {

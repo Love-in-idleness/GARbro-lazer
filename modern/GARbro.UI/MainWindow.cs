@@ -180,9 +180,9 @@ public sealed partial class MainWindow : AppWindow
         pageControls.Children.Add(Button("PreviousPage"));
         pageControls.Children.Add(Button("NextPage"));
         pageControls.Children.Add(Button("Copy"));
-        var encodingRow=new Grid {ColumnDefinitions=new("*,140"),ColumnSpacing=8};
-        var encodingLabel=Label("PreviewEncoding");encodingLabel.FontSize=12;encodingLabel.VerticalAlignment=VerticalAlignment.Center;
-        encodingRow.Children.Add(encodingLabel);Grid.SetColumn(previewEncoding,1);encodingRow.Children.Add(previewEncoding);encodingControls.Children.Add(encodingRow);
+        var encodingRow=new Grid {RowDefinitions=new("Auto,Auto"),RowSpacing=4};
+        var encodingLabel=Label("PreviewEncoding");encodingLabel.FontSize=12;encodingLabel.TextWrapping=TextWrapping.Wrap;
+        encodingRow.Children.Add(encodingLabel);Grid.SetRow(previewEncoding,1);previewEncoding.HorizontalAlignment=HorizontalAlignment.Stretch;encodingRow.Children.Add(previewEncoding);encodingControls.Children.Add(encodingRow);
         var wrap = new CheckBox { IsChecked = Settings.WrapText }; wrap.Bind(ContentControl.ContentProperty, Bind("Wrap"));
         wrap.IsCheckedChanged += (_, _) => { Settings.WrapText = wrap.IsChecked == true; text.TextWrapping = Settings.WrapText ? TextWrapping.Wrap : TextWrapping.NoWrap; };
         encodingControls.Children.Add(wrap); DockPanel.SetDock(encodingControls, Dock.Bottom); previewStack.Children.Insert(0, encodingControls);
@@ -266,9 +266,10 @@ public sealed partial class MainWindow : AppWindow
         string root = request.Location?.RootPath ?? request.Path ?? "";
         if (!sessionOptions.TryGetValue(root, out var profile)) sessionOptions[root] = profile = new();
         bool catalogOperation = request.Operation is "resource-catalog" or "resource-validate-schemes";
+        bool creationOperation=request.Operation=="resource-create";
         request = request with { Context = (request.Context ?? Settings.Context) with { OptionsByFormat = new(profile) },
-            OptionsJson = catalogOperation ? null : request.OptionsJson ?? (string.IsNullOrWhiteSpace(options.Text) ? null : options.Text),
-            Scheme = catalogOperation ? null : request.Scheme ?? (string.IsNullOrWhiteSpace(scheme.Text) ? null : scheme.Text),
+            OptionsJson = catalogOperation ? null : creationOperation?request.OptionsJson:request.OptionsJson ?? (string.IsNullOrWhiteSpace(options.Text) ? null : options.Text),
+            Scheme = catalogOperation ? null : creationOperation?request.Scheme:request.Scheme ?? (string.IsNullOrWhiteSpace(scheme.Text) ? null : scheme.Text),
             OptionsFormatId = listing?.Location.RootPath == root ? listing.ProviderId : request.OptionsFormatId };
         while (true)
         {

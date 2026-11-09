@@ -11,6 +11,7 @@ public sealed class PortableRasterTests
     [InlineData("PNG")]
     [InlineData("BMP")]
     [InlineData("TIFF")]
+    [InlineData("WEBP")]
     public void MobileLosslessEncodersPreserveStraightAlpha(string format)
     {
         byte[] bytes = { 10,20,30,255,40,50,60,80,70,80,90,255,100,110,120,160 };
