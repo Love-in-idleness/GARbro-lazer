@@ -1,1 +1,1 @@
-1.0.4: correct Mac architecture metadata check and reuse unchanged Windows media builds
+1.0.4: initialize Windows certificate provider explicitly and skip unused upgrade-test packages
