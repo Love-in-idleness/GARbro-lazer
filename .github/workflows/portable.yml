@@ -95,6 +95,7 @@ jobs:
         with:
           path: artifacts/media/${{ matrix.rid }}
           key: media-${{ runner.os }}-${{ runner.arch }}-${{ matrix.rid }}-${{ hashFiles('tools/build-media.py', 'tools/media-codecs.json') }}
+          restore-keys: media-${{ runner.os }}-${{ runner.arch }}-${{ matrix.rid }}-
       - name: Build native media helpers
         if: runner.os != 'Linux'
         run: python tools/build-media.py --rid ${{ matrix.rid }}

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build standalone LGPL FFmpeg helpers, with corresponding source and recipe."""
 import argparse
+import ast
 import hashlib
 import json
 import os
@@ -13,11 +14,39 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
+def compatible_builder(cached, rid):
+    current=Path(__file__).read_text()
+    if cached==current:return True
+    if not rid.startswith('win-'):return False
+    # Mac-only packaging changes must not rebuild identical Windows helpers.
+    # Compare the actual build body, excluding cache lookup and Mac-only blocks.
+    def windows_body(text):
+        module=ast.parse(text)
+        function=next(n for n in module.body if isinstance(n,ast.FunctionDef) and n.name=='build')
+        first=next(i for i,n in enumerate(function.body) if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='workspace' for t in n.targets))
+        class WindowsOnly(ast.NodeTransformer):
+            def visit_If(self,node):
+                if not node.orelse and ast.dump(node.test)==ast.dump(ast.parse("rid.startswith('osx-')",mode='eval').body):return None
+                return self.generic_visit(node)
+            def visit_UnaryOp(self,node):
+                if isinstance(node.op,ast.Not) and ast.dump(node.operand)==ast.dump(ast.parse("rid.startswith('osx-')",mode='eval').body):return ast.Constant(True)
+                return self.generic_visit(node)
+            def visit_BoolOp(self,node):
+                node=self.generic_visit(node)
+                if isinstance(node.op,ast.And):
+                    node.values=[v for v in node.values if not (isinstance(v,ast.Constant) and v.value is True)]
+                    if len(node.values)==1:return node.values[0]
+                return node
+        body=ast.Module(body=function.body[first:],type_ignores=[])
+        return ast.dump(WindowsOnly().visit(body))
+    try:return windows_body(cached)==windows_body(current)
+    except (SyntaxError,StopIteration):return False
+
 def build(rid, output):
     recipe = json.loads((ROOT/'tools/media-codecs.json').read_text())
     target = output.resolve()/rid
     suffix = '.exe' if rid.startswith('win-') else ''
-    if all((target/(name+suffix)).is_file() for name in ('ffmpeg', 'ffprobe')) and (target/'media-codecs.json').is_file() and json.loads((target/'media-codecs.json').read_text()) == recipe and (target/'build-media.py').is_file() and (target/'build-media.py').read_bytes() == Path(__file__).read_bytes():
+    if all((target/(name+suffix)).is_file() for name in ('ffmpeg', 'ffprobe')) and (target/'media-codecs.json').is_file() and json.loads((target/'media-codecs.json').read_text()) == recipe and (target/'build-media.py').is_file() and compatible_builder((target/'build-media.py').read_text(), rid):
         return target
     workspace = output.resolve()/('build-'+rid)
     workspace.mkdir(parents=True, exist_ok=True)
@@ -68,7 +97,7 @@ def build(rid, output):
     target.mkdir(parents=True, exist_ok=True)
     for name in ('ffmpeg', 'ffprobe'):
         if rid.startswith('osx-'):
-            subprocess.run(['lipo', '-verify_arch', 'arm64' if rid == 'osx-arm64' else 'x86_64', str(source/name)], check=True)
+            subprocess.run(['lipo', str(source/name), '-verify_arch', 'arm64' if rid == 'osx-arm64' else 'x86_64'], check=True)
         shutil.copy2(source/(name+suffix), target/(name+suffix))
     for name in ('COPYING.LGPLv2.1', 'LICENSE.md'): shutil.copy2(source/name, target/name)
     shutil.copy2(archive, target/'ffmpeg-source.tar.gz')

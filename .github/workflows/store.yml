@@ -33,6 +33,7 @@ jobs:
         with:
           path: artifacts/media/win-*
           key: media-store-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/build-media.py', 'tools/media-codecs.json') }}
+          restore-keys: media-store-${{ runner.os }}-${{ runner.arch }}-
       - name: Verify registered identity and build self-contained Store bundle
         run: python tools/package-store.py --version ${{ inputs.package_version || '1.0.4' }}
         env:
