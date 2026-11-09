@@ -180,10 +180,15 @@ def store_identity():
     return identity
 
 
-def store_version():
+def store_version(application_version=None):
     number = (ROOT/'release/store-version.txt').read_text().strip()
     if not re.fullmatch(r'\d+\.\d+\.\d+\.0', number) or any(int(part) > 65535 for part in number.split('.')):
         raise ValueError('Store versions require four components and a reserved zero revision')
+    if application_version is not None:
+        minimum=application_version.split('-',1)[0]
+        if not re.fullmatch(r'\d+\.\d+\.\d+',minimum):raise ValueError('Invalid application version')
+        if tuple(map(int,number.split('.')[:3])) < tuple(map(int,minimum.split('.'))):
+            raise ValueError('Store package version is behind the application version; update release/store-version.txt')
     return number
 
 
@@ -191,7 +196,7 @@ def msix_manifest(version, rid='win-x64', channel='preview'):
     architecture = {'win-x64': 'x64', 'win-arm64': 'arm64'}[rid]
     _, number = versions(version)
     identity = store_identity() if channel == 'store' else {'name': IDENTITY, 'publisher': PUBLISHER, 'publisherDisplayName': 'GARbro-no-wpf'}
-    if channel == 'store': number = store_version()
+    if channel == 'store': number = store_version(version)
     namespaces = {'': 'http://schemas.microsoft.com/appx/manifest/foundation/windows10',
         'uap': 'http://schemas.microsoft.com/appx/manifest/uap/windows10',
         'uap3': 'http://schemas.microsoft.com/appx/manifest/uap/windows10/3',

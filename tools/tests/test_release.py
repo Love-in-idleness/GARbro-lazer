@@ -22,6 +22,9 @@ class ReleaseTests(unittest.TestCase):
         (self.root/'docs/compatibility/portable-status.json').write_text('{"schema":1}')
         (self.root/'modern/GameData').mkdir(parents=True)
         for name in ('Formats.json.gz','schemes.json'):(self.root/'modern/GameData'/name).write_bytes(b'database')
+        (self.root/'tools/installers').mkdir(parents=True)
+        self.identity=json.loads((self.original_root/'tools/installers/store-identity.json').read_text())
+        (self.root/'tools/installers/store-identity.json').write_text(json.dumps(self.identity))
         self.artifacts=self.root/'artifacts'
         self.artifacts.mkdir()
 
@@ -47,7 +50,7 @@ class ReleaseTests(unittest.TestCase):
         for suffix in ('linux-x64.tar.gz','win-x64.zip','osx-arm64.tar.gz','linux-x64.deb','win-x64.msix','win-x64.cer','linux-arm64.tar.gz','linux-arm64.deb','win-arm64.zip','win-arm64.msix','win-arm64.cer','store.msixupload','store.msixbundle','osx-x64.tar.gz','osx-x64.dmg','osx-arm64.dmg','linux-x64.flatpak','linux-arm64.flatpak'):
             (self.artifacts/('garbro-1.2.3-'+suffix)).write_bytes(suffix.encode())
         for name in ('store-listing.zip','flathub-submission.zip'):(self.artifacts/name).write_bytes(b'submission')
-        (self.artifacts/'store-submission.json').write_text('{"state":"prepared"}')
+        (self.artifacts/'store-submission.json').write_text(json.dumps(dict(**self.identity,version='1.2.3.0',applicationVersion='1.2.3',selfContained=True,architectures=['x64','arm64'])))
         release.prepare_assets(plan,self.artifacts,'a'*40)
         manifest=json.loads((self.artifacts/'release.json').read_text())
         self.assertEqual('a'*40,manifest['commit'])
@@ -57,6 +60,15 @@ class ReleaseTests(unittest.TestCase):
         for line in checksums:
             digest,name=line.split('  ')
             self.assertEqual(digest,hashlib.sha256((self.artifacts/name).read_bytes()).hexdigest())
+
+    def test_store_version_cannot_lag_behind_the_application(self):
+        path=self.artifacts/'store-submission.json'
+        data=dict(**self.identity,version='1.0.3.0',applicationVersion='1.0.4',selfContained=True,architectures=['x64','arm64'])
+        path.write_text(json.dumps(data))
+        with self.assertRaisesRegex(ValueError,'behind'):release.validate_store_submission(path,'1.0.4')
+        data['version']='1.0.4.0';path.write_text(json.dumps(data))
+        self.assertEqual('1.0.4.0',release.validate_store_submission(path,'1.0.4')['version'])
+
 
 
 if __name__=='__main__':unittest.main()

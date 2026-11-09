@@ -1,0 +1,1 @@
+v1.0.4: synchronize Store version to 1.0.4.0; retain all other validated packages

@@ -20,6 +20,19 @@ def release_plan(tag):
     return dict(tag=tag,version=tag[1:],notes=notes.as_posix(),prerelease='true'if'-'in tag else'false')
 
 
+def validate_store_submission(path,version):
+    data=json.loads(path.read_text(encoding='utf-8-sig'))
+    identity=json.loads((ROOT/'tools/installers/store-identity.json').read_text())
+    if any(data.get(key)!=value for key,value in identity.items()):raise ValueError('Store identity differs from the registered identity')
+    number=data.get('version','')
+    if not re.fullmatch(r'\d+\.\d+\.\d+\.0',number):raise ValueError('Store revision must be zero')
+    if tuple(map(int,number.split('.')[:3])) < tuple(map(int,version.split('-',1)[0].split('.'))):
+        raise ValueError('Store package version is behind the application version')
+    if data.get('applicationVersion')!=version or data.get('selfContained') is not True or sorted(data.get('architectures',[]))!=['arm64','x64']:
+        raise ValueError('Store package metadata does not match this release')
+    return data
+
+
 def prepare_assets(plan,artifacts,revision):
     if not re.fullmatch(r'[0-9a-f]{40}|[0-9a-f]{64}',revision):
         raise ValueError('A full source commit SHA is required')
@@ -34,6 +47,7 @@ def prepare_assets(plan,artifacts,revision):
     packages.extend(artifacts/name for name in ('store-submission.json','store-listing.zip','flathub-submission.zip'))
     if any(not path.is_file()or not path.stat().st_size for path in packages):
         raise ValueError('All desktop architectures, Store upload, installers and certificates must exist and be nonempty')
+    validate_store_submission(artifacts/'store-submission.json',plan['version'])
     shutil.copy2(ROOT/'docs/compatibility/portable-status.json',artifacts/'compatibility.json')
     for name in ('Formats.json.gz','schemes.json'):
         shutil.copy2(ROOT/'modern/GameData'/name,artifacts/name)

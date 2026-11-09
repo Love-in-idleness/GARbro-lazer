@@ -53,7 +53,7 @@ def main():
     parser.add_argument('--version',default='1.0.4')
     parser.add_argument('--output',type=Path,default=Path('artifacts'))
     args=parser.parse_args();output=args.output.resolve();output.mkdir(parents=True,exist_ok=True)
-    identity=store_identity();number=store_version()
+    identity=store_identity();number=store_version(args.version)
     for rid in ('win-x64','win-arm64'):build_architecture(rid,args.version,output)
     bundle=output/f'garbro-{args.version}-store.msixbundle'
     subprocess.run([str(sdk_tool('makeappx.exe')),'bundle','/d',str(output/'store-packages'),'/p',str(bundle),'/bv',number,'/o'],check=True)
