@@ -1,7 +1,6 @@
 name: .NET Framework Build
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
   workflow_call:
 concurrency:
   group: legacy-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}

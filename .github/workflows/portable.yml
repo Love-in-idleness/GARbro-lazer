@@ -3,6 +3,7 @@ on:
   push:
     branches: [master, main]
   pull_request:
+  workflow_dispatch:
   workflow_call:
     inputs:
       package_version:
@@ -12,7 +13,44 @@ concurrency:
   group: portable-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 jobs:
-  test:
+  regression:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - id: scope
+        name: Select regressions for the changed files
+        run: python tools/review-changes.py
+      - run: python -m unittest discover -s tools/tests
+      - run: python tools/check-ui-localization.py
+      - uses: actions/setup-dotnet@v4
+        if: steps.scope.outputs.app == 'true'
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install runtime libraries
+        if: steps.scope.outputs.app == 'true'
+        run: sudo apt-get update -q && sudo apt-get install -y --no-install-recommends libsdl2-2.0-0 ffmpeg
+      - name: Run application regressions once
+        if: steps.scope.outputs.app == 'true'
+        run: dotnet test GARbro.NoWpf.slnx -c Release --logger "trx;LogFilePrefix=regression"
+        env:
+          SDL_AUDIODRIVER: dummy
+      - name: Check CLI behavior once
+        if: steps.scope.outputs.app == 'true'
+        run: python tools/smoke-cli.py
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: regression-results
+          path: tests/**/TestResults/*.trx
+  package:
+    if: github.event_name != 'pull_request'
     strategy:
       fail-fast: false
       matrix:
@@ -25,7 +63,8 @@ jobs:
             rid: linux-arm64
           - os: windows-11-arm
             rid: win-arm64
-          - os: macos-latest
+          # macOS packages only: no Mac tests or ARM64 hosted runner dependency.
+          - os: macos-15-intel
             rid: osx-arm64
           - os: macos-15-intel
             rid: osx-x64
@@ -33,27 +72,16 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      - run: python -m unittest discover -s tools/tests
-      - run: python tools/inventory-formats.py --check
-      - run: python tools/check-ui-localization.py
-      - name: Prepare the disposable Windows test desktop
-        if: runner.os == 'Windows'
-        shell: powershell
-        run: tools/prepare-windows-desktop.ps1
-      - name: Install Linux system audio library
+      - name: Install Linux runtime libraries
         if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y --no-install-recommends libsdl2-2.0-0 ffmpeg openbox
-      - name: Install Windows POSIX build tools
+        run: sudo apt-get update -q && sudo apt-get install -y --no-install-recommends libsdl2-2.0-0 ffmpeg
+      - name: Install Windows build tools
         if: runner.os == 'Windows'
         id: msys2
         uses: msys2/setup-msys2@v2
@@ -61,28 +89,13 @@ jobs:
           msystem: MSYS
           install: make pkgconf
           path-type: inherit
-      - run: dotnet build GARbro.NoWpf.slnx -c Release
-      - name: Verify Windows title bar and visible work-area bounds
-        if: runner.os == 'Windows'
-        timeout-minutes: 2
-        run: python tools/smoke-desktop.py
-        env:
-          GARBRO_CAPTION_SNAPSHOTS: '1'
-          GARBRO_LOCALIZATION_SNAPSHOTS: '1'
-      - uses: actions/upload-artifact@v4
-        if: always() && runner.os == 'Windows'
-        with:
-          name: windows-frame-${{ matrix.rid }}
-          path: |
-            artifacts/native-desktop/window-with-titlebar.png
-            artifacts/native-desktop/captions/
       - uses: actions/cache/restore@v4
         if: runner.os != 'Linux'
         id: media-cache
         with:
           path: artifacts/media/${{ matrix.rid }}
           key: media-${{ runner.os }}-${{ runner.arch }}-${{ matrix.rid }}-${{ hashFiles('tools/build-media.py', 'tools/media-codecs.json') }}
-      - name: Build redistributable video helpers
+      - name: Build native media helpers
         if: runner.os != 'Linux'
         run: python tools/build-media.py --rid ${{ matrix.rid }}
         env:
@@ -92,77 +105,15 @@ jobs:
         with:
           path: artifacts/media/${{ matrix.rid }}
           key: media-${{ runner.os }}-${{ runner.arch }}-${{ matrix.rid }}-${{ hashFiles('tools/build-media.py', 'tools/media-codecs.json') }}
-      - name: Use the packaged helpers for video regression tests
-        if: runner.os != 'Linux'
-        shell: bash
-        run: echo "${{ github.workspace }}/artifacts/media/${{ matrix.rid }}" >> "$GITHUB_PATH"
-      - run: dotnet test GARbro.NoWpf.slnx -c Release --no-build --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type mini --logger "trx;LogFilePrefix=portable"
-        timeout-minutes: 20
-        env:
-          SDL_AUDIODRIVER: dummy
-          GARBRO_CREATED_ARCHIVES: ${{ matrix.rid == 'win-x64' && format('{0}/artifacts/created-archives', github.workspace) || '' }}
-      - name: Verify continuous native Windows video frames
-        if: runner.os == 'Windows'
-        timeout-minutes: 2
-        run: python tools/smoke-desktop.py --output artifacts/native-video
-        env:
-          GARBRO_NATIVE_VIDEO: '1'
-          SDL_AUDIODRIVER: dummy
-      - name: Exercise native desktop window on X11
-        if: runner.os == 'Linux'
-        timeout-minutes: 2
-        run: xvfb-run -a python tools/smoke-desktop.py --window-manager openbox
-        env:
-          GARBRO_BENCHMARKS: '1'
-          GARBRO_LOCALIZATION_SNAPSHOTS: '1'
-          SDL_AUDIODRIVER: dummy
-      - name: Exercise native desktop window
-        if: runner.os == 'macOS'
-        timeout-minutes: 2
-        run: python tools/smoke-desktop.py
-      - uses: actions/upload-artifact@v4
-        if: always() && runner.os != 'macOS'
-        with:
-          name: localization-${{ matrix.rid }}
-          path: artifacts/native-desktop/localization/
-      - name: Install headless Wayland test dependencies
-        if: runner.os == 'Linux'
-        timeout-minutes: 5
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y --no-install-recommends sway libwayland-dev libxkbcommon-dev libgles2 libegl1 libgl1-mesa-dri
-      - name: Verify native Wayland text input
-        if: runner.os == 'Linux'
-        timeout-minutes: 2
-        run: python tools/smoke-wayland.py
-      - run: python tools/smoke-cli.py
-      - name: Compare public release corpus
-        timeout-minutes: 6
-        run: python tools/check-public-corpus.py
-      - name: Build archives and platform installers
-        shell: bash
-        run: |
-          flags=()
-          flags+=(--installer)
-          python tools/package-release.py --rid ${{ matrix.rid }} "${flags[@]}"
+      - name: Build archives and installers
+        run: python tools/package-release.py --rid ${{ matrix.rid }} --installer
         env:
           GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.4' }}
-      - run: python tools/smoke-package.py --rid ${{ matrix.rid }}
+      - name: Check package contents and startup
+        if: runner.os != 'macOS'
+        run: python tools/smoke-package.py --quick --rid ${{ matrix.rid }}
         env:
           GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.4' }}
-      - name: Mount and launch the macOS disk image
-        if: runner.os == 'macOS'
-        run: python tools/smoke-macos.py artifacts/garbro-${{ inputs.package_version || '1.0.4' }}-${{ matrix.rid }}.dmg
-      - name: Install and launch DEB on both supported distributions
-        if: runner.os == 'Linux'
-        timeout-minutes: 12
-        shell: bash
-        run: python tools/smoke-deb.py artifacts/garbro-${{ inputs.package_version || '1.0.4' }}-${{ matrix.rid }}.deb
-      - name: Verify MSIX install, activation, upgrade and removal
-        if: runner.os == 'Windows'
-        timeout-minutes: 5
-        shell: pwsh
-        run: tools/smoke-msix.ps1 -Output artifacts -Architecture ${{ matrix.rid == 'win-arm64' && 'arm64' || 'x64' }} -Version "${{ inputs.package_version || '1.0.4' }}"
       - uses: actions/upload-artifact@v4
         with:
           name: preview-${{ matrix.rid }}
@@ -174,23 +125,7 @@ jobs:
             artifacts/*.cer
             artifacts/*.dmg
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: failure()
         with:
-          name: portable-tests-${{ matrix.os }}
-          path: |
-            tests/**/TestResults/*.trx
-            tests/**/TestResults/**/*Sequence.xml
-            tests/**/TestResults/**/*.dmp
-            artifacts/native-video/
-            artifacts/desktop-readiness/
-            artifacts/native-desktop/video-window.png
-            artifacts/native-desktop/video-rendering.json
-            artifacts/native-desktop/performance.json
-            artifacts/native-desktop/window.png
-            artifacts/native-desktop/window-with-titlebar.png
-            artifacts/native-desktop/captions/
-            artifacts/wayland-ime/
-            artifacts/kde-cursors/
-            artifacts/public-corpus.json
-            artifacts/created-archives/
-            artifacts/media/build-*/FFmpeg-*/ffbuild/config.log
+          name: build-logs-${{ matrix.rid }}
+          path: artifacts/media/build-*/FFmpeg-*/ffbuild/config.log

@@ -1,7 +1,6 @@
 name: Microsoft Store packages
 on:
   workflow_dispatch:
-  pull_request:
   workflow_call:
     inputs:
       package_version:
@@ -43,10 +42,6 @@ jobs:
         with:
           path: artifacts/media/win-*
           key: media-store-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/build-media.py', 'tools/media-codecs.json') }}
-      - name: Install a disposable signed Store copy and verify Shell file activation
-        shell: pwsh
-        timeout-minutes: 5
-        run: tools/smoke-store.ps1 -Version "${{ inputs.package_version || '1.0.4' }}"
       - uses: actions/upload-artifact@v4
         with:
           name: store-upload

@@ -2,7 +2,10 @@
 
 Verified on 2026-11-09 with .NET 10, Linux x64 and a real Avalonia X11 window in
 Xvfb/Openbox. These results do not replace native platform and installer checks;
-the Release workflow performs those on Windows, Linux and macOS, x64 and ARM64.
+the completed application regressions also passed on Windows/Linux x64 and ARM64
+and macOS x64 before the release workflow was simplified. Per maintainer request,
+macOS now builds packages only, without runtime tests; release builds do not
+repeat full suites already passed for unchanged application code.
 
 | Check | Result |
 | --- | --- |

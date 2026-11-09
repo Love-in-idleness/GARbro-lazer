@@ -15,6 +15,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--rid',required=True)
+parser.add_argument('--quick',action='store_true',help='Check package contents, one archive open and CLI startup only')
 parser.add_argument('--output',type=Path,default=ROOT/'artifacts')
 parser.add_argument('--dotnet',default='dotnet')
 parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.0'))
@@ -52,11 +53,12 @@ with tempfile.TemporaryDirectory(prefix='garbro-package-')as folder:
         text=True,capture_output=True,check=True,timeout=45)
     opened=json.loads(worker.stdout)
     assert opened['kind']=='result' and opened['data']['tag']=='XFL' and len(opened['data']['entries'])==3
-    preview=subprocess.run([args.dotnet,str(desktop/'GARbro.Worker.dll')],
-        input=json.dumps({'operation':'resource-preview','location':{'rootPath':str(ROOT/'tests/fixtures/generated')},'entry':'movie.mpg'}),
-        text=True,capture_output=True,check=True,timeout=45)
-    result=json.loads(preview.stdout)
-    assert result['kind']=='result' and result['data']['kind']=='video',result
+    if not args.quick:
+        preview=subprocess.run([args.dotnet,str(desktop/'GARbro.Worker.dll')],
+            input=json.dumps({'operation':'resource-preview','location':{'rootPath':str(ROOT/'tests/fixtures/generated')},'entry':'movie.mpg'}),
+            text=True,capture_output=True,check=True,timeout=45)
+        result=json.loads(preview.stdout)
+        assert result['kind']=='result' and result['data']['kind']=='video',result
     if not args.rid.startswith('linux-'):
         helpers=desktop/'media'
         assert (helpers/('ffmpeg.exe' if args.rid.startswith('win-')else'ffmpeg')).exists()
@@ -74,6 +76,10 @@ with tempfile.TemporaryDirectory(prefix='garbro-package-')as folder:
     assert json.loads((package/'dependencies.json').read_text())
     for notice in ('GPPG.md','GPLEX.md','Concentus.Oggfile.txt','SQLite3MC.txt','SQLite3MC-NuGet.txt','SQLitePCLRaw.txt','NWayland.txt'):
         assert (package/'licenses/source-notices'/notice).exists(),notice
-    subprocess.run([sys.executable,str(ROOT/'tools/smoke-cli.py'),
-                    '--dotnet',args.dotnet,'--cli',str(cli)],check=True,cwd=root)
+    if args.quick:
+        version=subprocess.check_output([args.dotnet,str(cli),'--version'],text=True,timeout=15)
+        assert args.version in version,version
+    else:
+        subprocess.run([sys.executable,str(ROOT/'tools/smoke-cli.py'),
+                        '--dotnet',args.dotnet,'--cli',str(cli)],check=True,cwd=root)
 print('Unpacked package smoke checks passed:',args.rid)

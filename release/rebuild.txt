@@ -1,1 +1,1 @@
-1.0.4: bound selection ranges and guard empty lists during asynchronous browsing
+1.0.4: lean release builds, short package checks and Intel-hosted Mac packages without Mac tests

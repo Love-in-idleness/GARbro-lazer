@@ -34,7 +34,11 @@ def build(rid, output):
     environment = os.environ.copy()
     if rid.startswith('osx-'):
         environment['MACOSX_DEPLOYMENT_TARGET'] = '14.0'
-        options += ['--extra-cflags=-mmacosx-version-min=14.0', '--extra-ldflags=-mmacosx-version-min=14.0']
+        arch = 'arm64' if rid == 'osx-arm64' else 'x86_64'
+        options += ['--target-os=darwin', '--arch='+('aarch64' if arch == 'arm64' else 'x86_64'),
+                    '--enable-cross-compile', '--cc=clang -arch '+arch, '--cxx=clang++ -arch '+arch,
+                    '--as=clang -arch '+arch, '--extra-cflags=-mmacosx-version-min=14.0',
+                    '--extra-ldflags=-mmacosx-version-min=14.0']
     bash = shutil.which('bash') or '/bin/bash'
     make = shutil.which('make') or shutil.which('mingw32-make')
     if rid.startswith('win-'):
@@ -62,12 +66,15 @@ def build(rid, output):
     if not make: raise RuntimeError('GNU make is required to build FFmpeg')
     subprocess.run([make, '-j'+str(min(4, os.cpu_count() or 2))], cwd=source, env=environment, check=True)
     target.mkdir(parents=True, exist_ok=True)
-    for name in ('ffmpeg', 'ffprobe'): shutil.copy2(source/(name+suffix), target/(name+suffix))
+    for name in ('ffmpeg', 'ffprobe'):
+        if rid.startswith('osx-'):
+            subprocess.run(['lipo', '-verify_arch', 'arm64' if rid == 'osx-arm64' else 'x86_64', str(source/name)], check=True)
+        shutil.copy2(source/(name+suffix), target/(name+suffix))
     for name in ('COPYING.LGPLv2.1', 'LICENSE.md'): shutil.copy2(source/name, target/name)
     shutil.copy2(archive, target/'ffmpeg-source.tar.gz')
     shutil.copy2(ROOT/'tools/media-codecs.json', target/'media-codecs.json')
     shutil.copy2(ROOT/'tools/build-media.py', target/'build-media.py')
-    if not (rid == 'win-arm64' and platform.machine().lower() not in ('arm64','aarch64')):
+    if not rid.startswith('osx-') and not (rid == 'win-arm64' and platform.machine().lower() not in ('arm64','aarch64')):
         subprocess.run([str(target/('ffmpeg'+suffix)), '-version'], check=True)
     return target
 

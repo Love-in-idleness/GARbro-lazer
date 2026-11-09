@@ -5,3 +5,5 @@
 - Use one simple outlined icon family and review actual desktop and mobile screenshots when changing the UI. Refine spacing, hierarchy, responsive layouts and empty states as part of UI work.
 - Linux audio uses the distribution SDL2 library. Preserve native Wayland and text-input support.
 - Preserve the side-loaded Windows preview identity. Microsoft Store uploads use the identity in tools/installers/store-identity.json and include the .NET runtime; other desktop packages require the external runtime.
+
+- Keep release validation lean: run focused regressions once for changed behavior, then build packages with a short package check. Do not repeat full suites across architectures or re-run successful checks during packaging. macOS builds packages only; do not run macOS tests. The maintainer performs post-release manual review.
