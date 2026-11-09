@@ -66,7 +66,12 @@ public sealed partial class MainWindow
         Register("Create", CreateArchive, () => !busy && !loading && !choosingOperation && listing?.Physical == true);
         Register("Convert", ConvertSelected, () => !busy && !loading && !choosingOperation && listing != null && files.SelectedItems.Cast<BrowserEntry>().Any(e => !e.IsDirectory));
         Register("OpenSelected", OpenSelected, () => !busy && listing != null);
-        Register("SelectAll", () => { files.SelectAll(); return Task.CompletedTask; });
+        Register("SelectAll", () =>
+        {
+            // Bound the range even before the framework has attached its selection source.
+            if (files.ItemCount > 0) files.Selection.SelectRange(0, files.ItemCount - 1);
+            return Task.CompletedTask;
+        }, () => !busy && files.ItemCount > 0);
         Register("CopyNames", async () => { if (Clipboard != null) await Clipboard.SetTextAsync(string.Join(Environment.NewLine, files.SelectedItems.Cast<BrowserEntry>().Select(e => e.Name))); });
         Register("Mask", async () =>
         {

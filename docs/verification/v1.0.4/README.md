@@ -7,7 +7,7 @@ the Release workflow performs those on Windows, Linux and macOS, x64 and ARM64.
 | Check | Result |
 | --- | --- |
 | Core suite | 185 passed |
-| Desktop suite | 72 passed |
+| Desktop suite | 73 passed |
 | CLI command/JSON/exit-code smoke tests | Passed |
 | Python packaging/tool tests | 24 passed |
 | Four-language resource keys, placeholders and offline documents | 457 matching keys |
@@ -25,7 +25,9 @@ repeated archive names, source-file protection and shared output budgets.
 GUI regressions create and read back an XFL after changing selection in the
 dialog, with deliberately unrelated reader parameters present. They also check
 mutual exclusion of data-operation dialogs, selected extraction, independent
-media formats and separate converted/skipped/failed counts. The final screenshots
+media formats and separate converted/skipped/failed counts. An additional regression
+checks startup, empty-directory and zero-result selection, followed by selecting
+all visible rows after restoring the filter; selection ranges are explicitly bounded. The final screenshots
 use inline path pickers and a full-width preview encoding selector, after
 correcting Russian text clipping found in the native images.
 

@@ -1,1 +1,1 @@
-1.0.3: final four-language desktop packages and verified native file-class activation
+1.0.4: bound selection ranges and guard empty lists during asynchronous browsing

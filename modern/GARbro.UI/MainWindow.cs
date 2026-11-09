@@ -37,7 +37,7 @@ public sealed partial class MainWindow : AppWindow
     readonly TextBox options = new() { Name = "Options", AcceptsReturn = true, MinHeight = 55, PlaceholderText = "{\"Password\": \"…\"}" };
     readonly TextBox path = new() { Name = "Location", HorizontalAlignment = HorizontalAlignment.Stretch };
     readonly ListBox folders = new() { Name = "Folders" };
-    readonly ListBox files = new() { Name = "Files", SelectionMode = SelectionMode.Multiple };
+    readonly ListBox files = new() { Name = "Files", SelectionMode = SelectionMode.Multiple, ItemsSource = Array.Empty<BrowserEntry>(), IsEnabled = false };
     readonly Image image = new() { Name = "PreviewImage", Stretch = Stretch.Uniform };
     readonly ScrollViewer imageScroll = new() {HorizontalContentAlignment=HorizontalAlignment.Stretch,VerticalContentAlignment=VerticalAlignment.Stretch};
     readonly StackPanel encodingControls = new() { Spacing = 6, IsVisible = false };
@@ -393,7 +393,7 @@ public sealed partial class MainWindow : AppWindow
             updatingRows=true;
             try
             {
-                files.Selection.Clear();files.ItemsSource=rows;
+                files.Selection.Clear();files.ItemsSource=rows;files.IsEnabled=!busy && rows.Length>0;
                 files.Selection.BeginBatchUpdate();
                 try
                 {
@@ -516,7 +516,8 @@ public sealed partial class MainWindow : AppWindow
     void SetBusy(bool value)
     {
         busy = value; progress.IsIndeterminate = progress.IsVisible = value; footer.IsVisible = Settings.StatusVisible || value; status.Classes.Remove("error");
-        path.IsEnabled = search.IsEnabled = folders.IsEnabled = files.IsEnabled = !value;
+        path.IsEnabled = search.IsEnabled = folders.IsEnabled = !value;
+        files.IsEnabled = !value && files.ItemCount > 0;
         advanced.IsEnabled = pageControls.IsEnabled = previewEncoding.IsEnabled = audioControls.IsEnabled = !value;
         UpdateCommands();
     }
