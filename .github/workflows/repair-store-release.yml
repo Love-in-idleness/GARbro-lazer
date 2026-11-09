@@ -8,6 +8,10 @@ on:
         description: Existing release to repair
         type: string
         default: v1.0.4
+      store_run_id:
+        description: Run containing the already built Store upload artifact
+        type: string
+        default: '42677808924'
 permissions:
   contents: read
 concurrency:
@@ -32,16 +36,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPAIR_TAG: ${{ steps.plan.outputs.tag }}
-  store:
-    needs: prepare
-    uses: ./.github/workflows/store.yml
-    with:
-      package_version: ${{ needs.prepare.outputs.version }}
   repair:
-    needs: [prepare, store]
+    needs: prepare
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -53,8 +53,11 @@ jobs:
         with:
           name: store-upload
           path: artifacts/store-repair
+          run-id: ${{ inputs.store_run_id || '42677808924' }}
+          github-token: ${{ github.token }}
       - name: Verify Store manifests and replace only Store assets and checksums
-        run: python tools/repair-store-release.py --tag "$REPAIR_TAG" --assets artifacts/store-repair
+        run: python tools/repair-store-release.py --tag "$REPAIR_TAG" --assets artifacts/store-repair --store-run "$STORE_RUN_ID"
         env:
           GH_TOKEN: ${{ github.token }}
           REPAIR_TAG: ${{ needs.prepare.outputs.tag }}
+          STORE_RUN_ID: ${{ inputs.store_run_id || '42677808924' }}

@@ -7,3 +7,5 @@
 - Preserve the side-loaded Windows preview identity. Microsoft Store uploads use the identity in tools/installers/store-identity.json and include the .NET runtime; other desktop packages require the external runtime.
 
 - Keep release validation lean: run focused regressions once for changed behavior, then build packages with a short package check. Do not repeat full suites across architectures or re-run successful checks during packaging. macOS builds packages only; do not run macOS tests. The maintainer performs post-release manual review.
+
+- For coding work, use the pinned [Ponytail skill](.agents/skills/ponytail/SKILL.md) in full mode by default. User instructions and the focused-validation/macOS build-only policy above take precedence.
