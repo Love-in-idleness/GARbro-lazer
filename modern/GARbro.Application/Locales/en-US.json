@@ -455,5 +455,9 @@
   "Error.WebP dimensions exceed the encoder limit.": "WebP dimensions exceed the encoder limit.",
   "Error.A command is required.": "A command is required.",
   "NoCreationOptions": "This format does not need extra creation options.",
-  "Error.This archive format has no creation parameters.": "This archive format has no creation parameters."
+  "Error.This archive format has no creation parameters.": "This archive format has no creation parameters.",
+  "NewTab": "New tab",
+  "CloseTab": "Close tab",
+  "NextTab": "Next tab",
+  "PreviousTab": "Previous tab"
 }

@@ -56,14 +56,15 @@ public sealed partial class MainWindow : AppWindow
     readonly TextBlock playbackInfo = new();
     readonly Expander advanced = new();
     readonly CancellationTokenSource lifetime = new();
-    readonly List<ResourceLocation> history = new(), roots = new();
-    readonly Dictionary<string, string> typeOverrides = new(StringComparer.Ordinal);
+    List<ResourceLocation> history => currentTab.History;
+    List<ResourceLocation> roots => currentTab.Roots;
+    Dictionary<string, string> typeOverrides => currentTab.Types;
     readonly Dictionary<string, Dictionary<string, string>> sessionOptions = new(StringComparer.Ordinal);
     CancellationTokenSource active, previewCancellation, navigationCancellation, filterCancellation;
     int navigationGeneration, filterGeneration;
     bool loading, changingEncoding, updatingRows;
     readonly PreviewMemoryCache previewCache = new(64L << 20);
-    BrowserListing listing;
+    BrowserListing listing {get=>currentTab.Listing;set=>currentTab.Listing=value;}
     ResourceFormatInfo[] catalog;
     Bitmap bitmap;
     IAudioOutput player;
@@ -71,7 +72,8 @@ public sealed partial class MainWindow : AppWindow
     string audioDirectory;
     ResourcePreview preview;
     BrowserEntry previewEntry;
-    int historyIndex = -1, generation;
+    int historyIndex {get=>currentTab.HistoryIndex;set=>currentTab.HistoryIndex=value;}
+    int generation;
     bool isClosed, busy, changingPosition;
     public int VisibleEntryCount => files.ItemCount;
     public string ArchiveTag => listing?.Tag;
@@ -111,9 +113,10 @@ public sealed partial class MainWindow : AppWindow
         Grid.SetColumn(menu, 1); menu.VerticalAlignment = VerticalAlignment.Center;
         heading.Children.Add(menu); BuildMenus();
         var operations = new StackPanel { Spacing = 8 };
+        operations.Children.Add(BuildTabs());
         foreach (string key in new[] { "Back", "Forward", "Parent", "Open", "OpenFolder", "ExtractSelected", "ExtractAll", "Cancel" }) toolbar.Children.Add(IconButton(key));
         search.Bind(TextBox.PlaceholderTextProperty, Bind("Search")); operations.Children.Add(new ScrollViewer { Content = toolbar, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled });
-        path.KeyDown += async (_, e) => { if (!busy && e.Key == Key.Enter) { e.Handled = true; await Guard(() => LoadInputsAsync(new[] { path.Text })); } };
+        path.KeyDown += async (_, e) => { if (!busy && e.Key == Key.Enter) { e.Handled = true; await Guard(() => NavigateInput(path.Text)); } };
         var locationRow = new Grid { ColumnDefinitions = new("*,220"), RowDefinitions = new("Auto,Auto"), ColumnSpacing = 8, RowSpacing = 8 };
         locationRow.Children.Add(path); Grid.SetColumn(search, 1); locationRow.Children.Add(search); operations.Children.Add(locationRow);
         var advancedContent = new StackPanel { Spacing = 6 };
@@ -146,7 +149,7 @@ public sealed partial class MainWindow : AppWindow
             Grid.SetColumn(size, 2); row.Children.Add(size); return row;
         });
         files.DoubleTapped += async (_, _) => await Guard(OpenSelected);
-        files.SelectionChanged += async (_, _) => { if(updatingRows)return; UpdateCommands(); await PreviewSelection(); };
+        files.SelectionChanged += async (_, _) => { if(updatingRows)return; currentTab.Selection=files.SelectedItems.Cast<BrowserEntry>().Select(e=>e.Name).ToArray(); currentTab.Focused=(files.SelectedItem as BrowserEntry)?.Name; UpdateTabHeaders(); UpdateCommands(); await PreviewSelection(); };
         files.ContextMenu = BuildContextMenu(); Grid.SetRow(files, 1); list.Children.Add(files);
         fileEmpty.Children.Add(MaterialIcons.Create("OpenFolder", 48)); fileEmpty.Children.Add(emptyTitle); fileEmpty.Children.Add(emptyBody);
         foreach (string key in new[] { "Open", "OpenFolder" }) { var button = Button(key); button.Name = null; if (key == "Open") button.Classes.Add("primary"); emptyActions.Children.Add(button); }
@@ -188,10 +191,10 @@ public sealed partial class MainWindow : AppWindow
         encodingControls.Children.Add(wrap); DockPanel.SetDock(encodingControls, Dock.Bottom); previewStack.Children.Insert(0, encodingControls);
         previewEncoding.SelectionChanged += async (_, _) => { if (!changingEncoding && previewEntry != null) await ShowPreviewPage(0); };
         text.PropertyChanged += (_, e) => { if (e.Property == IsVisibleProperty) wrap.IsVisible = text.IsVisible; };
-        search.TextChanged += (_, _) => RefreshFiles(100);
+        search.TextChanged += (_, _) => {if(!updatingRows)RefreshFiles(100);};
         folders.SelectionChanged += async (_, _) =>
         {
-            if (folders.SelectedItem is FolderNode { Location: ResourceLocation location } && location != CurrentLocation)
+            if (!updatingRows && folders.SelectedItem is FolderNode { Location: ResourceLocation location } && location != CurrentLocation)
                 await Guard(() => LoadLocationAsync(location));
         };
         folders.ItemTemplate = new FuncDataTemplate<FolderNode>((node, _) => new TextBlock { Text = node?.Title, Margin = new Thickness(node?.Child == true ? 16 : 0, 8, 0, 8), TextTrimming = TextTrimming.CharacterEllipsis });
@@ -208,7 +211,7 @@ public sealed partial class MainWindow : AppWindow
         text.IsVisible = imageScroll.IsVisible = progress.IsVisible = false;
         Closed += (_, _) =>
         {
-            isClosed = true; lifetime.Cancel(); active?.Cancel(); navigationCancellation?.Cancel(); previewCancellation?.Cancel(); filterCancellation?.Cancel(); previewCache.Clear(); StopAudio(); bitmap?.Dispose();
+            isClosed = true; lifetime.Cancel(); browsingReady?.TrySetCanceled(lifetime.Token); active?.Cancel(); navigationCancellation?.Cancel(); previewCancellation?.Cancel(); filterCancellation?.Cancel(); previewCache.Clear(); StopAudio(); bitmap?.Dispose();
             Settings.Width = Width; Settings.Height = Height;
             try { store.Save(Settings); } catch (IOException error) { DesktopServices.Log(error); }
         };
@@ -299,32 +302,51 @@ public sealed partial class MainWindow : AppWindow
     public async Task LoadInputsAsync(IEnumerable<string> inputs)
     {
         ObjectDisposedException.ThrowIf(isClosed, this);
-        foreach (string input in inputs)
+        await WaitForBrowsingAsync();
+        foreach(string input in inputs)
         {
-            var source = await UiPlatform.Storage.RestoreAsync(input);
-            if (source == null) continue;
-            string full = source.LocalPath;
-            var location = new ResourceLocation(full);
-            try
-            {
-                if (File.Exists(full) && LightweightResources.IsOrdinaryName(full))
-                {
-                    await LoadLocationAsync(new(Path.GetDirectoryName(full)));
-                    files.SelectedItem = listing.Entries.FirstOrDefault(f => f.Name == Path.GetFileName(full));
-                }
-                else await LoadLocationAsync(location);
-            }
-            catch (WorkerOperationException e) when (e.RemoteType == "UnknownFormatException" && File.Exists(full))
+            var source=await UiPlatform.Storage.RestoreAsync(input);
+            if(source==null || isClosed)continue;
+            string full=Path.GetFullPath(source.LocalPath);
+            var comparer=OperatingSystem.IsWindows()?StringComparer.OrdinalIgnoreCase:StringComparer.Ordinal;
+            var existing=openTabs.FirstOrDefault(t=>comparer.Equals(t.Input,full));
+            if(existing!=null){await SelectTab(existing);if(existing.InputComplete)continue;}
+            else if(currentTab.Input!=null || listing!=null)await NewTab();
+            await LoadInput(full);
+        }
+        BuildMenus();SaveState();
+    }
+    async Task NavigateInput(string input)
+    {
+        var source=await UiPlatform.Storage.RestoreAsync(input);
+        if(source!=null)await LoadInput(Path.GetFullPath(source.LocalPath));
+    }
+    async Task LoadInput(string full)
+    {
+        var tab=currentTab;tab.Input=full;tab.InputComplete=false;UpdateTabHeaders();
+        try
+        {
+            if(File.Exists(full) && LightweightResources.IsOrdinaryName(full))
             {
                 await LoadLocationAsync(new(Path.GetDirectoryName(full)));
-                files.SelectedItem = listing.Entries.FirstOrDefault(f => f.Name == Path.GetFileName(full));
+                if(currentTab!=tab)throw new OperationCanceledException();
+                files.SelectedItem=listing.Entries.FirstOrDefault(f=>f.Name==Path.GetFileName(full));
             }
-            if (CurrentLocation == null) continue;
-            if (!roots.Any(r => r.RootPath == CurrentLocation.RootPath)) roots.Add(CurrentLocation);
-            string recentId = UiPlatform.Storage.PersistentId(full); Settings.Recent.Remove(recentId); Settings.Recent.Insert(0, recentId); Settings.Recent = Settings.Recent.Take(20).ToList();
+            else await LoadLocationAsync(new(full));
         }
-        BuildFolders(); BuildMenus();
-        SaveState();
+        catch(WorkerOperationException e)when(e.RemoteType=="UnknownFormatException" && File.Exists(full))
+        {
+            await LoadLocationAsync(new(Path.GetDirectoryName(full)));
+            if(currentTab!=tab)throw new OperationCanceledException();
+            files.SelectedItem=listing.Entries.FirstOrDefault(f=>f.Name==Path.GetFileName(full));
+        }
+        if(currentTab!=tab || isClosed)throw new OperationCanceledException();
+        tab.InputComplete=true;
+        if(CurrentLocation==null)return;
+        if(!roots.Any(r=>r.RootPath==CurrentLocation.RootPath))roots.Add(CurrentLocation);
+        string recentId=UiPlatform.Storage.PersistentId(full);Settings.Recent.Remove(recentId);Settings.Recent.Insert(0,recentId);Settings.Recent=Settings.Recent.Take(20).ToList();
+        SaveTabView();BuildFolders();UpdateTabHeaders();
+        if(path.IsFocused && files.IsEnabled)files.Focus();
     }
     async Task LoadLocationAsync(ResourceLocation location, bool recordHistory = true, bool refresh = false)
     {
@@ -339,7 +361,7 @@ public sealed partial class MainWindow : AppWindow
             var opened = await Request<BrowserListing>(new("resource-list", null, Location: location, Refresh: refresh), operation.Token);
             operation.Token.ThrowIfCancellationRequested(); if (isClosed || ticket != navigationGeneration) return;
             listing = opened; path.Text = UiPlatform.Storage.DisplayPath(listing.Location.RootPath) + string.Concat(listing.Location.Chain.Select(p => " → " + p)); Title = "GARbro — " + Path.GetFileName(location.RootPath.TrimEnd(Path.DirectorySeparatorChar));
-            ClearPreview(); previewCache.Clear(); typeOverrides.Clear(); await RefreshFilesAsync(); BuildFolders();
+            ClearPreview(); previewCache.Clear(); typeOverrides.Clear(); currentTab.ContextKey=WorkerProtocol.Serialize(Settings.Context); await RefreshFilesAsync(); BuildFolders(); UpdateTabHeaders();
             operation.Token.ThrowIfCancellationRequested(); if (ticket != navigationGeneration) return;
             if (recordHistory)
             {
@@ -360,7 +382,7 @@ public sealed partial class MainWindow : AppWindow
     sealed record FolderNode(string Title, ResourceLocation Location, bool Child = false);
     void BuildFolders()
     {
-        if (listing == null) return;
+        if (listing == null) {folders.ItemsSource=Array.Empty<FolderNode>();return;}
         // Data only: ListBox virtualizes the current level instead of creating a control per directory.
         var nodes = new List<FolderNode>();
         foreach (var root in roots.Where(r => r.RootPath != listing.Location.RootPath)) nodes.Add(new(Path.GetFileName(root.RootPath), root));
@@ -370,7 +392,7 @@ public sealed partial class MainWindow : AppWindow
         folders.ItemsSource = nodes;
     }
     void RefreshFiles(int delay = 0) => _ = Guard(() => RefreshFilesAsync(delay));
-    async Task RefreshFilesAsync(int delay = 0)
+    async Task RefreshFilesAsync(int delay = 0, BrowserTab restoring = null)
     {
         filterCancellation?.Cancel(); using var cancel = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token); filterCancellation = cancel;
         int ticket = ++filterGeneration;
@@ -388,8 +410,8 @@ public sealed partial class MainWindow : AppWindow
                 return BrowsePlanning.Visible(data,query,sort,descending,culture).Select(i=>source.Entries[i]).ToArray();
             },cancel.Token);
             if(cancel.IsCancellationRequested || ticket!=filterGeneration || listing!=source || isClosed)return;
-            var selected=files.SelectedItems.Cast<BrowserEntry>().Select(e=>e.Name).ToHashSet(StringComparer.Ordinal);
-            var scroll=files.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();var scrollOffset=scroll?.Offset??default;
+            var selected=currentTab.Selection.ToHashSet(StringComparer.Ordinal);
+            var scroll=files.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();var scrollOffset=restoring?.Scroll??scroll?.Offset??default;
             updatingRows=true;
             try
             {
@@ -398,6 +420,8 @@ public sealed partial class MainWindow : AppWindow
                 try
                 {
                 files.Selection.Clear();
+                int focused=Array.FindIndex(rows,e=>e.Name==currentTab.Focused && selected.Contains(e.Name));
+                if(focused>=0)files.Selection.Select(focused);
                 for(int i=0;i<rows.Length;i++)
                     if(selected.Contains(rows[i].Name))
                     {
@@ -408,7 +432,15 @@ public sealed partial class MainWindow : AppWindow
                 finally {files.Selection.EndBatchUpdate();}
             }
             finally {updatingRows=false;}
-            if(scroll!=null)scroll.Offset=scrollOffset;
+            if(scroll!=null)
+            {
+                scroll.Offset=scrollOffset;
+                if(restoring!=null)Dispatcher.UIThread.Post(()=>
+                {
+                    if(!isClosed && currentTab==restoring && ticket==filterGeneration)scroll.Offset=scrollOffset;
+                },DispatcherPriority.Loaded);
+            }
+            currentTab.Selection=files.SelectedItems.Cast<BrowserEntry>().Select(e=>e.Name).ToArray();
             fileEmpty.IsVisible=rows.Length==0;UpdateCommands();
         }
         catch(OperationCanceledException)when(cancel.IsCancellationRequested){}
@@ -424,15 +456,16 @@ public sealed partial class MainWindow : AppWindow
         try { await LoadLocationAsync(location); }
         catch (WorkerOperationException e) when (!entry.IsDirectory && e.RemoteType == "UnknownFormatException") { await PreviewSelection(); }
     }
-    async Task PreviewSelection()
+    async Task PreviewSelection(bool resetEncoding = true,long offset = 0)
     {
         if (updatingRows) return;
         ClearPreview();
-        changingEncoding=true; previewEncoding.SelectedIndex=0; changingEncoding=false;
+        if(resetEncoding){changingEncoding=true; previewEncoding.SelectedIndex=0; changingEncoding=false;}
         if (files.SelectedItem is not BrowserEntry { IsDirectory: false } entry || listing == null) return;
         previewPrompt.IsVisible = false; previewInfo.Text = Text["Preparing"];
         previewEntry = entry; encodingControls.IsVisible = true;
-        await ShowPreviewPage(0, debounce: true);
+        currentTab.Selection=files.SelectedItems.Cast<BrowserEntry>().Select(e=>e.Name).ToArray();UpdateTabHeaders();
+        await ShowPreviewPage(offset, debounce: true);
     }
     void ClearPreview()
     {
@@ -511,7 +544,7 @@ public sealed partial class MainWindow : AppWindow
         imageScroll.HorizontalScrollBarVisibility = imageScroll.VerticalScrollBarVisibility = Settings.FitImage ?
             Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled : Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
         if (languageChanged && !busy && !loading) UpdateListingStatus();
-        ApplyShortcutBindings(); if (save) store.Save(Settings); BuildMenus(); RefreshFiles(); BuildFolders();
+        ApplyShortcutBindings(); if (save) store.Save(Settings); BuildMenus(); RefreshFiles(); BuildFolders(); UpdateTabHeaders();
     }
     void SetBusy(bool value)
     {
@@ -521,11 +554,17 @@ public sealed partial class MainWindow : AppWindow
         advanced.IsEnabled = pageControls.IsEnabled = previewEncoding.IsEnabled = audioControls.IsEnabled = !value;
         UpdateCommands();
     }
-    void UpdateCommands() { foreach (var command in commands.Values) command.Update(); }
+    void UpdateCommands()
+    {
+        tabStrip.IsEnabled=!busy && !choosingOperation;
+        if(!busy && !choosingOperation){browsingReady?.TrySetResult();browsingReady=null;}
+        foreach(var command in commands.Values)command.Update();
+    }
     public async Task Guard(Func<Task> action)
     {
+        var tab=currentTab;
         try { await action(); }
-        catch (OperationCanceledException) { if(!loading && !busy)status.Text = Text["Cancelled"]; }
-        catch (Exception error) { footer.IsVisible = true; status.Classes.Add("error"); status.Text = Text["Error"] + ": " + Text.ErrorMessage(error.Message); DesktopServices.Log(error); }
+        catch (OperationCanceledException) { if(currentTab==tab && !loading && !busy)status.Text = Text["Cancelled"]; }
+        catch (Exception error) { if(currentTab!=tab){DesktopServices.Log(error);return;} footer.IsVisible = true; status.Classes.Add("error"); status.Text = Text["Error"] + ": " + Text.ErrorMessage(error.Message); DesktopServices.Log(error); }
     }
 }

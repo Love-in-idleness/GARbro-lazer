@@ -25,12 +25,14 @@ This is a stable desktop release; some game-specific formats or encryption metho
 
 ## Using the desktop app
 
+Resources open in separate tabs within one window; later launches forward files to that window. Use Ctrl/Cmd+T for a new tab, Ctrl/Cmd+W to close it, and Ctrl+Tab to switch. Shortcuts can be customized in Settings.
+
 1. **Open a resource.** Drop files or a folder into the window, or use the **File** icon menu at the top right. Hover over an icon to see its menu name.
 2. **Browse an archive.** Double-click a folder or recognized archive to enter it. Use Back, Forward, and Up in **View** to navigate.
 3. **Preview files.** Select an image, text file, audio file, or video. Playback starts only when you press Play.
 4. **Extract files.** Select files and press **F4**, or choose **Extract all** from **Process**. Pick an output folder, choose any image/audio conversion and existing-file options, then start.
 
-Use **Process → Recursive extraction** to expand child directories and archives too. Archive creation and batch media conversion are also in **Process**.
+Enable **Recursive extraction** in the extraction dialog to expand child directories and archives. Archive creation and batch media conversion are in **File**.
 
 Recursive extraction can discard child archive copies after success. Conversion can omit original media copies from the output. These options preserve your source game files.
 

@@ -455,5 +455,9 @@
   "Error.WebP dimensions exceed the encoder limit.": "Размеры изображения превышают предел кодировщика WebP.",
   "Error.A command is required.": "Укажите команду.",
   "NoCreationOptions": "Этот формат не требует дополнительных параметров создания.",
-  "Error.This archive format has no creation parameters.": "Этот формат архива не принимает параметры создания."
+  "Error.This archive format has no creation parameters.": "Этот формат архива не принимает параметры создания.",
+  "NewTab": "Новая вкладка",
+  "CloseTab": "Закрыть вкладку",
+  "NextTab": "Следующая вкладка",
+  "PreviousTab": "Предыдущая вкладка"
 }

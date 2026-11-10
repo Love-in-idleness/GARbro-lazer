@@ -52,6 +52,10 @@ public sealed partial class MainWindow
     void CreateCommands()
     {
         Register("Open", OpenPicker); Register("OpenFolder", FolderPicker);
+        Register("NewTab",NewTab,()=>!busy && !choosingOperation);
+        Register("CloseTab",()=>CloseTab(currentTab),()=>!busy && !choosingOperation);
+        Register("NextTab",()=>SwitchTab(1),()=>!busy && !choosingOperation && openTabs.Count>1);
+        Register("PreviousTab",()=>SwitchTab(-1),()=>!busy && !choosingOperation && openTabs.Count>1);
         Register("Exit", () => { Close(); return Task.CompletedTask; }, () => true);
         Register("Cancel", () => { active?.Cancel(); navigationCancellation?.Cancel(); previewCancellation?.Cancel(); StopAudio(); return Task.CompletedTask; }, () => busy || loading || mediaPreparation!=null || previewCancellation != null || Playback != null);
         Register("Back", () => NavigateHistory(-1), () => !busy && historyIndex > 0);
@@ -127,7 +131,7 @@ public sealed partial class MainWindow
         menu.Children.Clear();
         ContextMenu GroupMenu(params string[] keys)
         { var popup = new ContextMenu(); foreach (string key in keys) popup.Items.Add(Item(key)); return popup; }
-        var file = GroupMenu("Open", "OpenFolder", "Create", "Convert");
+        var file = GroupMenu("NewTab", "CloseTab", "Open", "OpenFolder", "Create", "Convert");
         var recent = Group("Recent"); foreach (string filename in Settings.Recent)
         { var item = new MenuItem { Header = UiPlatform.Storage.DisplayPath(filename), Icon = MaterialIcons.Create("Recent") }; item.Click += async (_, _) => await Guard(() => LoadInputsAsync(new[] { filename })); recent.Items.Add(item); }
         file.Items.Add(recent); if (!UiPlatform.IsMobile) file.Items.Add(Item("Exit"));

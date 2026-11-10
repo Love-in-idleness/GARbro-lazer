@@ -455,5 +455,9 @@
   "Error.WebP dimensions exceed the encoder limit.": "图像尺寸超出 WebP 编码器的上限。",
   "Error.A command is required.": "请指定要执行的命令。",
   "NoCreationOptions": "此格式无需额外的创建参数。",
-  "Error.This archive format has no creation parameters.": "此归档格式不接受创建参数。"
+  "Error.This archive format has no creation parameters.": "此归档格式不接受创建参数。",
+  "NewTab": "新标签页",
+  "CloseTab": "关闭标签页",
+  "NextTab": "下一个标签页",
+  "PreviousTab": "上一个标签页"
 }

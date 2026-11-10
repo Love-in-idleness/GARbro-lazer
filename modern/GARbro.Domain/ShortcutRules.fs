@@ -35,3 +35,8 @@ type ShortcutRules private () =
                    | true, first when first <> pair.Key ->
                        yield { Gesture = gesture; FirstCommand = first; SecondCommand = pair.Key }
                    | _ -> seen[gesture] <- pair.Key |]
+
+    /// New commands must not displace shortcuts explicitly chosen before they existed.
+    static member Unclaimed(defaults: string[], reserved: string[]) =
+        let used = HashSet<string>(reserved |> Array.map ShortcutRules.Normalize, StringComparer.OrdinalIgnoreCase)
+        defaults |> Array.filter (fun value -> not (used.Contains(ShortcutRules.Normalize value)))

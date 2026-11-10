@@ -20,7 +20,7 @@ public static class MaterialIcons
         "Settings" => "settings", "Shortcuts" => "tune", "General" or "Formats" => "tune", "Appearance" => "palette", "Decoding" => "text_fields", "Help" => "help", "Back" => "arrow_back", "Forward" => "arrow_forward",
         "Parent" => "arrow_upward", "Refresh" => "refresh", "Create" => "archive",
         "ExtractAll" => "unarchive", "ExtractSelected" => "download", "Convert" => "transform",
-        "Cancel" or "Exit" or "Close" => "close", "SelectAll" => "select_all", "CopyNames" or "Copy" => "content_copy",
+        "Cancel" or "Exit" or "Close" or "CloseTab" => "close", "NewTab" => "add", "SelectAll" => "select_all", "CopyNames" or "Copy" => "content_copy",
         "Explore" => "open_in_new", "Trash" => "delete", "SortName" or "SortType" or "SortSize" or "SortNone" or "Sort" or "Name" or "Size" or "Type" or "Unsorted" => "sort",
         "FitWindow" or "FitImage" => "fit_screen", "Images" => "image", "Audio" => "music_note", "Video" => "movie", "Search" => "search",
         "Recent" => "history", "About" => "info", "Language" => "translate", "Theme" => "dark_mode", "Color" => "palette",

@@ -57,6 +57,10 @@ public sealed class NativeSmokeApp : Avalonia.Application
             try
             {
                 window.DesktopHost.Activate();
+                if(Environment.GetEnvironmentVariable("GARBRO_TABS_SMOKE")=="1")
+                {
+                    await TabSmoke.Check(window,lifetime);code=0;return;
+                }
                 await window.LoadInputsAsync(new[]{Path.GetDirectoryName(Program.Fixture)});
                 if (window.ArchiveTag!="directory")
                     throw new InvalidDataException("Saved format settings blocked folder browsing.");

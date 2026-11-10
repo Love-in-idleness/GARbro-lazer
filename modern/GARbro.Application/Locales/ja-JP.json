@@ -455,5 +455,9 @@
   "Error.WebP dimensions exceed the encoder limit.": "画像サイズが WebP エンコーダーの上限を超えています。",
   "Error.A command is required.": "実行するコマンドを指定してください。",
   "NoCreationOptions": "この形式に追加の作成オプションは必要ありません。",
-  "Error.This archive format has no creation parameters.": "このアーカイブ形式に作成パラメーターは指定できません。"
+  "Error.This archive format has no creation parameters.": "このアーカイブ形式に作成パラメーターは指定できません。",
+  "NewTab": "新しいタブ",
+  "CloseTab": "タブを閉じる",
+  "NextTab": "次のタブ",
+  "PreviousTab": "前のタブ"
 }

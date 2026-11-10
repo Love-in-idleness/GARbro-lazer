@@ -72,6 +72,7 @@ public sealed class SettingsStore
             var result = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(Path)) ?? new();
             if (result.Version is not (1 or 2 or 3)) throw new InvalidDataException("Unsupported settings version.");
             result.Version = 3; result.MenuVisible = true;
+            ShortcutCatalog.MigrateTabBindings(result);
             result.Validate();
             return result;
         }
