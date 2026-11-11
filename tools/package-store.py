@@ -31,7 +31,7 @@ def build_architecture(rid,version,output):
             '--self-contained','true','-p:RuntimeFrameworkVersion=10.0.14','-o',str(app),'-p:Version='+version,'-p:UseSharedCompilation=false','-m:1','-nr:false','--nologo'],check=True)
     runtime_report=output/('runtime-compaction-'+rid+'.json')
     subprocess.run(['dotnet',str(ROOT/'tools/RuntimeCompactor/bin/Release/net10.0/RuntimeCompactor.dll'),str(app),str(runtime_report)],check=True)
-    runtime=json.loads(runtime_report.read_text())
+    compaction=json.loads(runtime_report.read_text())
     compact_application(app)
     helpers=importlib.import_module('build-media').build(rid,ROOT/'artifacts/media')
     install_media(helpers,app/'media')
@@ -54,7 +54,7 @@ def build_architecture(rid,version,output):
     with zipfile.ZipFile(package) as contents:
         installed=sum(file.file_size for file in contents.infolist())
     report=dict(architecture=rid,packageBytes=package.stat().st_size,installedBytes=installed,
-        runtimeCompactionBytesSaved=runtime['bytesSaved'],runtimeInventoryVerified=runtime['metadataAndResourcesPreserved'],
+        runtimeCompactionBytesSaved=compaction['bytesSaved'],runtimeInventoryVerified=compaction['metadataAndResourcesPreserved'],
         targetBytes=100_000_000,downloadTargetMet=package.stat().st_size<=100_000_000,installedTargetMet=installed<=100_000_000)
     (output/('store-size-'+rid+'.json')).write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report))
