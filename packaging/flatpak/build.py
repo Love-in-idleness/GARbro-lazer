@@ -12,6 +12,7 @@ root=Path.cwd()
 import sys
 sys.path.insert(0,str(root/'tools'))
 from patched_dependencies import local_packages
+from package_layout import compact_application
 
 # The pinned source tree contains the patched managed backend. Keep it in the
 # same offline feed as the downloaded, checksummed official packages.
@@ -24,22 +25,24 @@ ET.SubElement(feeds,'clear');ET.SubElement(feeds,'add',key='offline',value=str(o
 offline_config=root/'.flatpak-nuget.config'
 ET.ElementTree(configuration).write(offline_config,encoding='utf-8',xml_declaration=True)
 rid={'x86_64':'linux-x64','aarch64':'linux-arm64'}[platform.machine()]
-version=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.4')
-for project,folder in [('GARbro.Desktop','desktop'),('GARbro.Worker','desktop'),('GARbro.Cli','cli')]:
+version=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.5')
+application=Path('/app/lib/garbro/app')
+for project in ('GARbro.Desktop','GARbro.Worker','GARbro.Cli'):
     path=f'modern/{project}/{project}.csproj'
     options=['-r',rid,'-p:SelfContained=true','-p:RuntimeFrameworkVersion=10.0.14','-p:NuGetAudit=false']
     subprocess.run(['dotnet','restore',path,*options,'--configfile',str(offline_config)],check=True)
-    subprocess.run(['dotnet','publish',path,*options,'--no-restore','-c','Release','-o',f'/app/lib/garbro/{folder}',
+    subprocess.run(['dotnet','publish',path,*options,'--no-restore','-c','Release','-o',str(application),
                     '-p:Version='+version,'-m:1','-nr:false','-p:UseSharedCompilation=false'],check=True)
     # SDL is provided by the Freedesktop runtime, as distribution libraries are
     # used in the DEB. Never ship the NuGet SDL build on Linux.
-    (Path('/app/lib/garbro')/folder/'libSDL2-2.0.so').unlink(missing_ok=True)
+compact_application(application)
+(application/'libSDL2-2.0.so').unlink(missing_ok=True)
 spec=importlib.util.spec_from_file_location('installer_support',root/'tools/installer_support.py')
 installer=importlib.util.module_from_spec(spec);spec.loader.exec_module(installer)
 app='io.github.love_in_idleness.GARbro-no-wpf'
 data=Path('/app/share');binary=Path('/app/bin');binary.mkdir(parents=True,exist_ok=True)
-for name,target in [('garbro-desktop','desktop/GARbro.Desktop'),('garbro','cli/garbro')]:
-    (binary/name).symlink_to('/app/lib/garbro/'+target)
+for name,target in [('garbro-desktop','GARbro.Desktop'),('garbro','garbro')]:
+    (binary/name).symlink_to(application/target)
 entries=data/'applications';entries.mkdir(parents=True,exist_ok=True)
 entry=installer.desktop_entry(installer.associations()).replace(installer.APP_ID,app)
 # The executable exists inside the sandbox, not in the host's PATH.

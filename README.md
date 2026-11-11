@@ -10,18 +10,20 @@
 
 到 [正式版下载页](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.4) 选择与你的系统和处理器对应的文件。普通 Intel、AMD 电脑选 **x64**；Windows on ARM、ARM Linux 和 Apple 芯片选 **arm64**。
 
+GUI 和 CLI 现在共用 `app` 目录，无需分别下载。1.0.4 及更早的旧包仍使用 `desktop` 和 `cli` 两个目录。
+
 | 系统 | 下载哪个 | 怎么打开 |
 | --- | --- | --- |
-| Windows | `win-x64.zip` 或 `win-arm64.zip` | 解压后打开 `desktop/GARbro.Desktop.exe` |
+| Windows | `win-x64.zip` 或 `win-arm64.zip` | 解压后打开 `app/GARbro.Desktop.exe` |
 | Windows 安装版 | 对应架构的 `.msix` 和 `.cer` | 按[安装说明](docs/install.md)信任测试证书，再安装 MSIX |
 | Debian 13 / Ubuntu 24.04 | 对应架构的 `.deb` | 安装后从应用菜单打开 GARbro |
-| 其他 Linux | `linux-x64.tar.gz` 或 `linux-arm64.tar.gz` | 解压后运行 `desktop/GARbro.Desktop` |
+| 其他 Linux | `linux-x64.tar.gz` 或 `linux-arm64.tar.gz` | 解压后运行 `app/GARbro.Desktop` |
 | macOS 14 或更新版本 | Apple 芯片选 `osx-arm64.dmg`，Intel 选 `osx-x64.dmg` | 打开磁盘映像，将整个 GARbro 文件夹复制到本机，再打开 `GARbro.app` |
 | Flatpak | 与架构对应的 `.flatpak` | 通过软件中心打开，或使用 `flatpak install --user 文件名.flatpak` |
 
 除自带运行时的 Flatpak、商店包以外，桌面下载包需要先安装对应架构的 [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)。缺少依赖或遇到证书提示时，请看[安装说明](docs/install.md)。文件名中的版本号会随更新改变。
 
-这是正式桌面版，部分游戏的特殊加密或格式变体仍可能打不开。Flathub 和微软商店尚未上架，目前可直接下载安装包。Android 开发暂缓。`store.msixupload` 是商店提交文件，普通用户无需下载。
+这是正式桌面版，部分游戏的特殊加密或格式变体仍可能打不开。也可以从 [Microsoft Store](https://apps.microsoft.com/detail/9NP39X1TRVNM) 安装；Flathub 上架准备仍在进行中。Android 开发暂缓。`store.msixupload` 是商店提交文件，普通用户无需下载。
 
 ## 图形界面怎么用
 

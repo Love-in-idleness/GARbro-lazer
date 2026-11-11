@@ -10,12 +10,14 @@
 
 Выберите пакет на [странице выпуска](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.4). Для большинства компьютеров Intel и AMD нужен **x64**, для Windows on ARM, Linux на ARM и компьютеров Apple Silicon — **arm64**.
 
+Теперь интерфейс и CLI находятся в одной папке `app` и загружаются вместе. В пакетах версии 1.0.4 и ниже остаются отдельные папки `desktop` и `cli`.
+
 | Система | Какой пакет выбрать | Как запустить |
 | --- | --- | --- |
-| Windows | `win-x64.zip` или `win-arm64.zip` | Распакуйте и откройте `desktop/GARbro.Desktop.exe` |
+| Windows | `win-x64.zip` или `win-arm64.zip` | Распакуйте и откройте `app/GARbro.Desktop.exe` |
 | Установщик Windows | `.msix` и `.cer` для вашей архитектуры | Добавьте тестовый сертификат по [инструкции](docs/install.md), затем установите MSIX |
 | Debian 13 / Ubuntu 24.04 | `.deb` для вашей архитектуры | Установите пакет и откройте GARbro из меню приложений |
-| Другие дистрибутивы Linux | `linux-x64.tar.gz` или `linux-arm64.tar.gz` | Распакуйте и запустите `desktop/GARbro.Desktop` |
+| Другие дистрибутивы Linux | `linux-x64.tar.gz` или `linux-arm64.tar.gz` | Распакуйте и запустите `app/GARbro.Desktop` |
 | macOS 14 или новее | `osx-arm64.dmg` для Apple Silicon, `osx-x64.dmg` для Intel | Откройте образ, скопируйте всю папку GARbro на компьютер и запустите `GARbro.app` |
 | Flatpak | Файл `.flatpak` для вашей архитектуры | Откройте в центре приложений или выполните `flatpak install --user имя-файла.flatpak` |
 

@@ -4,6 +4,7 @@ import argparse
 import gzip
 import hashlib
 import json
+import lzma
 import os
 import subprocess
 import sys
@@ -18,7 +19,7 @@ parser.add_argument('--rid',required=True)
 parser.add_argument('--quick',action='store_true',help='Check package contents, one archive open and CLI startup only')
 parser.add_argument('--output',type=Path,default=ROOT/'artifacts')
 parser.add_argument('--dotnet',default='dotnet')
-parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.0'))
+parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.5'))
 args=parser.parse_args()
 name='garbro-'+args.version+'-'+args.rid
 archive=args.output/(name+('.zip'if args.rid.startswith('win-')else'.tar.gz'))
@@ -38,8 +39,10 @@ with tempfile.TemporaryDirectory(prefix='garbro-package-')as folder:
                      'compatibility/baseline-source.json','compatibility/baseline-runtime.json',
                      'compatibility/portable-status.json','migration-status.md'):
         assert (package/relative).exists(),relative
-    cli=package/'cli/garbro.dll'
-    desktop=package/('GARbro.app/Contents/Resources/app'if args.rid.startswith('osx-')else'desktop')
+    desktop=package/('GARbro.app/Contents/Resources/app'if args.rid.startswith('osx-')else'app')
+    cli=desktop/'garbro.dll'
+    assert not (package/'cli').exists() and not (package/'desktop').exists(),'Application dependencies must be shared'
+    assert not list(package.rglob('*.pdb')),'Debug symbols must not be installed'
     if args.rid.startswith('osx-'):assert (package/'GARbro.app/Contents/MacOS/GARbro.Desktop').exists()
     assert (desktop/'GARbro.Desktop.dll').exists()
     sdl='SDL2.dll'if args.rid.startswith('win-')else'libSDL2-2.0.dylib'if args.rid.startswith('osx-')else'libSDL2-2.0.so'
@@ -63,13 +66,16 @@ with tempfile.TemporaryDirectory(prefix='garbro-package-')as folder:
         helpers=desktop/'media'
         assert (helpers/('ffmpeg.exe' if args.rid.startswith('win-')else'ffmpeg')).exists()
         recipe=json.loads((helpers/'media-codecs.json').read_text())
-        assert hashlib.sha256((helpers/'ffmpeg-source.tar.gz').read_bytes()).hexdigest()==recipe['sha256']
+        source=json.loads((helpers/'source-archive.json').read_text())
+        assert source['file']=='ffmpeg-source.tar.xz' and source['originalSha256']==recipe['sha256']
+        assert hashlib.sha256((helpers/source['file']).read_bytes()).hexdigest()==source['sha256']
+        with lzma.open(helpers/source['file']) as stream:assert hashlib.file_digest(stream,'sha256').hexdigest()==source['tarSha256']
         assert (helpers/'COPYING.LGPLv2.1').exists()
     database=cli.parent/'GameData/Formats.json.gz'
-    assert database.read_bytes()==(desktop/'GameData/Formats.json.gz').read_bytes()
+    assert len(list(package.rglob('Formats.json.gz')))==1,'Only one format database is needed'
     schemes=json.loads(gzip.decompress(database.read_bytes()))
     metadata=json.loads(database.with_name('schemes.json').read_text())
-    assert database.with_name('schemes.json').read_bytes()==(desktop/'GameData/schemes.json').read_bytes()
+    assert list((desktop/'GameData').glob('*.lst.gz')) and not list((desktop/'GameData').glob('*.lst'))
     assert schemes['Version']==metadata['version']==148 and schemes['PortableSchemaVersion']==2
     assert sorted(schemes['SchemeMap'])==metadata['applied']
     assert hashlib.sha256(gzip.decompress(database.read_bytes())).hexdigest()==metadata['json_sha256']

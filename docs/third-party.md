@@ -65,4 +65,4 @@ SQLite3 Multiple Ciphers and its NuGet bundle notices are also retained in
 SQLitePCLRaw's Apache-2.0 license is retained there as well (upstream license
 blob `d645695673349e3947e8e5ae42332d0ac3164cd7`).
 
-Media tools on Windows/macOS are FFmpeg 8.0.3 (LGPL-2.1-or-later only, no GPL/nonfree components). They run as separate processes. Corresponding source, licenses and the exact build recipe are included in each `media` directory. Linux uses distribution FFmpeg; Flatpak builds the same pinned LGPL source inside the sandbox. See [FFmpeg notice](licenses/FFmpeg.md).
+Media tools on Windows/macOS are FFmpeg 8.0.3 (LGPL-2.1-or-later only, no GPL/nonfree components). They run as separate processes. Corresponding source, licenses and the exact build recipe are included once in the shared `app/media` directory. Linux uses distribution FFmpeg; Flatpak builds the same pinned LGPL source inside the sandbox. See [FFmpeg notice](licenses/FFmpeg.md).

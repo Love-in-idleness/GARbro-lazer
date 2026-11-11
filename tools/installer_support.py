@@ -120,7 +120,7 @@ def build_deb(stage, output, version, rid='linux-x64'):
     root = output/f'deb-root-{version}-{architecture}'
     if root.exists(): shutil.rmtree(root)
     app = root/'opt/garbro'
-    for folder in ('desktop', 'cli'): shutil.copytree(stage/folder, app/folder)
+    shutil.copytree(stage/'app', app/'app')
     docs = root/'usr/share/doc/garbro'
     docs.mkdir(parents=True)
     for name in ('LICENSE', 'third-party.md', 'dependencies.json', 'compatibility.md', 'migration-status.md', 'linux-desktop.md', 'install.md', 'desktop-parity.md'):
@@ -129,8 +129,8 @@ def build_deb(stage, output, version, rid='linux-x64'):
     shutil.copytree(stage/'licenses', docs/'licenses')
     shutil.copytree(stage/'compatibility', docs/'compatibility')
     binary = root/'usr/bin'; binary.mkdir(parents=True)
-    (binary/'garbro').symlink_to('/opt/garbro/cli/garbro')
-    (binary/'garbro-desktop').symlink_to('/opt/garbro/desktop/GARbro.Desktop')
+    (binary/'garbro').symlink_to('/opt/garbro/app/garbro')
+    (binary/'garbro-desktop').symlink_to('/opt/garbro/app/GARbro.Desktop')
     entries = root/'usr/share/applications'; entries.mkdir(parents=True)
     extensions = associations()
     (entries/(APP_ID+'.desktop')).write_text(desktop_entry(extensions))
@@ -200,10 +200,11 @@ def msix_manifest(version, rid='win-x64', channel='preview'):
     namespaces = {'': 'http://schemas.microsoft.com/appx/manifest/foundation/windows10',
         'uap': 'http://schemas.microsoft.com/appx/manifest/uap/windows10',
         'uap3': 'http://schemas.microsoft.com/appx/manifest/uap/windows10/3',
+        'uap5': 'http://schemas.microsoft.com/appx/manifest/uap/windows10/5',
         'rescap': 'http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities'}
     def tag(prefix, name): return '{'+namespaces[prefix]+'}'+name
     for prefix, uri in namespaces.items(): ET.register_namespace(prefix, uri)
-    root = ET.Element(tag('', 'Package'), IgnorableNamespaces='uap uap3 rescap')
+    root = ET.Element(tag('', 'Package'), IgnorableNamespaces='uap uap3 uap5 rescap')
     ET.SubElement(root, tag('', 'Identity'), Name=identity['name'], Publisher=identity['publisher'], Version=number, ProcessorArchitecture=architecture)
     properties = ET.SubElement(root, tag('', 'Properties'))
     for key, value in [('DisplayName','GARbro' if channel == 'store' or '-' not in version else 'GARbro Preview'),('PublisherDisplayName',identity['publisherDisplayName']),('Logo','Assets/StoreLogo.png')]: ET.SubElement(properties, tag('', key)).text = value
@@ -212,7 +213,7 @@ def msix_manifest(version, rid='win-x64', channel='preview'):
     dependencies = ET.SubElement(root, tag('', 'Dependencies'))
     ET.SubElement(dependencies, tag('', 'TargetDeviceFamily'), Name='Windows.Desktop', MinVersion='10.0.19041.0', MaxVersionTested='10.0.26100.0')
     apps = ET.SubElement(root, tag('', 'Applications'))
-    app = ET.SubElement(apps, tag('', 'Application'), Id='GARbro', Executable='desktop/GARbro.Desktop.exe', EntryPoint='Windows.FullTrustApplication')
+    app = ET.SubElement(apps, tag('', 'Application'), Id='GARbro', Executable='app/GARbro.Desktop.exe', EntryPoint='Windows.FullTrustApplication')
     ET.SubElement(app, tag('uap', 'VisualElements'), DisplayName='GARbro', Description='Game resource browser',
         BackgroundColor='transparent', Square150x150Logo='Assets/Square150x150Logo.png', Square44x44Logo='Assets/Square44x44Logo.png')
     extensions = ET.SubElement(app, tag('', 'Extensions'))
@@ -222,6 +223,8 @@ def msix_manifest(version, rid='win-x64', channel='preview'):
     ET.SubElement(association, tag('uap', 'DisplayName')).text = 'GARbro game resources'
     types = ET.SubElement(association, tag('uap', 'SupportedFileTypes'))
     for ext in associations(): ET.SubElement(types, tag('uap', 'FileType')).text = '.'+ext
+    alias = ET.SubElement(extensions, tag('uap5', 'Extension'), Category='windows.appExecutionAlias', Executable='app/garbro.exe', EntryPoint='Windows.FullTrustApplication')
+    ET.SubElement(ET.SubElement(alias, tag('uap5', 'AppExecutionAlias')), tag('uap5', 'ExecutionAlias'), Alias='garbro.exe')
     capabilities = ET.SubElement(root, tag('', 'Capabilities'))
     ET.SubElement(capabilities, tag('rescap', 'Capability'), Name='runFullTrust')
     return ET.tostring(root, encoding='unicode', xml_declaration=False)
@@ -232,7 +235,7 @@ def build_msix(stage, output, version, rid='win-x64'):
     root = output/f'msix-root-{version}-{architecture}'
     if root.exists(): shutil.rmtree(root)
     root.mkdir()
-    for folder in ('desktop', 'cli', 'licenses', 'compatibility'): shutil.copytree(stage/folder, root/folder)
+    for folder in ('app', 'licenses', 'compatibility'): shutil.copytree(stage/folder, root/folder)
     for name in ('LICENSE','third-party.md','dependencies.json','compatibility.md'): shutil.copy2(stage/name, root/name)
     windows_icon_assets(root/'Assets')
     (root/'AppxManifest.xml').write_text(msix_manifest(version, rid), encoding='utf-8')

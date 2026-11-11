@@ -50,7 +50,7 @@ jobs:
       - name: Verify self-contained CLI and worker in the sandbox
         run: |
           dbus-run-session -- flatpak-builder --run build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json garbro --help
-          dbus-run-session -- flatpak-builder --run build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json sh -ec 'test -e /app/lib/garbro/desktop/libcoreclr.so; test -x /app/lib/garbro/desktop/GARbro.Worker'
+          dbus-run-session -- flatpak-builder --run build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json sh -ec 'test -e /app/lib/garbro/app/libcoreclr.so; test -x /app/lib/garbro/app/GARbro.Worker; test -x /app/lib/garbro/app/garbro; test ! -e /app/lib/garbro/cli'
           dbus-run-session -- flatpak-builder --run build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json env SDL_AUDIODRIVER=dummy python3 -c 'import ctypes; sdl=ctypes.CDLL("libSDL2-2.0.so.0"); assert sdl.SDL_Init(0x10)==0, "System SDL audio initialization failed"; sdl.SDL_Quit()'
       - name: Verify video tools in the sandbox
         run: |

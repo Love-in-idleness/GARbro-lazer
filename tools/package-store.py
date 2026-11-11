@@ -8,7 +8,8 @@ import shutil
 import subprocess
 import zipfile
 from pathlib import Path
-from installer_support import ROOT, msix_manifest, store_identity, store_version, windows_icon_assets, index_windows_icons
+from installer_support import ROOT, msix_manifest, store_identity, store_version, versions, windows_icon_assets, index_windows_icons
+from package_layout import compact_application, install_media
 import importlib
 
 
@@ -24,35 +25,44 @@ def build_architecture(rid,version,output):
     stage=output/('store-stage-'+rid)
     if stage.exists():shutil.rmtree(stage)
     stage.mkdir(parents=True)
-    for project,folder in [('GARbro.Desktop','desktop'),('GARbro.Worker','desktop'),('GARbro.Cli','cli')]:
+    app=stage/'app'
+    for project in ('GARbro.Desktop','GARbro.Worker','GARbro.Cli'):
         subprocess.run(['dotnet','publish',str(ROOT/'modern'/project/(project+'.csproj')),'-c','Release','-r',rid,
-            '--self-contained','true','-p:RuntimeFrameworkVersion=10.0.14','-o',str(stage/folder),'-p:Version='+version,'-p:UseSharedCompilation=false','-m:1','-nr:false','--nologo'],check=True)
+            '--self-contained','true','-p:RuntimeFrameworkVersion=10.0.14','-o',str(app),'-p:Version='+version,'-p:UseSharedCompilation=false','-m:1','-nr:false','--nologo'],check=True)
+    compact_application(app)
     helpers=importlib.import_module('build-media').build(rid,ROOT/'artifacts/media')
-    for folder in ('desktop','cli'):shutil.copytree(helpers,stage/folder/'media')
+    install_media(helpers,app/'media')
     # Each apphost, including the packaged decoder, must use the local runtime.
-    for folder,name in [('desktop','GARbro.Desktop'),('desktop','GARbro.Worker'),('cli','garbro')]:
-        runtime=json.loads((stage/folder/(name+'.runtimeconfig.json')).read_text())['runtimeOptions']
+    for name in ('GARbro.Desktop','GARbro.Worker','garbro'):
+        runtime=json.loads((app/(name+'.runtimeconfig.json')).read_text())['runtimeOptions']
         if 'framework' in runtime or 'frameworks' in runtime or not runtime.get('includedFrameworks'):
             raise RuntimeError('Store apphost is not self-contained: '+name)
-        if not (stage/folder/'coreclr.dll').is_file():raise RuntimeError('Store runtime is missing')
+        if not (app/'coreclr.dll').is_file():raise RuntimeError('Store runtime is missing')
     spec=importlib.util.spec_from_file_location('package_release',ROOT/'tools/package-release.py')
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);module.licenses(stage)
     windows_icon_assets(stage/'Assets')
     (stage/'AppxManifest.xml').write_text(msix_manifest(version,rid,'store'),encoding='utf-8')
     index_windows_icons(stage)
     # Both the GUI and decoder retain package identity when launching the worker apphost.
-    (stage/'desktop/store-channel.json').write_text(json.dumps(store_identity(),indent=2)+'\n')
+    (app/'store-channel.json').write_text(json.dumps(store_identity(),indent=2)+'\n')
     packages=output/'store-packages';packages.mkdir(exist_ok=True)
     package=packages/f'garbro-{version}-store-{rid}.msix'
     subprocess.run([str(sdk_tool('makeappx.exe')),'pack','/d',str(stage),'/p',str(package),'/o'],check=True)
+    with zipfile.ZipFile(package) as contents:
+        installed=sum(file.file_size for file in contents.infolist())
+    report=dict(architecture=rid,packageBytes=package.stat().st_size,installedBytes=installed,
+        targetBytes=100_000_000,downloadTargetMet=package.stat().st_size<=100_000_000,installedTargetMet=installed<=100_000_000)
+    (output/('store-size-'+rid+'.json')).write_text(json.dumps(report,indent=2)+'\n')
+    print(json.dumps(report))
     return package
 
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--version',default='1.0.4')
+    parser.add_argument('--version',default='1.0.5')
     parser.add_argument('--output',type=Path,default=Path('artifacts'))
-    args=parser.parse_args();output=args.output.resolve();output.mkdir(parents=True,exist_ok=True)
+    args=parser.parse_args();versions(args.version)
+    output=args.output.resolve();output.mkdir(parents=True,exist_ok=True)
     identity=store_identity();number=store_version(args.version)
     for rid in ('win-x64','win-arm64'):build_architecture(rid,args.version,output)
     bundle=output/f'garbro-{args.version}-store.msixbundle'

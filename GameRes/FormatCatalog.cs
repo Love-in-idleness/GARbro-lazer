@@ -546,9 +546,17 @@ namespace GameRes
         public void ReadFileList (string filename, Action<string> process_line)
         {
             var lst_file = Path.Combine (DataDirectory, filename);
-            if (!File.Exists (lst_file))
+            Stream stream;
+            if (File.Exists (lst_file))
+                stream = File.OpenRead (lst_file);
+#if NET8_0_OR_GREATER
+            else if (File.Exists (lst_file + ".gz"))
+                stream = new System.IO.Compression.GZipStream (File.OpenRead (lst_file + ".gz"), System.IO.Compression.CompressionMode.Decompress);
+#endif
+            else
                 return;
-            using (var input = new StreamReader (lst_file))
+            using (stream)
+            using (var input = new StreamReader (stream))
             {
                 string line;
                 while ((line = input.ReadLine()) != null)

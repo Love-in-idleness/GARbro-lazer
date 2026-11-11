@@ -10,12 +10,14 @@ Open a game's resource archives, browse pictures, play audio and video, and extr
 
 Choose a package from the [release download page](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.4). Use **x64** for most Intel and AMD computers, or **arm64** for Windows on ARM, ARM Linux, and Apple silicon.
 
+The GUI and CLI now share the `app` folder in one download. Packages for 1.0.4 and earlier still use separate `desktop` and `cli` folders.
+
 | System | Package | Open it |
 | --- | --- | --- |
-| Windows | `win-x64.zip` or `win-arm64.zip` | Extract it and open `desktop/GARbro.Desktop.exe` |
+| Windows | `win-x64.zip` or `win-arm64.zip` | Extract it and open `app/GARbro.Desktop.exe` |
 | Windows installer | Matching `.msix` and `.cer` | Follow the [installation guide](docs/install.md) to trust the test certificate, then install the MSIX |
 | Debian 13 / Ubuntu 24.04 | Matching `.deb` | Install it, then open GARbro from your application menu |
-| Other Linux distributions | `linux-x64.tar.gz` or `linux-arm64.tar.gz` | Extract it and run `desktop/GARbro.Desktop` |
+| Other Linux distributions | `linux-x64.tar.gz` or `linux-arm64.tar.gz` | Extract it and run `app/GARbro.Desktop` |
 | macOS 14 or later | `osx-arm64.dmg` for Apple silicon, `osx-x64.dmg` for Intel | Open the disk image, copy the whole GARbro folder to your Mac, then open `GARbro.app` |
 | Flatpak | Matching `.flatpak` | Open with your software center, or run `flatpak install --user filename.flatpak` |
 

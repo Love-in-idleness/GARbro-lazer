@@ -1,11 +1,19 @@
 name: Microsoft Store packages
 on:
+  push:
+    branches: [migration/net10]
+    paths: ['tools/package-store.py', 'tools/package_layout.py', '.github/workflows/store.yml', 'release/store-version.txt']
   workflow_dispatch:
+    inputs:
+      package_version:
+        description: Application version for this Store upload
+        type: string
+        default: 1.0.5
   workflow_call:
     inputs:
       package_version:
         type: string
-        default: 1.0.4
+        default: 1.0.5
 jobs:
   build:
     runs-on: windows-latest
@@ -35,9 +43,31 @@ jobs:
           key: media-store-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/build-media.py', 'tools/media-codecs.json') }}
           restore-keys: media-store-${{ runner.os }}-${{ runner.arch }}-
       - name: Verify registered identity and build self-contained Store bundle
-        run: python tools/package-store.py --version ${{ inputs.package_version || '1.0.4' }}
+        run: python tools/package-store.py --version "$env:GARBRO_PACKAGE_VERSION"
         env:
+          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.5' }}
           MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
+      - name: Check shared self-contained CLI and decoder once on x64
+        shell: pwsh
+        env:
+          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.5' }}
+        run: |
+          $app = 'artifacts/store-stage-win-x64/app'
+          $env:DOTNET_ROOT = Join-Path $env:RUNNER_TEMP 'no-global-dotnet'
+          $env:DOTNET_MULTILEVEL_LOOKUP = '0'
+          $version = & "$app/garbro.exe" --version
+          if ($LASTEXITCODE -ne 0 -or $version -notmatch [regex]::Escape($env:GARBRO_PACKAGE_VERSION)) { throw 'Self-contained CLI did not start.' }
+          $listing = & "$app/garbro.exe" list tests/fixtures/generated/standard.xfl --json | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $listing[0].format -ne 'XFL' -or $listing[0].entries.Count -ne 3) { throw 'Shared CLI did not decode the archive.' }
+          $request = @{operation='resource-list';location=@{rootPath=(Resolve-Path 'tests/fixtures/generated/standard.xfl').Path}} | ConvertTo-Json -Compress
+          $decoded = $request | & "$app/GARbro.Worker.exe" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $decoded.kind -ne 'result' -or $decoded.data.entries.Count -ne 3) { throw 'Shared worker did not decode the archive.' }
+          $gui = Start-Process "$app/GARbro.Desktop.exe" -ArgumentList (Resolve-Path 'tests/fixtures/generated/standard.xfl').Path -PassThru
+          try {
+            $deadline = (Get-Date).AddSeconds(20)
+            do { Start-Sleep -Milliseconds 200; $gui.Refresh() } while (-not $gui.HasExited -and $gui.MainWindowTitle -notlike '*standard.xfl*' -and (Get-Date) -lt $deadline)
+            if ($gui.HasExited -or $gui.MainWindowTitle -notlike '*standard.xfl*') { throw 'Shared GUI did not open the archive.' }
+          } finally { if (-not $gui.HasExited) { $gui.CloseMainWindow() | Out-Null; if (-not $gui.WaitForExit(5000)) { $gui.Kill($true) } } }
       - uses: actions/cache/save@v4
         if: steps.media-cache.outputs.cache-hit != 'true'
         with:
@@ -51,3 +81,4 @@ jobs:
             artifacts/*-store.msixbundle
             artifacts/store-submission.json
             artifacts/store-listing.zip
+            artifacts/store-size-*.json

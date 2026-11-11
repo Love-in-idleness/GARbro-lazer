@@ -13,6 +13,7 @@ import zipfile
 from pathlib import Path
 from installer_support import build_deb, build_msix
 from installer_support import associations, mac_document_types
+from package_layout import compact_application, install_media
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -71,28 +72,30 @@ def main():
     parser.add_argument('--rid',required=True,choices=['linux-x64','linux-arm64','win-x64','win-arm64','osx-x64','osx-arm64'])
     parser.add_argument('--output',default='artifacts')
     parser.add_argument('--dotnet',default='dotnet')
-    parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.4'))
+    parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.5'))
     parser.add_argument('--installer',action='store_true',help='Also build DEB or signed test MSIX for the selected architecture')
     args=parser.parse_args()
     if not re.fullmatch(r'\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?',args.version):parser.error('Invalid package version')
     output=Path(args.output).resolve();stage=output/('garbro-'+args.version+'-'+args.rid)
     if stage.exists():shutil.rmtree(stage)
     stage.mkdir(parents=True)
-    for project,folder in [('GARbro.Cli','cli'),('GARbro.Desktop','desktop')]:
+    app_directory=stage/'app'
+    for project in ('GARbro.Desktop','GARbro.Worker','GARbro.Cli'):
         subprocess.run([args.dotnet,'publish',str(ROOT/'modern'/project/(project+'.csproj')),
-            '-c','Release','-r',args.rid,'--self-contained','false','-o',str(stage/folder),
+            '-c','Release','-r',args.rid,'--self-contained','false','-o',str(app_directory),
             '-p:Version='+args.version,'-m:1','-nr:false','-p:UseSharedCompilation=false','--nologo','-v:q'],cwd=ROOT,check=True)
-        if args.rid.startswith('linux-'):
-            # Linux follows the distribution's SDL2 ABI and security updates.
-            (stage/folder/'libSDL2-2.0.so').unlink(missing_ok=True)
-        else:
-            helpers=ROOT/'artifacts/media'/args.rid
-            if not helpers.is_dir():raise RuntimeError('Build video helpers first: python tools/build-media.py --rid '+args.rid)
-            shutil.copytree(helpers,stage/folder/'media')
+    compact_application(app_directory)
+    if args.rid.startswith('linux-'):
+        # Linux follows the distribution's SDL2 ABI and security updates.
+        (app_directory/'libSDL2-2.0.so').unlink(missing_ok=True)
+    else:
+        helpers=ROOT/'artifacts/media'/args.rid
+        if not helpers.is_dir():raise RuntimeError('Build video helpers first: python tools/build-media.py --rid '+args.rid)
+        install_media(helpers,app_directory/'media')
     if args.rid.startswith('osx-'):
-        desktop=stage/'desktop';app=stage/'GARbro.app/Contents';app.mkdir(parents=True)
+        app=stage/'GARbro.app/Contents';app.mkdir(parents=True)
         resources=app/'Resources';resources.mkdir()
-        shutil.move(str(desktop),resources/'app')
+        shutil.move(str(app_directory),resources/'app')
         executables=app/'MacOS';executables.mkdir()
         project=ROOT/'modern/GARbro.Desktop/GARbro.Desktop.csproj'
         template=subprocess.check_output([args.dotnet,'msbuild',str(project),'-t:_GetAppHostPaths','-getProperty:AppHostSourcePath',
@@ -124,7 +127,8 @@ def main():
     licenses(stage)
     (stage/'README.txt').write_text(f'GARbro {args.version} ({args.rid})\nRequires the .NET 10 runtime.\n'
         'This archive is unsigned. See compatibility.md for verified formats and known limits.\n'
-        'Run cli/garbro for commands, or the desktop executable / macOS app bundle.\n')
+        'GUI and CLI share app/: run app/garbro for commands or app/GARbro.Desktop for the GUI.\n'
+        'On Windows use the corresponding .exe files; on macOS open GARbro.app and find the CLI in GARbro.app/Contents/Resources/app.\n')
     archive=output/(stage.name+('.zip'if args.rid.startswith('win-')else '.tar.gz'))
     if archive.suffix=='.zip':
         write_zip(stage,archive)

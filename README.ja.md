@@ -10,12 +10,14 @@
 
 [リリースページ](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.4)で、システムと CPU に合ったファイルを選んでください。一般的な Intel・AMD の PC は **x64**、Windows on ARM、ARM Linux、Apple シリコンは **arm64** です。
 
+GUI と CLI は同じ配布パッケージの `app` フォルダーを共有します。1.0.4 以前のパッケージでは、引き続き `desktop` と `cli` に分かれています。
+
 | システム | ダウンロード | 起動方法 |
 | --- | --- | --- |
-| Windows | `win-x64.zip` または `win-arm64.zip` | 展開して `desktop/GARbro.Desktop.exe` を開く |
+| Windows | `win-x64.zip` または `win-arm64.zip` | 展開して `app/GARbro.Desktop.exe` を開く |
 | Windows インストーラー | CPU に合った `.msix` と `.cer` | [手順](docs/install.md)に従って同じリリースの証明書を信頼し、MSIX をインストール |
 | Debian 13 / Ubuntu 24.04 | CPU に合った `.deb` | インストール後、アプリ一覧から起動 |
-| その他の Linux | `linux-x64.tar.gz` または `linux-arm64.tar.gz` | 展開して `desktop/GARbro.Desktop` を実行 |
+| その他の Linux | `linux-x64.tar.gz` または `linux-arm64.tar.gz` | 展開して `app/GARbro.Desktop` を実行 |
 | macOS 14 以降 | Apple シリコンは `osx-arm64.dmg`、Intel は `osx-x64.dmg` | GARbro フォルダー全体をローカルにコピーし、`GARbro.app` を開く |
 | Flatpak | CPU に合った `.flatpak` | ソフトウェアセンターで開くか、`flatpak install --user ファイル名.flatpak` を実行 |
 

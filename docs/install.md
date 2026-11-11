@@ -55,14 +55,14 @@ and game-resource extensions. Installation preserves the current default
 application. Common media and executable types are not registered.
 
 The ZIP is an alternative that needs no certificate trust. Unpack all files and
-run `desktop\GARbro.Desktop.exe`; the CLI is `cli\garbro.exe`.
+run `app\GARbro.Desktop.exe`; the CLI is `app\garbro.exe`.
 
 ## macOS
 
 macOS 14 or later is supported on Intel (`osx-x64`) and Apple silicon (`osx-arm64`).
 Install the matching .NET 10 Runtime, open the DMG and copy its whole GARbro folder
-to `/Applications` or `~/Applications`. Open `GARbro.app`; the `cli` directory
-contains the command-line tool.
+to `/Applications` or `~/Applications`. Open `GARbro.app`; the command-line tool
+is `GARbro.app/Contents/Resources/app/garbro` and shares the application's libraries.
 Tarballs are also available. Keep the accompanying files together.
 
 The app has an ad-hoc signature for local integrity; it is not Apple Developer ID

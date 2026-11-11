@@ -71,7 +71,7 @@ if __name__=='__main__':
     defaults.write_text(original)
     run('apt-get','remove','-y','garbro',stdout=subprocess.DEVNULL)
     assert not Path('/usr/share/applications/org.garbro.GARbro.desktop').exists()
-    assert not Path('/opt/garbro/desktop/GARbro.Desktop').exists()
+    assert not Path('/opt/garbro/app/GARbro.Desktop').exists()
     assert defaults.read_text()==original
     assert 'org.garbro.GARbro.desktop'not in handlers('application/octet-stream')
     print('DEB install, upgrade, default preservation, CLI, desktop activation and uninstall passed.')
