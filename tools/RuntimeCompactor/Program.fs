@@ -192,6 +192,16 @@ let compatibilityLibraries = Set.ofList ["System.Private.DataContractSerializati
 let preservesInventory original candidate =
     not candidate.ReadyToRun && original.Identity = candidate.Identity && original.Contract = candidate.Contract && original.Resources = candidate.Resources
 
+let responseArgument (value: string) =
+    let result = StringBuilder("\"")
+    let mutable slashes = 0
+    for character in value do
+        if character = '\\' then slashes <- slashes + 1
+        else
+            result.Append('\\', if character = '"' then 2 * slashes + 1 else slashes).Append(character) |> ignore
+            slashes <- 0
+    result.Append('\\', 2 * slashes).Append('"').ToString()
+
 [<EntryPoint>]
 let main arguments =
     try
@@ -208,8 +218,9 @@ let main arguments =
             let linker = File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"illink-path.txt")).Trim()
             if not (File.Exists linker) then raise (FileNotFoundException("The pinned SDK linker was not restored.",linker))
             let start = ProcessStartInfo("dotnet", UseShellExecute = false)
-            let add values = for value in values do start.ArgumentList.Add value
-            add [linker; "--action"; "copy"; "--trim-mode"; "copy"; "--ignore-substitutions"; "--keep-metadata"; "all"
+            let linkerArguments = ResizeArray<string>()
+            let add values = linkerArguments.AddRange values
+            add ["--action"; "copy"; "--trim-mode"; "copy"; "--ignore-substitutions"; "--keep-metadata"; "all"
                  "--keep-compilers-resources"; "true"; "--keep-dep-attributes"; "true"; "--strip-security"; "false"
                  "--strip-descriptors"; "false"; "--strip-substitutions"; "false"; "--strip-link-attributes"; "false"
                  "--deterministic"; "--singlewarn"; "-out"; temporary]
@@ -218,6 +229,11 @@ let main arguments =
             for file in assemblies do add ["-reference"; Path.Combine(app,file.File)]
             for file in selected do add ["--action"; "link"; Path.GetFileNameWithoutExtension file.File; "-a"; Path.Combine(app,file.File); "all"]
             if selected.Length > 0 then
+                // A shared GUI/CLI payload exceeds Windows' command-line limit.
+                let response = Path.Combine(temporary,"linker.rsp")
+                File.WriteAllLines(response, linkerArguments |> Seq.map responseArgument)
+                start.ArgumentList.Add linker
+                start.ArgumentList.Add ("@" + response)
                 use child = Process.Start start
                 child.WaitForExit()
                 if child.ExitCode <> 0 then failwith "Runtime rewriting failed; original libraries were kept."
