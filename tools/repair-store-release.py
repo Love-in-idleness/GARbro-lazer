@@ -35,7 +35,10 @@ def verify_bundle(bundle,upload,submission):
                 if root.find('{*}Properties/{*}PublisherDisplayName').text!=submission['publisherDisplayName']:raise ValueError('Publisher display name mismatch')
                 seen.add(identity.get('ProcessorArchitecture'))
                 paths={path.replace('\\','/') for path in package.namelist()}
-                for folder in ('desktop','cli'):
+                shared='app/coreclr.dll' in paths
+                if shared and any(path.startswith(('desktop/','cli/')) for path in paths):
+                    raise ValueError('Store payload mixes shared and duplicate application directories')
+                for folder in ('app',) if shared else ('desktop','cli'):
                     if folder+'/coreclr.dll' not in paths:raise ValueError('Bundled Store runtime missing')
     if seen!={'x64','arm64'}:raise ValueError('Both Store architectures are required')
     with zipfile.ZipFile(upload) as archive:

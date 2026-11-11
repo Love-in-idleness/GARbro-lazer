@@ -1,4 +1,4 @@
-param([string]$Version='1.0.4', [string]$Output='artifacts')
+param([string]$Version='1.0.5', [string]$Output='artifacts')
 $ErrorActionPreference='Stop'
 $identity=Get-Content -Raw (Join-Path $PSScriptRoot 'installers/store-identity.json') | ConvertFrom-Json
 $source=(Resolve-Path (Join-Path $Output "garbro-$Version-store.msixbundle")).Path

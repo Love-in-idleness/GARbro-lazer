@@ -31,6 +31,8 @@ it is not an in-place upgrade of the preview package.
 
 Debug symbols, debugger-only helpers and XML API documentation are omitted. File lists use lossless gzip compression. The complete FFmpeg source is retained once in losslessly recompressed XZ form with checksums. `store-size-win-*.json` reports each architecture’s download and installed sizes separately against the 100 MB target. The multi-architecture upload contains both architectures; each device installs its matching package.
 
+Measured 1.0.5 package sizes and validation: [package-size-1.0.5.md](package-size-1.0.5.md).
+
 ## 中文
 
 商店注册信息集中保存在 `tools/installers/store-identity.json`。打包前会通过 Publisher 的哈希核对 PFN。
