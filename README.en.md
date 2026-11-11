@@ -23,7 +23,7 @@ The GUI and CLI now share the `app` folder in one download. Packages for 1.0.4 a
 
 Desktop downloads other than Flatpak and Store packages require the matching [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0). See the [installation guide](docs/install.md) for missing libraries or certificate prompts. Package filenames also contain the version number.
 
-This is a stable desktop release; some game-specific formats or encryption methods may still be unsupported. GARbro is not yet available on Flathub or the Microsoft Store, and Android development is on hold. The `store.msixupload` download is for Store submission; you do not need it to use GARbro.
+This is a stable desktop release; some game-specific formats or encryption methods may still be unsupported. GARbro is also available from the [Microsoft Store](https://apps.microsoft.com/detail/9NP39X1TRVNM). Flathub publication is being prepared, and Android development is on hold. The `store.msixupload` download is for Store submission; you do not need it to use GARbro.
 
 ## Using the desktop app
 

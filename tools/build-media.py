@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build standalone LGPL FFmpeg helpers, with corresponding source and recipe."""
+"""Build LGPL FFmpeg helpers, with corresponding source and recipe."""
 import argparse
 import ast
 import hashlib
@@ -46,7 +46,9 @@ def build(rid, output):
     recipe = json.loads((ROOT/'tools/media-codecs.json').read_text())
     target = output.resolve()/rid
     suffix = '.exe' if rid.startswith('win-') else ''
-    if all((target/(name+suffix)).is_file() for name in ('ffmpeg', 'ffprobe')) and (target/'media-codecs.json').is_file() and json.loads((target/'media-codecs.json').read_text()) == recipe and (target/'build-media.py').is_file() and compatible_builder((target/'build-media.py').read_text(), rid):
+    libraries = ('avcodec', 'avformat', 'avutil', 'avfilter', 'swresample', 'swscale')
+    shared_ready = not rid.startswith('win-') or all(len(list(target.glob(library+'-*.dll')))==1 for library in libraries)
+    if shared_ready and all((target/(name+suffix)).is_file() for name in ('ffmpeg', 'ffprobe')) and (target/'media-codecs.json').is_file() and json.loads((target/'media-codecs.json').read_text()) == recipe and (target/'build-media.py').is_file() and compatible_builder((target/'build-media.py').read_text(), rid):
         return target
     workspace = output.resolve()/('build-'+rid)
     workspace.mkdir(parents=True, exist_ok=True)
@@ -59,7 +61,9 @@ def build(rid, output):
     source = workspace/('FFmpeg-'+recipe['commit'])
     if not (source/'configure').is_file():
         with tarfile.open(archive) as contents: contents.extractall(workspace, filter='data')
-    options = recipe['options'] + ['--prefix='+str(target).replace('\\', '/'), '--disable-shared', '--enable-static']
+    options = recipe['options'] + ['--prefix='+str(target).replace('\\', '/')]
+    # The two Windows executables share codec code instead of embedding it twice.
+    options += ['--enable-shared', '--disable-static'] if rid.startswith('win-') else ['--disable-shared', '--enable-static']
     environment = os.environ.copy()
     if rid.startswith('osx-'):
         environment['MACOSX_DEPLOYMENT_TARGET'] = '14.0'
@@ -99,12 +103,19 @@ def build(rid, output):
         if rid.startswith('osx-'):
             subprocess.run(['lipo', str(source/name), '-verify_arch', 'arm64' if rid == 'osx-arm64' else 'x86_64'], check=True)
         shutil.copy2(source/(name+suffix), target/(name+suffix))
+    if rid.startswith('win-'):
+        for library in libraries:
+            binaries=list((source/('lib'+library)).glob(library+'-*.dll'))
+            if len(binaries)!=1:raise RuntimeError('Missing or ambiguous FFmpeg shared library: '+library)
+            for old in target.glob(library+'-*.dll'):old.unlink()
+            shutil.copy2(binaries[0],target/binaries[0].name)
     for name in ('COPYING.LGPLv2.1', 'LICENSE.md'): shutil.copy2(source/name, target/name)
     shutil.copy2(archive, target/'ffmpeg-source.tar.gz')
     shutil.copy2(ROOT/'tools/media-codecs.json', target/'media-codecs.json')
     shutil.copy2(ROOT/'tools/build-media.py', target/'build-media.py')
     if not rid.startswith('osx-') and not (rid == 'win-arm64' and platform.machine().lower() not in ('arm64','aarch64')):
-        subprocess.run([str(target/('ffmpeg'+suffix)), '-version'], check=True)
+        for name in ('ffmpeg', 'ffprobe'):
+            subprocess.run([str(target/(name+suffix)), '-version'], check=True)
     return target
 
 if __name__ == '__main__':

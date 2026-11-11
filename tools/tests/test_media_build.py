@@ -17,3 +17,7 @@ class MediaBuildCacheTests(unittest.TestCase):
         self.assertFalse(media.compatible_builder(current.replace("'--enable-static'","'--enable-shared'"),'win-x64'))
     def test_malformed_recipe_is_not_reused(self):
         self.assertFalse(media.compatible_builder('invalid python','win-x64'))
+    def test_windows_shared_libraries_do_not_reuse_the_old_static_executables(self):
+        current=Path(media.__file__).read_text()
+        old=current.replace("['--enable-shared', '--disable-static'] if rid.startswith('win-') else ['--disable-shared', '--enable-static']", "['--disable-shared', '--enable-static']")
+        for rid in ('win-x64','win-arm64'):self.assertFalse(media.compatible_builder(old,rid))

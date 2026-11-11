@@ -2,7 +2,7 @@ name: Microsoft Store packages
 on:
   push:
     branches: [migration/net10]
-    paths: ['tools/package-store.py', 'tools/package_layout.py', '.github/workflows/store.yml', 'release/store-version.txt']
+    paths: ['tools/package-store.py', 'tools/package_layout.py', 'tools/build-media.py', 'tools/media-codecs.json', '.github/workflows/store.yml', 'release/store-version.txt']
   workflow_dispatch:
     inputs:
       package_version:
@@ -62,6 +62,11 @@ jobs:
           $request = @{operation='resource-list';location=@{rootPath=(Resolve-Path 'tests/fixtures/generated/standard.xfl').Path}} | ConvertTo-Json -Compress
           $decoded = $request | & "$app/GARbro.Worker.exe" | ConvertFrom-Json
           if ($LASTEXITCODE -ne 0 -or $decoded.kind -ne 'result' -or $decoded.data.entries.Count -ne 3) { throw 'Shared worker did not decode the archive.' }
+          $media = & "$app/media/ffprobe.exe" -v error -show_streams -of json tests/fixtures/generated/movie.mpg | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or -not ($media.streams | Where-Object codec_type -eq 'video')) { throw 'Shared FFmpeg libraries did not probe video.' }
+          $frame = Join-Path $env:RUNNER_TEMP 'garbro-video-frame.bmp'
+          & "$app/media/ffmpeg.exe" -v error -i tests/fixtures/generated/movie.mpg -map 0:V:0 -frames:v 1 -f image2pipe -c:v bmp $frame
+          if ($LASTEXITCODE -ne 0 -or (Get-Item $frame).Length -lt 100) { throw 'Shared FFmpeg libraries did not decode a video frame.' }
           $gui = Start-Process "$app/GARbro.Desktop.exe" -ArgumentList (Resolve-Path 'tests/fixtures/generated/standard.xfl').Path -PassThru
           try {
             $deadline = (Get-Date).AddSeconds(20)
