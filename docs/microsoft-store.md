@@ -9,7 +9,7 @@ The Publisher hash is checked against the supplied PFN before packaging.
 - PFN: `Love-in-idleness.GARbro_j546ht2g1e7f4`
 - Store ID: `9NP39X1TRVNM`
 
-Run `python tools/package-store.py --version 1.0.5` on Windows with
+Run `python tools/package-store.py --version 1.0.6` on Windows with
 .NET 10 SDK, Python and the Windows SDK installed. The script publishes GUI,
 worker and CLI in one `app/` directory with a single shared local runtime, builds x64/ARM64 packages, and creates
 an unsigned MSIX bundle and MSIX upload for Partner Center signing. Do not upload
@@ -31,12 +31,16 @@ it is not an in-place upgrade of the preview package.
 
 Debug symbols, debugger-only helpers and XML API documentation are omitted. File lists use lossless gzip compression. The complete FFmpeg source is retained once in losslessly recompressed XZ form with checksums. `store-size-win-*.json` reports each architecture’s download and installed sizes separately against the 100 MB target. The multi-architecture upload contains both architectures; each device installs its matching package.
 
-Measured 1.0.5 package sizes and validation: [package-size-1.0.5.md](package-size-1.0.5.md).
+The build-only F# `tools/RuntimeCompactor` removes ReadyToRun native code from selected framework libraries with the pinned .NET 10.0.14 ILLink tool. All their IL members remain rooted; linker optimizations and substitutions are disabled. Original runtime configurations, application/format assemblies and native codecs remain unchanged. Frequently used startup libraries retain ReadyToRun code. Assembly identity, member/parameter metadata and embedded resources are checked before any replacement; mismatches stop packaging. This is not `PublishTrimmed`, and does not turn off reflection, COM or serialization features. Compaction reports accompany the upload artifacts.
+
+Package sizes and validation: [1.0.5 baseline](package-size-1.0.5.md), [1.0.6 runtime compaction](package-size-1.0.6.md).
 
 ## 中文
 
 商店注册信息集中保存在 `tools/installers/store-identity.json`。打包前会通过 Publisher 的哈希核对 PFN。
 商店包将 GUI、解码工作进程和 CLI 放在同一个 `app/` 目录，共用一份 .NET 运行时、格式数据库和媒体工具。用户无需另行安装运行时；安装后可通过 `garbro` 命令调用 CLI。
+
+1.0.6 继续精简部分运行时库中可由 JIT 重新生成的预编译代码，保留所有成员和资源，以及常用启动库的预编译代码。格式后端、本机编解码器和运行时功能配置保持原样。构建核对成员、参数和内嵌资源后才替换文件；核对不通过则停止打包。每个架构的精简记录随上传文件提供。
 
 在装有 .NET 10 SDK、Python 和 Windows SDK 的 Windows 上运行上述命令，会生成未签名的 x64/ARM64 MSIX bundle 和 MSIX upload，供 Partner Center 签名。
 不要把侧载预览包作为该商店身份上传。

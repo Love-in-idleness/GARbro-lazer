@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.fs" />
+    <PackageReference Include="FSharp.Core" />
+    <!-- Build tool only; keep aligned with the Store's pinned runtime. -->
+    <PackageDownload Include="Microsoft.NET.ILLink.Tasks" Version="[10.0.14]" />
+  </ItemGroup>
+  <Target Name="WriteLinkerLocation" AfterTargets="Build">
+    <WriteLinesToFile File="$(TargetDir)illink-path.txt" Lines="$(NuGetPackageRoot)/microsoft.net.illink.tasks/10.0.14/tools/net/illink.dll" Overwrite="true" />
+  </Target>
+</Project>

@@ -19,7 +19,7 @@ parser.add_argument('--rid',required=True)
 parser.add_argument('--quick',action='store_true',help='Check package contents, one archive open and CLI startup only')
 parser.add_argument('--output',type=Path,default=ROOT/'artifacts')
 parser.add_argument('--dotnet',default='dotnet')
-parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.5'))
+parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.6'))
 args=parser.parse_args()
 name='garbro-'+args.version+'-'+args.rid
 archive=args.output/(name+('.zip'if args.rid.startswith('win-')else'.tar.gz'))

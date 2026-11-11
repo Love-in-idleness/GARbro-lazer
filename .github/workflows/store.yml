@@ -2,18 +2,18 @@ name: Microsoft Store packages
 on:
   push:
     branches: [migration/net10]
-    paths: ['tools/package-store.py', 'tools/package_layout.py', 'tools/build-media.py', 'tools/media-codecs.json', '.github/workflows/store.yml', 'release/store-version.txt']
+    paths: ['tools/package-store.py', 'tools/package_layout.py', 'tools/RuntimeCompactor/**', 'tools/build-media.py', 'tools/media-codecs.json', '.github/workflows/store.yml', 'release/store-version.txt']
   workflow_dispatch:
     inputs:
       package_version:
         description: Application version for this Store upload
         type: string
-        default: 1.0.5
+        default: 1.0.6
   workflow_call:
     inputs:
       package_version:
         type: string
-        default: 1.0.5
+        default: 1.0.6
 jobs:
   build:
     runs-on: windows-latest
@@ -45,13 +45,15 @@ jobs:
       - name: Verify registered identity and build self-contained Store bundle
         run: python tools/package-store.py --version "$env:GARBRO_PACKAGE_VERSION"
         env:
-          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.5' }}
+          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.6' }}
           MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
       - name: Check shared self-contained CLI and decoder once on x64
         shell: pwsh
         env:
-          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.5' }}
+          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.6' }}
         run: |
+          dotnet fsi --exec tools/RuntimeCompactor/Tests.fsx
+          if ($LASTEXITCODE -ne 0) { throw 'Runtime compactor checks failed.' }
           $app = 'artifacts/store-stage-win-x64/app'
           $env:DOTNET_ROOT = Join-Path $env:RUNNER_TEMP 'no-global-dotnet'
           $env:DOTNET_MULTILEVEL_LOOKUP = '0'
@@ -87,3 +89,4 @@ jobs:
             artifacts/store-submission.json
             artifacts/store-listing.zip
             artifacts/store-size-*.json
+            artifacts/runtime-compaction-*.json
