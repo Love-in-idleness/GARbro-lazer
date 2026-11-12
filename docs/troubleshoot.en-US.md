@@ -5,6 +5,8 @@ Open the parent folder when a format needs an auxiliary index or key file. Choos
 
 If names or text look wrong, change the encoding in Settings → Decoding. Fixed encodings required by a format or encryption algorithm keep their original meaning.
 
+Some Fate/hollow ataraxia language and voice packs wrap XP3 in MoleBox. Download demoleition VS from **Help → Tool downloads**. Copy the pack and its companion `FateFD.exe` into an empty folder. Open the copied executable in demoleition VS and accept its hidden-filenames prompt. Rename the resulting `namemd5_….bin` with an XP3 header to `.xp3`, open it in GARbro and select the **Fate/hollow ataraxia** scheme.
+
 ## Android storage
 Select files or folders with the system picker. If access has expired, select the source again. Optional access to shared storage can reduce temporary copying for large local folders; Android still protects other apps' private directories.
 

@@ -11,7 +11,7 @@ namespace GARbro.Application;
 public static class LightweightResources
 {
     public static bool IsTextName(string name) => Path.GetExtension(name).ToLowerInvariant() is
-        ".txt" or ".json" or ".xml" or ".csv" or ".ini" or ".log" or ".md" or ".yaml" or ".yml" or ".ks" or ".lua" or ".js" or ".css" or ".html" or ".tsc" or ".rpy";
+        ".txt" or ".json" or ".xml" or ".csv" or ".ini" or ".log" or ".md" or ".yaml" or ".yml" or ".ks" or ".lua" or ".js" or ".css" or ".html" or ".tsc" or ".rpy" or ".ast" or ".bsd" or ".bpd" or ".rb";
     public static bool IsOrdinaryName(string name) => IsTextName(name) || MediaInfo.IsVideoName(name) || MediaInfo.IsAudioName(name) || Path.GetExtension(name).ToLowerInvariant() is
         ".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif" or ".webp" or ".wav" or ".mp3" or ".ogg" or ".opus" or ".flac" or ".aiff";
     static System.Collections.Generic.Dictionary<string,string> registered = new(StringComparer.OrdinalIgnoreCase);

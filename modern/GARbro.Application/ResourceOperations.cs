@@ -314,8 +314,17 @@ public static partial class ResourceService
     public static (string Format,string Output) MediaConversionTarget(ResourceSession session,string name,string output,ResourceExtractionOptions options)
     {
         string forcedType=options.TypeOverrides?.GetValueOrDefault(name);
-        if ((forcedType is null or "script") && ScriptOutputFormats.ForInput(name) is string script)
-            return options.ConvertScripts ? (script,Path.ChangeExtension(output,script.ToLowerInvariant())) : (null,null);
+        if (forcedType is null or "script")
+        {
+            string script = ScriptOutputFormats.ForInput(name);
+            if (script == null && options.ConvertScripts && ScriptOutputFormats.NeedsSignature(name))
+            {
+                using var input = session.OpenEntry(name);
+                if (ScriptTools.IsBgi(input)) script = "BSD";
+            }
+            if (script != null)
+                return options.ConvertScripts ? (script,Path.ChangeExtension(output,script.ToLowerInvariant())) : (null,null);
+        }
         string kind=MediaKind(session,name,forcedType);
         string format=kind switch {"image"=>options.ImageFormat,"audio"=>options.AudioFormat,"video"=>options.VideoFormat,_=>null};
         if(format==null)return (null,null);
@@ -331,13 +340,14 @@ public static partial class ResourceService
         if (formatId is "FLAC" or "M4A" or "MP4" or "MKV")
             return ConvertStandardMedia(session,name,output,formatId,overwrite,maxBytes,completed,prohibited);
         bool script = ScriptOutputFormats.Supports(formatId);
-        if (script && ScriptOutputFormats.ForInput(name) != formatId)
-            throw new NotSupportedException("The selected script output requires GSC → TSC or RPYC → RPY.");
+        if (script && ScriptOutputFormats.ForInput(name) != formatId &&
+            !(formatId == "BSD" && ScriptOutputFormats.NeedsSignature(name)))
+            throw new NotSupportedException("The selected output format does not match this script.");
         string scratch = WorkerTemporaryFiles.CreateDirectory(Path.GetTempPath());
         string temporary = null;
         try
         {
-            string path = Path.Combine(scratch, script ? "input" + Path.GetExtension(name).ToLowerInvariant() : Path.GetFileName(name));
+            string path = Path.Combine(scratch, script ? "input" + Path.GetExtension(name.Replace('\\', '/')).ToLowerInvariant() : Path.GetFileName(name));
             using (var sourceInput = session.OpenEntry(name))
             using (var target = File.Create(path)) CopyBounded(sourceInput, target, 2L << 30);
             using var input = script ? null : new BinaryStream(File.OpenRead(path), name);
@@ -366,7 +376,7 @@ public static partial class ResourceService
             using (var bounded = new BoundedOutput(file, maxBytes))
             {
                 if (script)
-                    ScriptTools.Convert(path, bounded, formatId, maxBytes, cancellation);
+                    ScriptTools.Convert(path, name, bounded, formatId, maxBytes, cancellation);
                 else if (audio != null)
                 {
                     if (passthrough) { audio.Source.Position = 0; CopyBounded(audio.Source, bounded, maxBytes); }
@@ -433,7 +443,7 @@ public static partial class ResourceService
 
     public static void CopyOriginalMedia(ResourceSession session, string name, string converted, OverwritePolicy overwrite)
     {
-        string copy = Path.ChangeExtension(converted, Path.GetExtension(name));
+        string copy = Path.ChangeExtension(converted, Path.GetExtension(name.Replace('\\', '/')));
         if (Path.GetFullPath(copy).Equals(Path.GetFullPath(converted), StringComparison.OrdinalIgnoreCase)) return;
         string sourcePath=session.Physical?session.PhysicalPath(name):session.Location.RootPath;
         if(Path.GetFullPath(copy).Equals(Path.GetFullPath(sourcePath),OperatingSystem.IsWindows()?StringComparison.OrdinalIgnoreCase:StringComparison.Ordinal))return;

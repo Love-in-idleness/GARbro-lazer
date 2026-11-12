@@ -50,10 +50,36 @@ type ImageOutputFormats private () =
 
 [<AbstractClass; Sealed>]
 type ScriptOutputFormats private () =
-    static member ForInput(name: string) =
-        match (Path.GetExtension(name) |> Option.ofObj |> Option.defaultValue "").ToLowerInvariant() with
-        | ".gsc" -> "TSC"
-        | ".rpyc" -> "RPY"
-        | _ -> null
+    static member private FileName(name: string) =
+        Path.GetFileName(if isNull name then "" else name.Replace('\\', '/'))
 
-    static member Supports(format: string) = format = "TSC" || format = "RPY"
+    static member ForInput(name: string) =
+        let fileName = ScriptOutputFormats.FileName(name).ToLowerInvariant()
+        match fileName with
+        | "nscript.dat" | "data.dsm" -> "TXT"
+        | "scripts.rxdata" | "scripts.rvdata" | "scripts.rvdata2" -> "RB"
+        | _ ->
+            match Path.GetExtension(fileName) with
+            | ".gsc" -> "TSC"
+            | ".rpyc" -> "RPY"
+            | ".ks" -> "KS"
+            | ".tjs" -> "TJS"
+            | ".ast" -> "AST"
+            | ".asb" -> "JSON"
+            | "._bs" -> "BSD"
+            | "._bp" -> "BPD"
+            | _ -> null
+
+    static member NeedsSignature(name: string) =
+        let fileName = ScriptOutputFormats.FileName(name)
+        fileName <> "" && not (Path.HasExtension fileName)
+
+    static member Supports(format: string) =
+        match format with
+        | "TSC" | "RPY" | "KS" | "TJS" | "AST" | "JSON" | "BSD" | "BPD" | "TXT" | "RB" -> true
+        | _ -> false
+
+    static member UsesBinaryPreview(name: string) =
+        match ScriptOutputFormats.ForInput(name) with
+        | "TSC" | "RPY" | "JSON" | "BSD" | "BPD" | "RB" -> true
+        | _ -> false

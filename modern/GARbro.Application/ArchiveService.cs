@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -180,11 +181,32 @@ namespace GARbro.Application
                 {
                     if (scope.MissingOptions != null)
                         throw scope.MissingOptions;
+                    CheckWrappedXp3(path);
                     throw new UnknownFormatException(FormatCatalog.Instance.LastError);
                 }
 
                 return new ArchiveSession(archive, path, options);
             }
+        }
+
+        internal static void CheckWrappedXp3(string path)
+        {
+            if (!Path.GetExtension(path).Equals(".xp3", StringComparison.OrdinalIgnoreCase))
+                return;
+            using var input = File.OpenRead(path);
+            Span<byte> header = stackalloc byte[16];
+            // The Fate patch and voice boxes share this encrypted QUICKBOX marker and 48-byte footer.
+            if (input.Length >= header.Length + 48 && input.ReadAtLeast(header, header.Length, false) == header.Length &&
+                BinaryPrimitives.ReadUInt32LittleEndian(header) == input.Length - 48 &&
+                BinaryPrimitives.ReadUInt64LittleEndian(header[4..]) == 0xcdd13adc5430d915UL &&
+                BinaryPrimitives.ReadUInt32LittleEndian(header[12..]) == 4)
+                throw new WrappedXp3Exception();
+        }
+
+        sealed class WrappedXp3Exception : UnknownFormatException
+        {
+            public override string Message =>
+                "This XP3 is inside a MoleBox package. Use demoleition VS on a copy of FateFD.exe and the package, then open the extracted XP3.";
         }
 
         public static object ProbeResource(string path,IOptionsProvider options=null)

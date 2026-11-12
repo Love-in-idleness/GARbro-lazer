@@ -101,7 +101,7 @@ public sealed partial class MainWindow
                     case "Statusbar": Settings.StatusVisible = !Settings.StatusVisible; break; case "FitImage": Settings.FitImage = !Settings.FitImage; break; }
                 ApplySettings(); return key=="FitImage" && previewEntry!=null ? ShowPreviewPage(0) : Task.CompletedTask;
             });
-        foreach (string page in new[] { "Feedback", "Manual", "Troubleshoot", "Updates", "License", "ExportLogs", "About" })
+        foreach (string page in HelpPages)
             Register(page, () => ShowHelp(page), () => !busy);
         Register("FocusMenu", () => { menu.Children.FirstOrDefault()?.Focus(); return Task.CompletedTask; }, () => true);
         Register("NextSelection", () => { files.SelectedIndex = Math.Min(files.ItemCount - 1, files.SelectedIndex + 1); return Task.CompletedTask; }, () => files.IsFocused && files.ItemCount > 0);
@@ -153,7 +153,7 @@ public sealed partial class MainWindow
             button.Click += (_, _) => button.ContextMenu.Open(button); menu.Children.Add(button);
         }
     }
-    static readonly string[] HelpPages = { "Manual", "Feedback", "Troubleshoot", "Updates", "License", "ExportLogs", "About" };
+    static readonly string[] HelpPages = { "Manual", "ToolDownloads", "Feedback", "Troubleshoot", "Updates", "License", "ExportLogs", "About" };
     void ShowHelpMenu(Control target)
     {
         var popup = new ContextMenu(); foreach (string page in HelpPages) popup.Items.Add(Item(page)); target.ContextMenu = popup; popup.Open(target);
@@ -287,7 +287,7 @@ public sealed partial class MainWindow
         {
             catalog??=await Request<ResourceFormatInfo[]>(new("resource-catalog",null));
             if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return (ConversionChoice)null;}
-            bool offerScripts=!UiPlatform.IsMobile && selected.Any(e=>ScriptOutputFormats.ForInput(e.Name)!=null);
+            bool offerScripts=!UiPlatform.IsMobile && selected.Any(e=>ScriptOutputFormats.ForInput(e.Name)!=null || ScriptOutputFormats.NeedsSignature(e.Name));
             return await Dialogs.Conversion(this,Text,catalog.Where(f=>f.Type=="image"&&f.CanWrite).ToArray(),Settings.OutputDirectory,selected.Length,offerScripts);
         });
         if(choice==null)return;

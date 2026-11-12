@@ -63,10 +63,14 @@ public static class DesktopServices
         if (name == null) return "";
         using var stream = assembly.GetManifestResourceStream(name); using var reader = new StreamReader(stream); return reader.ReadToEnd();
     }
+    internal const string PythonDownloads = "https://www.python.org/downloads/";
+    internal const string MoleBoxToolDownload = "https://lifeinhex.com/download/demoleition-vs/";
+
     public static void OpenUrl(string url)
     {
         var uri = new Uri(url);
-        if (uri.Scheme != "https" || uri.Host != "github.com") throw new ArgumentException("Unsupported help URL.");
+        if (uri.Scheme != "https" || (uri.Host != "github.com" && url is not (PythonDownloads or MoleBoxToolDownload)))
+            throw new ArgumentException("Unsupported help URL.");
         if (UiPlatform.OpenUrl != null) { UiPlatform.OpenUrl(url); return; }
         Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
     }

@@ -82,9 +82,15 @@ Alt+Shift+T/M/S 切换工具栏、菜单栏、状态栏；Alt 可恢复隐藏菜
 
 ## 脚本转换
 
-选中磁盘或归档中的 GSC、RPYC 文件，打开「转换」并勾选「转换脚本」。GSC 导出为 UTF-8 TSC，RPYC 导出为 RPY。
+选择磁盘或归档中的受支持脚本，在「转换」中勾选「转换脚本」。
 
-安装 [LiarsoftTool](https://github.com/Love-in-idleness/LiarsoftTool) 2.3.1 或更新版本，以及 [unrpyc](https://github.com/CensoredUsername/unrpyc) 2.x。将工具加入 `PATH`，或在启动 GARbro 前，将 `GARBRO_LIARSOFTTOOL` 和 `GARBRO_UNRPYC` 分别设为工具的绝对路径。使用 `unrpyc.py` 时，还需将 Python 3.9 或更新版本加入 `PATH`。Flatpak 需要能在其沙箱内运行的工具。
+- CodeX RScript GSC → UTF-8 TSC 使用 LiarsoftTool，Ren’Py RPYC → RPY 使用 unrpyc。
+- KiriKiri 的 KS 和 TJS 文本可转为 UTF-8，已编译的 TJS2100 使用 tjs2dec。
+- BGI/Ethornell 的 v1 脚本（`._bs` 或无扩展名）→ BSD，`._bp` → BPD，使用 Bgi_asdisEN。自动使用 CP932，也可指定 GBK。
+- NScripter 的 `nscript.dat` → TXT。自动识别 BOM 和 UTF-8，其余按 CP932 读取，GBK 文件可手动选 GBK。
+- Artemis AST → UTF-8、ASB → 结构化 JSON。Unity Utage 的 `data.dsm` → TXT。RPG Maker XP、VX、VX Ace 的 `Scripts.rxdata`、`Scripts.rvdata` 和 `Scripts.rvdata2` → Ruby 源码。
+
+在「帮助 → 工具下载」按需获取工具。将 LiarsoftTool 2.3.1 以上版本、unrpyc 2.x 和 tjs2dec 加入 `PATH`，或用 `GARBRO_LIARSOFTTOOL`、`GARBRO_UNRPYC`、`GARBRO_TJS2DEC` 指定各工具的绝对路径。将 `GARBRO_BGI_ASDIS` 设为解压后的 Bgi_asdisEN 仓库目录的绝对路径。ASB 使用 msg-tool v0.4.0-alpha.3 或更新版本，将 `msg_tool` 加入 `PATH`，或用 `GARBRO_MSG_TOOL` 指定其绝对路径。RGSS 使用 rvpacker-txt-rs v19 或更新版本，将工具加入 `PATH`，或用 `GARBRO_RVPACKER` 指定其绝对路径。Bgi_asdisEN 和 `unrpyc.py` 需要把 Python 3.9 或更新版本加入 `PATH`。Flatpak 需要能在沙箱内运行的工具。Luca System 的 `SCRIPT.PAK` 可独立使用 LuckSystem，需选用该游戏对应的指令表。
 
 `garbro convert scene.gsc -o scene.tsc --encoding gbk` 显式指定 GBK。选择「自动」时由 LiarsoftTool 检测编码。转换归档条目可用 `garbro convert scripts.rpa --entry game/script.rpyc -o script.rpy`，条目名称以 `garbro list` 的结果为准。
 

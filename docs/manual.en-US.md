@@ -103,9 +103,15 @@ Choose **WebP (lossless)** under Image output format when extracting or converti
 
 ## Convert scripts
 
-Select a GSC or RPYC file on disk or in an archive, open **Convert** and enable **Convert scripts**. GSC becomes UTF-8 TSC. RPYC becomes RPY.
+Select a supported script on disk or in an archive, open **Convert** and enable **Convert scripts**.
 
-Install [LiarsoftTool](https://github.com/Love-in-idleness/LiarsoftTool) 2.3.1 or later and [unrpyc](https://github.com/CensoredUsername/unrpyc) 2.x. Put the tools on `PATH` or set `GARBRO_LIARSOFTTOOL` and `GARBRO_UNRPYC` to their absolute paths before starting GARbro. For `unrpyc.py`, install Python 3.9 or newer on `PATH` too. Flatpak needs helpers that can run inside its sandbox.
+- CodeX RScript GSC → UTF-8 TSC uses LiarsoftTool. Ren’Py RPYC → RPY uses unrpyc.
+- KiriKiri KS and TJS text → UTF-8. Compiled TJS2100 uses tjs2dec.
+- BGI/Ethornell v1 scripts (`._bs` or extensionless) → BSD and `._bp` → BPD use Bgi_asdisEN. Auto uses CP932. GBK is also supported.
+- NScripter `nscript.dat` → TXT. Auto checks for a BOM and UTF-8, then falls back to CP932. For GBK files select GBK.
+- Artemis AST → UTF-8, ASB → structured JSON. Unity Utage `data.dsm` → TXT. RPG Maker XP, VX and VX Ace `Scripts.rxdata`, `Scripts.rvdata` and `Scripts.rvdata2` → Ruby source.
+
+Download optional tools under **Help → Tool downloads**. Put LiarsoftTool 2.3.1+, unrpyc 2.x and tjs2dec on `PATH`, or set `GARBRO_LIARSOFTTOOL`, `GARBRO_UNRPYC` and `GARBRO_TJS2DEC` to their absolute paths. Set `GARBRO_BGI_ASDIS` to the absolute path of the unpacked Bgi_asdisEN repository. For ASB, use msg-tool v0.4.0-alpha.3 or newer as `msg_tool` on `PATH` or set `GARBRO_MSG_TOOL`. For RGSS, use rvpacker-txt-rs v19 or newer on `PATH` or set `GARBRO_RVPACKER`. Both variables take absolute paths to the executables. Bgi_asdisEN and `unrpyc.py` require Python 3.9+ on `PATH`. Flatpak helpers must be able to run in the sandbox. For Luca System `SCRIPT.PAK`, run LuckSystem separately with the opcode table for your game.
 
 `garbro convert scene.gsc -o scene.tsc --encoding gbk` selects GBK explicitly. Auto lets LiarsoftTool detect the encoding. Use `garbro convert scripts.rpa --entry game/script.rpyc -o script.rpy` for an archive entry, using the entry name shown by `garbro list`.
 

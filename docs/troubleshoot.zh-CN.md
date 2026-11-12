@@ -5,6 +5,8 @@
 
 文件名或文本显示乱码时，请在“设置 → 解码”中切换编码。格式或加密算法明确规定的固定编码仍遵循原有规范。
 
+部分 Fate/hollow ataraxia 语言包和语音包使用 MoleBox 封装 XP3。在「帮助 → 工具下载」获取 demoleition VS。将资源包和同目录的 `FateFD.exe` 复制到空目录，用 demoleition VS 打开复制的 EXE，并确认隐藏文件名提示。将带有 XP3 文件头的 `namemd5_….bin` 改为 `.xp3` 扩展名，再用 GARbro 打开并选择 **Fate/hollow ataraxia** 方案。
+
 ## Android 文件访问
 通过系统选择器授权文件或目录。授权失效后，请重新选择来源。处理大型本地目录时，可以主动允许访问共享存储，以减少临时复制；Android 仍会保护其他应用的私有目录。
 

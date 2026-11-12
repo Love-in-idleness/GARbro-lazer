@@ -77,9 +77,15 @@ Flatpak ではシステムのファイル選択でアクセスを許可してく
 
 ## スクリプトの変換
 
-ディスクまたはアーカイブ内の GSC、RPYC を選択し、「変換」で「スクリプトを変換」を有効にします。GSC は UTF-8 の TSC に、RPYC は RPY に変換されます。
+ディスクまたはアーカイブ内の対応スクリプトを選択し、「変換」で「スクリプトを変換」を有効にします。
 
-[LiarsoftTool](https://github.com/Love-in-idleness/LiarsoftTool) 2.3.1 以降と [unrpyc](https://github.com/CensoredUsername/unrpyc) 2.x をインストールしてください。ツールを `PATH` に追加するか、GARbro の起動前に `GARBRO_LIARSOFTTOOL` と `GARBRO_UNRPYC` にそれぞれの絶対パスを指定します。`unrpyc.py` を指定する場合は Python 3.9 以降も `PATH` に追加してください。Flatpak ではサンドボックス内で実行できるツールが必要です。
+- CodeX RScript の GSC → UTF-8 の TSC には LiarsoftTool、Ren’Py の RPYC → RPY には unrpyc を使います。
+- 吉里吉里のテキスト KS と TJS → UTF-8。コンパイル済みの TJS2100 には tjs2dec を使います。
+- BGI/Ethornell v1 のスクリプト（`._bs` または拡張子なし）→ BSD、`._bp` → BPD には Bgi_asdisEN を使います。自動設定では CP932 を使用し、GBK も選択できます。
+- NScripter の `nscript.dat` → TXT。自動設定では BOM と UTF-8 を判定し、それ以外は CP932 として読み込みます。GBK のファイルには GBK を指定してください。
+- Artemis の AST → UTF-8、ASB → 構造化 JSON。Unity Utage の `data.dsm` → TXT。RPG ツクール XP、VX、VX Ace の `Scripts.rxdata`、`Scripts.rvdata`、`Scripts.rvdata2` → Ruby ソース。
+
+必要なツールは「ヘルプ → ツールのダウンロード」から入手できます。LiarsoftTool 2.3.1 以降、unrpyc 2.x、tjs2dec を `PATH` に追加するか、`GARBRO_LIARSOFTTOOL`、`GARBRO_UNRPYC`、`GARBRO_TJS2DEC` に絶対パスを指定します。`GARBRO_BGI_ASDIS` には展開した Bgi_asdisEN リポジトリの絶対パスを指定します。ASB には msg-tool v0.4.0-alpha.3 以降を使います。`msg_tool` を `PATH` に追加するか、`GARBRO_MSG_TOOL` に絶対パスを指定します。RGSS には rvpacker-txt-rs v19 以降を使います。ツールを `PATH` に追加するか、`GARBRO_RVPACKER` に絶対パスを指定します。Bgi_asdisEN と `unrpyc.py` には `PATH` 上に Python 3.9 以降が必要です。Flatpak ではサンドボックス内で実行できるツールが必要です。Luca System の `SCRIPT.PAK` は、ゲームに対応する命令テーブルを指定して LuckSystem で別途処理できます。
 
 `garbro convert scene.gsc -o scene.tsc --encoding gbk` は GBK を明示的に指定します。自動設定では LiarsoftTool が文字コードを判定します。アーカイブ内の項目には `garbro convert scripts.rpa --entry game/script.rpyc -o script.rpy` を使います。項目名は `garbro list` で確認できます。
 

@@ -77,9 +77,15 @@ CLI находится в папке `cli`; DEB также устанавлив�
 
 ## Преобразование сценариев
 
-Выберите GSC или RPYC на диске или в архиве, откройте окно преобразования и включите «Преобразовать сценарии». GSC сохраняется в TSC с кодировкой UTF-8, а RPYC — в RPY.
+Выберите поддерживаемый сценарий на диске или в архиве, откройте «Преобразовать» и включите «Преобразовать сценарии».
 
-Установите [LiarsoftTool](https://github.com/Love-in-idleness/LiarsoftTool) 2.3.1 или новее и [unrpyc](https://github.com/CensoredUsername/unrpyc) 2.x. Добавьте утилиты в `PATH` или перед запуском GARbro укажите их абсолютные пути в переменных `GARBRO_LIARSOFTTOOL` и `GARBRO_UNRPYC`. Для `unrpyc.py` в `PATH` также нужен Python 3.9 или новее. В Flatpak нужны утилиты, которые запускаются внутри песочницы.
+- CodeX RScript GSC → TSC в UTF-8 через LiarsoftTool, Ren’Py RPYC → RPY через unrpyc.
+- Текстовые KS и TJS движка KiriKiri → UTF-8. Для байткода TJS2100 используется tjs2dec.
+- Сценарии BGI/Ethornell v1 (`._bs` или без расширения) → BSD, а `._bp` → BPD через Bgi_asdisEN. В автоматическом режиме используется CP932. Можно выбрать GBK.
+- NScripter `nscript.dat` → TXT. В автоматическом режиме проверяются BOM и UTF-8, затем используется CP932. Для файлов в GBK выберите GBK.
+- Artemis AST → UTF-8, ASB → структурированный JSON. Unity Utage `data.dsm` → TXT. Файлы `Scripts.rxdata`, `Scripts.rvdata` и `Scripts.rvdata2` RPG Maker XP, VX и VX Ace → исходный код Ruby.
+
+Нужные утилиты доступны в меню «Справка → Загрузка утилит». Добавьте LiarsoftTool 2.3.1 или новее, unrpyc 2.x и tjs2dec в `PATH` или задайте абсолютные пути в `GARBRO_LIARSOFTTOOL`, `GARBRO_UNRPYC` и `GARBRO_TJS2DEC`. В `GARBRO_BGI_ASDIS` укажите абсолютный путь к распакованному репозиторию Bgi_asdisEN. Для ASB нужен msg-tool v0.4.0-alpha.3 или новее. Добавьте `msg_tool` в `PATH` или задайте абсолютный путь в `GARBRO_MSG_TOOL`. Для RGSS нужен rvpacker-txt-rs v19 или новее. Добавьте его в `PATH` или задайте абсолютный путь в `GARBRO_RVPACKER`. Для Bgi_asdisEN и `unrpyc.py` нужен Python 3.9 или новее в `PATH`. В Flatpak утилиты должны работать внутри песочницы. Для `SCRIPT.PAK` движка Luca System запустите LuckSystem отдельно с таблицей команд для вашей игры.
 
 Команда `garbro convert scene.gsc -o scene.tsc --encoding gbk` явно задаёт GBK. При автоопределении кодировку выбирает LiarsoftTool. Для файла внутри архива используйте `garbro convert scripts.rpa --entry game/script.rpyc -o script.rpy`. Имя файла внутри архива показывает `garbro list`.
 

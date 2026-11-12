@@ -28,6 +28,7 @@ public sealed class ResourceSession : IDisposable
     public bool Synthetic => Archive?.Tag == "DAT/BOGUS";
     public ResourceSession(ResourceLocation location, IOptionsProvider options = null, bool allowPlainFile = false, bool forcePlainFile = false)
     {
+        ArchiveService.EnsureFormats();
         scoped = options as ILocatedOptionsProvider;
         Location = location with { RootPath = Path.GetFullPath(location.RootPath) };
         if (Location.Chain.Length > 64) throw new InvalidDataException("Archive nesting exceeds 64 levels.");
@@ -56,8 +57,10 @@ public sealed class ResourceSession : IDisposable
                     var current = Location with { Archives = Location.Chain.Take(depth).ToArray(), Directory = "" };
                     scoped?.SetLocation(current);
                     try {VFS.FullPath = new[] { current.RootPath }.Concat(current.Chain).Append("").ToArray();}
-                    catch(UnknownFormatException)when(allowPlainFile && depth==0 && Location.Chain.Length==0 && scope.MissingOptions==null && FormatCatalog.Instance.LastError is not ResourceParametersRequiredException)
+                    catch(UnknownFormatException)when(depth==0 && scope.MissingOptions==null && FormatCatalog.Instance.LastError is not ResourceParametersRequiredException)
                     {
+                        ArchiveService.CheckWrappedXp3(current.RootPath);
+                        if (!allowPlainFile || Location.Chain.Length != 0) throw;
                         VFS.FullPath=new[]{root};VFS.Flush();
                         standalone=PlainFile();break;
                     }
@@ -176,7 +179,7 @@ public static partial class ResourceService
         string forcedType = null, long offset = 0, IOptionsProvider options = null, string previewMode = "auto", string previewEncoding = null, string output = null, int width = 0, int height = 0)
     {
         using var session = BrowserDecoderSession.Open(location, options);
-        if (previewMode == "hex" || forcedType == null && ScriptOutputFormats.ForInput(name) != null)
+        if (previewMode == "hex" || forcedType == null && ScriptOutputFormats.UsesBinaryPreview(name))
         {
             using var input = session.OpenEntry(name);
             return LightweightResources.ReadPage(input, name, offset, true, previewEncoding ?? context.TextEncoding);

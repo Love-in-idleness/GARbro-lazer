@@ -19,6 +19,27 @@ public sealed class HelpWindow : AppWindow
         var tabs = new TabControl();
         Control Reader(string content) => new TextBox { Text = content, IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Margin = new Avalonia.Thickness(12) };
         var manual = new TabItem { Header = text["Manual"], Content = Reader(DesktopServices.ReadResource("manual." + text.Language + ".md")) }; tabs.Items.Add(manual);
+        var tools = new StackPanel { Spacing = 8, Margin = new Avalonia.Thickness(12) };
+        tools.Children.Add(new TextBlock { Text = text["ToolDownloadsHint"], TextWrapping = TextWrapping.Wrap });
+        foreach (var (label, url) in new[]
+        {
+            ("LiarsoftTool", "https://github.com/Love-in-idleness/LiarsoftTool/releases"),
+            ("unrpyc", "https://github.com/CensoredUsername/unrpyc/releases"),
+            ("tjs2dec", "https://github.com/crate-1556/tjs2-decompiler"),
+            ("Bgi_asdisEN", "https://github.com/Checkumeito/Bgi_asdisEN"),
+            ("msg-tool", "https://github.com/lifegpc/msg-tool/releases"),
+            ("rvpacker-txt-rs", "https://github.com/RPG-Maker-Translation-Tools/rvpacker-txt-rs/releases"),
+            ("Python", DesktopServices.PythonDownloads),
+            ("LuckSystem", "https://github.com/wetor/LuckSystem/releases"),
+            ("demoleition VS", DesktopServices.MoleBoxToolDownload)
+        })
+        {
+            var download = new Button { Content = label };
+            download.Click += (_, _) => DesktopServices.OpenUrl(url);
+            tools.Children.Add(download);
+        }
+        var toolsTab = new TabItem { Header = text["ToolDownloads"], Content = new ScrollViewer { Content = tools } };
+        tabs.Items.Add(toolsTab);
         var about = new StackPanel { Spacing = 8, Margin = new Avalonia.Thickness(12) };
         about.Children.Add(new TextBlock { Text = "GARbro " + DesktopServices.Version, FontSize = 20 });
         about.Children.Add(new TextBlock { Text = text["Authors"] });
@@ -72,7 +93,7 @@ public sealed class HelpWindow : AppWindow
         }
         check.Click += async (_, _) => await Check(false); database.Click += async (_, _) => await Check(true);
         var updateTab = new TabItem { Header = text["Updates"], Content = updates }; tabs.Items.Add(updateTab);
-        tabs.SelectedItem = page switch { "About" => aboutTab, "License" => license, "Troubleshoot" => diagnostics, "Updates" => updateTab, _ => manual };
+        tabs.SelectedItem = page switch { "About" => aboutTab, "License" => license, "Troubleshoot" => diagnostics, "Updates" => updateTab, "ToolDownloads" => toolsTab, _ => manual };
         var root = new DockPanel(); var close = new Button { Content = text["Close"], Margin = new Avalonia.Thickness(12), HorizontalAlignment = HorizontalAlignment.Right }; close.Click += (_, _) => Close(); DockPanel.SetDock(close, Dock.Bottom); root.Children.Add(close); root.Children.Add(Dialogs.ResponsivePages(tabs)); Content = root;
     }
 }
