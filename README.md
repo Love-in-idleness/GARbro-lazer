@@ -1,4 +1,4 @@
-# GARbro
+# GARbro-lazer
 
 **简体中文** · [English](README.en.md) · [Русский](README.ru.md) · [日本語](README.ja.md)
 
@@ -8,7 +8,7 @@
 
 ## 下载与启动
 
-到 [正式版下载页](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.4) 选择与你的系统和处理器对应的文件。普通 Intel、AMD 电脑选 **x64**；Windows on ARM、ARM Linux 和 Apple 芯片选 **arm64**。
+到 [正式版下载页](https://github.com/Love-in-idleness/GARbro-lazer/releases/latest) 选择与你的系统和处理器对应的文件。普通 Intel、AMD 电脑选 **x64**；Windows on ARM、ARM Linux 和 Apple 芯片选 **arm64**。
 
 GUI 和 CLI 现在共用 `app` 目录，无需分别下载。1.0.4 及更早的旧包仍使用 `desktop` 和 `cli` 两个目录。
 
@@ -59,7 +59,7 @@ macOS 可使用 Command 代替表中的 Ctrl。更多操作见[使用说明](doc
 
 ## 命令行怎么用
 
-CLI 在下载包的 `cli` 目录中。在这个目录打开终端即可运行。下面使用 Linux / macOS 的写法；Windows PowerShell 请把 `./garbro` 换成 `.\garbro.exe`。路径中有空格时保留引号。
+CLI 在下载包的 `app` 目录中。在这个目录打开终端即可运行。下面使用 Linux / macOS 的写法；Windows PowerShell 请把 `./garbro` 换成 `.\garbro.exe`。路径中有空格时保留引号。
 
 ```sh
 # 查看帮助
@@ -92,7 +92,7 @@ CLI 在下载包的 `cli` 目录中。在这个目录打开终端即可运行。
 
 ## 遇到问题
 
-先在“帮助”中查看使用说明和故障排查。仍无法处理时，请到 [Issues](https://github.com/Love-in-idleness/GARbro-no-wpf/issues/new/choose) 描述游戏名称、文件格式、系统和操作步骤；可通过“帮助 → 日志导出”附上诊断信息。不要公开密码、密钥或无权分享的游戏文件。
+先在“帮助”中查看使用说明和故障排查。仍无法处理时，请到 [Issues](https://github.com/Love-in-idleness/GARbro-lazer/issues/new/choose) 描述游戏名称、文件格式、系统和操作步骤；可通过“帮助 → 日志导出”附上诊断信息。不要公开密码、密钥或无权分享的游戏文件。
 
 [安装说明](docs/install.md) · [已知兼容性限制](docs/compatibility.md) · [开发与构建](docs/migration-status.md)
 

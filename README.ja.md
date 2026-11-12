@@ -1,4 +1,4 @@
-# GARbro
+# GARbro-lazer
 
 [简体中文](README.md) · [English](README.en.md) · [Русский](README.ru.md) · **日本語**
 
@@ -8,7 +8,7 @@
 
 ## ダウンロードと起動
 
-[リリースページ](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.4)で、システムと CPU に合ったファイルを選んでください。一般的な Intel・AMD の PC は **x64**、Windows on ARM、ARM Linux、Apple シリコンは **arm64** です。
+[リリースページ](https://github.com/Love-in-idleness/GARbro-lazer/releases/latest)で、システムと CPU に合ったファイルを選んでください。一般的な Intel・AMD の PC は **x64**、Windows on ARM、ARM Linux、Apple シリコンは **arm64** です。
 
 GUI と CLI は同じ配布パッケージの `app` フォルダーを共有します。1.0.4 以前のパッケージでは、引き続き `desktop` と `cli` に分かれています。
 
@@ -55,7 +55,7 @@ DEB、MSIX、Flatpak、macOS アプリをインストールすると、対応す
 
 ## コマンドラインで使う
 
-ダウンロードしたパッケージの `cli` フォルダーでターミナルを開きます。PowerShell では `./garbro` を `.\garbro.exe` に置き換えてください。
+ダウンロードしたパッケージの `app` フォルダーでターミナルを開きます。PowerShell では `./garbro` を `.\garbro.exe` に置き換えてください。
 
 ```sh
 ./garbro --language ja-JP help
@@ -79,7 +79,7 @@ DEB、MSIX、Flatpak、macOS アプリをインストールすると、対応す
 
 ## 困ったとき
 
-「ヘルプ」の使い方とトラブルシューティングをご確認ください。解決しない場合は [Issues](https://github.com/Love-in-idleness/GARbro-no-wpf/issues/new/choose) にゲーム名、ファイル形式、システム、操作手順を記載してください。「ログをエクスポート」で診断情報を保存できます。パスワードやキー、共有する権利のないゲームデータは公開しないでください。
+「ヘルプ」の使い方とトラブルシューティングをご確認ください。解決しない場合は [Issues](https://github.com/Love-in-idleness/GARbro-lazer/issues/new/choose) にゲーム名、ファイル形式、システム、操作手順を記載してください。「ログをエクスポート」で診断情報を保存できます。パスワードやキー、共有する権利のないゲームデータは公開しないでください。
 
 [詳しい使い方](docs/manual.ja-JP.md) · [インストール](docs/install.md) · [対応状況と制限](docs/compatibility.md)
 

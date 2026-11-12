@@ -1,4 +1,4 @@
-# GARbro
+# GARbro-lazer
 
 [简体中文](README.md) · **English** · [Русский](README.ru.md) · [日本語](README.ja.md)
 
@@ -8,7 +8,7 @@ Open a game's resource archives, browse pictures, play audio and video, and extr
 
 ## Download and start
 
-Choose a package from the [release download page](https://github.com/Love-in-idleness/GARbro-no-wpf/releases/tag/v1.0.4). Use **x64** for most Intel and AMD computers, or **arm64** for Windows on ARM, ARM Linux, and Apple silicon.
+Choose a package from the [release download page](https://github.com/Love-in-idleness/GARbro-lazer/releases/latest). Use **x64** for most Intel and AMD computers, or **arm64** for Windows on ARM, ARM Linux, and Apple silicon.
 
 The GUI and CLI now share the `app` folder in one download. Packages for 1.0.4 and earlier still use separate `desktop` and `cli` folders.
 
@@ -60,7 +60,7 @@ Installed DEB, MSIX, Flatpak and macOS apps appear in the file manager’s **Ope
 
 ## Using the command line
 
-The command-line tool is in the package's `cli` folder. Open a terminal there. The examples below use Linux/macOS syntax; in Windows PowerShell, replace `./garbro` with `.\garbro.exe`. Quote paths containing spaces.
+The command-line tool is in the package's `app` folder. Open a terminal there. The examples below use Linux/macOS syntax; in Windows PowerShell, replace `./garbro` with `.\garbro.exe`. Quote paths containing spaces.
 
 ```sh
 # Show help
@@ -93,7 +93,7 @@ The command-line tool is in the package's `cli` folder. Open a terminal there. T
 
 ## Getting help
 
-Start with the user guide and troubleshooting pages in **Help**. If you still need assistance, [open an issue](https://github.com/Love-in-idleness/GARbro-no-wpf/issues/new/choose) with the game name, file format, operating system, and steps to reproduce. **Help → Export logs** creates a diagnostic report you can attach. Do not publish passwords, keys, or game files you cannot share.
+Start with the user guide and troubleshooting pages in **Help**. If you still need assistance, [open an issue](https://github.com/Love-in-idleness/GARbro-lazer/issues/new/choose) with the game name, file format, operating system, and steps to reproduce. **Help → Export logs** creates a diagnostic report you can attach. Do not publish passwords, keys, or game files you cannot share.
 
 [Installation](docs/install.md) · [Known compatibility limits](docs/compatibility.md) · [Development and building](docs/migration-status.md)
 

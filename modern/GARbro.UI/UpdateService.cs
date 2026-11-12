@@ -33,7 +33,7 @@ public static class UpdateService
     }
     public static async Task<UpdateRelease> CheckAsync()
     {
-        using var response = await client.GetAsync("https://api.github.com/repos/Love-in-idleness/GARbro-no-wpf/releases?per_page=100"); response.EnsureSuccessStatusCode();
+        using var response = await client.GetAsync($"https://api.github.com/repos/{DesktopServices.RepositoryPath}/releases?per_page=100"); response.EnsureSuccessStatusCode();
         using var data = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var releases = data.RootElement.EnumerateArray().Where(r => !r.GetProperty("draft").GetBoolean() &&
             (DesktopServices.Version.Contains('-') || !r.GetProperty("prerelease").GetBoolean())).Select(r => new UpdateRelease(r.GetProperty("tag_name").GetString(),

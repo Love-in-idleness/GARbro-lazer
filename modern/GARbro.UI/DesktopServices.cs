@@ -12,7 +12,8 @@ namespace GARbro.Desktop;
 
 public static class DesktopServices
 {
-    public const string Repository = "https://github.com/Love-in-idleness/GARbro-no-wpf";
+    internal const string RepositoryPath = "Love-in-idleness/GARbro-lazer";
+    public const string Repository = "https://github.com/" + RepositoryPath;
     public static string Version => typeof(MainWindow).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.3.0-preview.1";
     public static string DataDirectory => UiPlatform.DataDirectory ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GARbro");
     public static string CacheDirectory => Path.Combine(DataDirectory, "cache");

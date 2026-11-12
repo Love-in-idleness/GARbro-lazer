@@ -171,7 +171,9 @@ public sealed class ExtractionUiTests
             await window.LoadArchiveAsync(input);await VisibleFiles(window,0);
             Assert.False(SelectionCommand(window).CanExecute(null));
             foreach(string name in new[]{"one.txt","two.txt"})File.WriteAllText(Path.Combine(input,name),name);
-            await window.LoadArchiveAsync(input);await VisibleFiles(window,2);
+            var view=window.GetVisualDescendants().OfType<Button>().Single(c=>c.Name=="MenuView").ContextMenu;
+            view.Items.OfType<MenuItem>().Single(c=>c.Header as string==UiPlatform.CurrentText["Refresh"]).Command.Execute(null);
+            await VisibleFiles(window,2);
             Assert.True(SelectionCommand(window).CanExecute(null));SelectionCommand(window).Execute(null);Assert.Equal(2,files.SelectedItems.Count);
             var search=window.GetVisualDescendants().OfType<TextBox>().Single(c=>c.Name=="Search");search.Text="no matching file";
             await VisibleFiles(window,0);Assert.False(SelectionCommand(window).CanExecute(null));

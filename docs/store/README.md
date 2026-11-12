@@ -5,7 +5,7 @@ Product: **9NP39X1TRVNM**. Identity and Publisher are taken from
 Do not replace them with the side-loaded test identity.
 
 1. In Partner Center, open the existing GARbro product and create a submission.
-2. Upload `garbro-1.0.4-store.msixupload`. It contains self-contained x64/ARM64 packages;
+2. Upload `garbro-1.0.6-store.msixupload`. It contains self-contained x64/ARM64 packages;
    it needs no user-installed .NET runtime and Microsoft applies the Store signature.
 3. Use the English, Simplified Chinese, Russian and Japanese listings in this folder and the supplied
    1440×810 screenshots. Review the public privacy URL, support URL and license.
@@ -19,7 +19,7 @@ Do not replace them with the side-loaded test identity.
    repository's `tests/fixtures/generated` directory. Some game variants require their own
    keys, which are not included. Verify both architectures before submitting.
 
-Only upload `garbro-1.0.4-store.msixupload` (or its `store.msixbundle` counterpart).
+Only upload `garbro-1.0.6-store.msixupload` (or its `store.msixbundle` counterpart).
 It already includes x64 and ARM64. The `win-x64.msix` and `win-arm64.msix` downloads
 use the side-load identity and version scheme and must not be submitted to Store.
 The Store version is `1.0.4.0`; its reserved fourth component is zero.
@@ -39,7 +39,7 @@ or published the app. The current automation has no Partner Center credentials.
 添加截图和隐私链接，完成账户要求的定价、地区、分级及法律声明后提交认证。
 构建产物可直接用于提交；没有后台访问凭据时，自动化不能代替账户持有人提交。
 
-只上传 **`garbro-1.0.4-store.msixupload`**，一个文件包含 x64 和 ARM64。
+只上传 **`garbro-1.0.6-store.msixupload`**，一个文件包含 x64 和 ARM64。
 `win-x64.msix`、`win-arm64.msix` 是本地侧载包，不能提交商店。
 商店版本为 `1.0.4.0`。`runFullTrust` 仍需按后台提示申报并获批；可说明：
 “GARbro 是桌面游戏资源浏览器，需要读取用户选择的本地资源、提取和转换文件，

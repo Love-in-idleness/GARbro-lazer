@@ -150,7 +150,7 @@ def build_deb(stage, output, version, rid='linux-x64'):
     (control/'control').write_text(f'Package: garbro\nVersion: {deb_version}\nArchitecture: {architecture}\n'
         'Section: graphics\nPriority: optional\nMaintainer: GARbro-no-wpf contributors\n'
         f'Depends: {depends}\nRecommends: xdg-desktop-portal\n'
-        'Homepage: https://github.com/Love-in-idleness/GARbro-no-wpf\n'
+        'Homepage: https://github.com/Love-in-idleness/GARbro-lazer\n'
         'Description: Game resource browser and extractor\n'
         ' Browse game archives, preview resources and safely extract their contents.\n')
     for name in ('postinst', 'postrm'):

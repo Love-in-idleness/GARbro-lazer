@@ -76,5 +76,5 @@ jobs:
           if [[ "$RELEASE_PRERELEASE" == true ]]; then flags+=(--prerelease); fi
           gh release create "$RELEASE_TAG_INPUT" artifacts/release/* \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "GARbro $RELEASE_TAG_INPUT" --notes-file "$RELEASE_NOTES" --draft "${flags[@]}"
+            --title "${GITHUB_REPOSITORY##*/} $RELEASE_TAG_INPUT" --notes-file "$RELEASE_NOTES" --draft "${flags[@]}"
           gh release edit "$RELEASE_TAG_INPUT" --repo "$GITHUB_REPOSITORY" --draft=false

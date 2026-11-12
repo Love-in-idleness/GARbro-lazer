@@ -25,4 +25,4 @@ GARbro 在本机处理所选文件，不会上传游戏资源、文件内容、�
 自行写入外部参数文件。预览临时文件保存在本机缓存，切换文件或关闭软件时清理。
 删除 GARbro 的应用数据目录可以清除保存的设置和日志。
 
-Questions / 问题反馈: https://github.com/Love-in-idleness/GARbro-no-wpf/issues
+Questions / 问题反馈: https://github.com/Love-in-idleness/GARbro-lazer/issues
