@@ -38,7 +38,7 @@ jobs:
         run: sudo apt-get update -q && sudo apt-get install -y --no-install-recommends libsdl2-2.0-0 ffmpeg
       - name: Run application regressions once
         if: steps.scope.outputs.app == 'true'
-        run: dotnet test GARbro.NoWpf.slnx -c Release --logger "trx;LogFilePrefix=regression"
+        run: dotnet test GARbro-lazer.slnx -c Release --logger "trx;LogFilePrefix=regression"
         env:
           SDL_AUDIODRIVER: dummy
       - name: Check CLI behavior once

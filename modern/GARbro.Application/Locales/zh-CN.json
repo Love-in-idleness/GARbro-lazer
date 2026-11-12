@@ -28,7 +28,7 @@
   "EmptyHint": "当前位置没有可显示的项目。",
   "NoMatches": "没有匹配的文件",
   "SearchHint": "试试其他文件名，或清空搜索内容。",
-  "Authors": "原作者：morkt · MIT · GARbro-no-wpf 贡献者",
+  "Authors": "原作者：morkt · MIT · GARbro-lazer 贡献者",
   "LegalNotice": "以下许可证与版权声明保留原文。",
   "InterruptedTask": "上次任务已中断，已完成的输出得到保留；重新打开来源后可重试。",
   "Parameter.AFAEncodingCP": "AFA 文件名编码",

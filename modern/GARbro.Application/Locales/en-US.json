@@ -28,7 +28,7 @@
   "EmptyHint": "This location contains no entries.",
   "NoMatches": "No matching files",
   "SearchHint": "Try another filename or clear the search.",
-  "Authors": "Original author: morkt · MIT · GARbro-no-wpf contributors",
+  "Authors": "Original author: morkt · MIT · GARbro-lazer contributors",
   "LegalNotice": "Licenses and copyright notices below retain their original wording.",
   "InterruptedTask": "The previous task was interrupted. Completed outputs were retained; reopen the source to retry.",
   "Parameter.AFAEncodingCP": "AFA filename encoding",

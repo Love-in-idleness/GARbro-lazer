@@ -8,7 +8,7 @@ from pathlib import Path
 from association_probe import verify_candidate
 
 ROOT=Path(__file__).resolve().parents[1]
-APP='io.github.love_in_idleness.GARbro-no-wpf'
+APP='io.github.love_in_idleness.GARbro-lazer'
 log=ROOT/'artifacts/flatpak-gui-startup.log';log.parent.mkdir(parents=True,exist_ok=True)
 exports=Path.home()/'.local/share/flatpak/exports/share'
 entry=exports/'applications'/(APP+'.desktop')

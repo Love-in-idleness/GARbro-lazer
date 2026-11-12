@@ -1,1 +1,1 @@
-1.0.6 preserves the existing Flatpak ID after the repository rename.
+1.0.6 uses the GARbro-lazer Flatpak application ID.

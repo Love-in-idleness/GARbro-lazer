@@ -10,7 +10,7 @@ from pathlib import Path
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('keystore',type=Path)
-    parser.add_argument('--repo',default='Love-in-idleness/GARbro-no-wpf')
+    parser.add_argument('--repo',default='Love-in-idleness/GARbro-lazer')
     args=parser.parse_args()
     password=getpass.getpass('PKCS12 password: ')
     if not password:parser.error('A password is required')

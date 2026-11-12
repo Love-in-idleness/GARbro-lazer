@@ -7,7 +7,7 @@ The original data and license remain intact.
 
 The source is the schema-2 Windows export at commit
 `a181a9760ca42734a034e7e88fc8f85cf13cbf34`, workflow run
-[40984047492](https://github.com/Love-in-idleness/GARbro-no-wpf/actions/runs/40984047492),
+[40984047492](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/40984047492),
 artifact `legacy-runtime-catalog` (ID `12946361447`). `schemes.json` records the
 source-export SHA-256, bundled JSON SHA-256 and exact applied/excluded tag sets.
 The export includes private serialized fields; computed password setters are never

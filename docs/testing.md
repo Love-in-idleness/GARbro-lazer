@@ -3,8 +3,8 @@
 Install a .NET 10 SDK, then run from the repository root:
 
 ```sh
-dotnet build GARbro.NoWpf.slnx -c Release
-dotnet test GARbro.NoWpf.slnx -c Release --no-build
+dotnet build GARbro-lazer.slnx -c Release
+dotnet test GARbro-lazer.slnx -c Release --no-build
 python3 tools/inventory-formats.py --check
 ```
 
@@ -21,7 +21,7 @@ same entry/hash manifest used by the portable integration tests.
 In restricted build environments, MSBuild can run without compiler servers:
 
 ```sh
-dotnet test GARbro.NoWpf.slnx -c Release -m:1 -nr:false -p:UseSharedCompilation=false
+dotnet test GARbro-lazer.slnx -c Release -m:1 -nr:false -p:UseSharedCompilation=false
 ```
 
 This is a build invocation option, not a repository-specific local path dependency.

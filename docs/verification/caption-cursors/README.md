@@ -12,7 +12,7 @@ The backend source and exact hashes are pinned in
 Only Avalonia.Wayland uses `12.1.4-garbro.1`; other Avalonia dependencies remain
 12.1.4. Its assembly identity is unchanged, including version `12.1.4.0` and
 public key token `c8d484a7012f9a8b`. The independent
-[reproduction/API check](https://github.com/Love-in-idleness/GARbro-no-wpf/actions/runs/41683152821)
+[reproduction/API check](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/41683152821)
 passed with SDK 10.0.403 and 60 public/protected API records.
 
 | Check | Evidence |
@@ -27,8 +27,8 @@ passed with SDK 10.0.403 and 60 public/protected API records.
 | X11 | Real Openbox/Xvfb window: maximize, restore, minimize, close and extraction passed; continuous video still produced 22 distinct native pixel regions. |
 | Clean offline restore | Linux x64 and ARM64 restored from a single local feed into empty package caches, including the local patched backend. This local check used runtime packs 10.0.13; the Flatpak matrix uses its pinned 10.0.14 packs. |
 | Windows x64 / ARM64 | Both native backends captured light/dark, English/Chinese hover states and passed caption actions. The x64 matrix completed. ARM64 also passed application tests and native video; its ZIP timestamp error is fixed with a regression test. |
-| Flatpak x64 / ARM64 | Both complete offline builds, sandbox startup and Flathub validation [passed](https://github.com/Love-in-idleness/GARbro-no-wpf/actions/runs/41685587647). |
-| Cross-platform matrix | Full test results, installer checks and KDE traces are retained in [PR checks](https://github.com/Love-in-idleness/GARbro-no-wpf/pull/1/checks). Ubuntu 26.04's newer Wayland header requires the test helper to link libm; this is now explicit. |
+| Flatpak x64 / ARM64 | Both complete offline builds, sandbox startup and Flathub validation [passed](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/41685587647). |
+| Cross-platform matrix | Full test results, installer checks and KDE traces are retained in [PR checks](https://github.com/Love-in-idleness/GARbro-lazer/pull/1/checks). Ubuntu 26.04's newer Wayland header requires the test helper to link libm; this is now explicit. |
 
 KDE 6 protocol captures cover Arrow, Ibeam, Hand, Wait, AppStarting, both axial
 resize cursors, DragCopy/DragMove/DragLink and hidden/visible protocol transitions.

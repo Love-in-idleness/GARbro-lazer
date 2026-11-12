@@ -1,7 +1,7 @@
-# GARbro-no-wpf — 跨平台迁移计划 / Cross-platform Migration Plan
+# GARbro-lazer — 跨平台迁移计划 / Cross-platform Migration Plan
 
 **版本 / Version:** 1.0 (2026-10-30)  
-**仓库 / Repository:** https://github.com/Love-in-idleness/GARbro-no-wpf  
+**仓库 / Repository:** https://github.com/Love-in-idleness/GARbro-lazer
 **上游 / Upstream:** https://github.com/crskycode/GARbro  
 **基线 / Baseline:** `master` fork is currently identical to upstream `master` at the inspected revision; no independent no-WPF changes have yet been identified.
 
@@ -48,7 +48,7 @@
 ## 3. 目标架构 / Target architecture
 
 ```text
-GARbro-no-wpf/
+GARbro-lazer/
   GameRes/                    # Existing core sources, progressively ported
   ArcFormats/                 # Existing decoders
   Legacy/                     # Legacy decoders: retain, migrate separately
@@ -72,7 +72,7 @@ GARbro-no-wpf/
     compatibility.md
     testing.md
   GARbro.sln                  # Historical/Windows baseline until retirement
-  GARbro.NoWpf.slnx          # Modern portable solution
+  GARbro-lazer.slnx          # Modern portable solution
   Directory.Build.props
   Directory.Packages.props
   global.json
@@ -267,8 +267,8 @@ Prefer small dependency-scoped PRs; do not ask an AI tool to migrate hundreds of
 
 1. 创建 `migration/net10` 分支，冻结原版构建及格式清单。
    Create `migration/net10`, freeze the legacy build and catalog inventory.
-2. 新建 `GARbro.NoWpf.slnx` 与最小 SDK-style 平台 IO 测试项目，不直接移除旧解决方案；不要在完全消除图像依赖前要求整个 `GameRes` 编译通过。
-   Create `GARbro.NoWpf.slnx` and a minimal SDK-style platform-I/O test project without deleting the old solution; do not require the entire `GameRes` assembly to build before imaging dependencies are removed.
+2. 新建 `GARbro-lazer.slnx` 与最小 SDK-style 平台 IO 测试项目，不直接移除旧解决方案；不要在完全消除图像依赖前要求整个 `GameRes` 编译通过。
+   Create `GARbro-lazer.slnx` and a minimal SDK-style platform-I/O test project without deleting the old solution; do not require the entire `GameRes` assembly to build before imaging dependencies are removed.
 3. 独立修复 `GameRes/ArcView.cs`，让 Linux 上的简单归档读取单测通过。
    Make `GameRes/ArcView.cs` portable and pass Linux archive-read tests.
 4. 在图像重构前，做 CP932、MEF 插件枚举、选项提供者的基本集成测试。
@@ -289,7 +289,7 @@ Cross-platform coverage must be measured by **fixture-backed extraction behaviou
 
 ## 9. 参考 / References
 
-- Fork: https://github.com/Love-in-idleness/GARbro-no-wpf
+- Fork: https://github.com/Love-in-idleness/GARbro-lazer
 - Upstream: https://github.com/crskycode/GARbro
 - Framework support policy: https://dotnet.microsoft.com/en-us/platform/support/policy
 - Avalonia platforms: https://docs.avaloniaui.net/docs/supported-platforms

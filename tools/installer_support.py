@@ -148,7 +148,7 @@ def build_deb(stage, output, version, rid='linux-x64'):
                'libice6, libsm6, libegl1, libgles2, libwayland-client0, libwayland-egl1, libwayland-cursor0, libxkbcommon0, '
                'libgomp1, libpulse0, libsdl2-2.0-0 (>= 2.0.22), ffmpeg, libglib2.0-bin, desktop-file-utils, shared-mime-info, xdg-utils, python3 (>= 3.9)')
     (control/'control').write_text(f'Package: garbro\nVersion: {deb_version}\nArchitecture: {architecture}\n'
-        'Section: graphics\nPriority: optional\nMaintainer: GARbro-no-wpf contributors\n'
+        'Section: graphics\nPriority: optional\nMaintainer: GARbro-lazer contributors\n'
         f'Depends: {depends}\nRecommends: xdg-desktop-portal\n'
         'Homepage: https://github.com/Love-in-idleness/GARbro-lazer\n'
         'Description: Game resource browser and extractor\n'
@@ -195,7 +195,7 @@ def store_version(application_version=None):
 def msix_manifest(version, rid='win-x64', channel='preview'):
     architecture = {'win-x64': 'x64', 'win-arm64': 'arm64'}[rid]
     _, number = versions(version)
-    identity = store_identity() if channel == 'store' else {'name': IDENTITY, 'publisher': PUBLISHER, 'publisherDisplayName': 'GARbro-no-wpf'}
+    identity = store_identity() if channel == 'store' else {'name': IDENTITY, 'publisher': PUBLISHER, 'publisherDisplayName': 'GARbro-lazer'}
     if channel == 'store': number = store_version(version)
     namespaces = {'': 'http://schemas.microsoft.com/appx/manifest/foundation/windows10',
         'uap': 'http://schemas.microsoft.com/appx/manifest/uap/windows10',

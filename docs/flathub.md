@@ -1,6 +1,6 @@
 # Flathub preparation / Flathub 发布准备
 
-Application ID: `io.github.love_in_idleness.GARbro-no-wpf`. The GitHub namespace
+Application ID: `io.github.love_in_idleness.GARbro-lazer`. The GitHub namespace
 matches the maintainer and repository, without claiming the original GARbro domain.
 The supported targets are x86_64 and aarch64 on Freedesktop 26.08 with .NET 10.
 The Flatpak carries its runtime within the sandbox. DEB and side-loaded Windows
@@ -18,7 +18,7 @@ For local use, install `flatpak`, `org.flatpak.Builder`, the Freedesktop SDK and
 python3 tools/prepare-flathub.py --in-sdk --revision FULL_REVIEWED_COMMIT
 python3 tools/check-flatpak.py
 appstreamcli validate --no-net packaging/flatpak/*.metainfo.xml
-flatpak run --filesystem="$PWD" org.flatpak.Builder --user --install-deps-from=flathub --compose-url-policy=full --mirror-screenshots-url=https://dl.flathub.org/media/ --repo=artifacts/flatpak-repo build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json
+flatpak run --filesystem="$PWD" org.flatpak.Builder --user --install-deps-from=flathub --compose-url-policy=full --mirror-screenshots-url=https://dl.flathub.org/media/ --repo=artifacts/flatpak-repo build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-lazer.json
 ```
 
 The manifest grants Wayland, fallback X11, GPU rendering, PulseAudio and network
@@ -70,7 +70,7 @@ commit, `nuget-sources.json` with both architectures' download hashes, and
 1. Fork https://github.com/flathub/flathub with the `new-pr` branch included.
 2. Create a branch from `new-pr`, add these three JSON files, commit and push.
 3. Open a pull request targeting `flathub/flathub:new-pr`, titled
-   `Add io.github.love_in_idleness.GARbro-no-wpf`.
+   `Add io.github.love_in_idleness.GARbro-lazer`.
 4. Explain that this is the maintained cross-platform GARbro fork, built from source;
    the independent FFmpeg helpers use LGPL source, and .NET uses the SDK extension.
    Attach the matching release/CI links and describe the permissions above.

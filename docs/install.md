@@ -87,7 +87,7 @@ remote for their Freedesktop runtime, then install your downloaded bundle:
 ```sh
 flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 flatpak install --user ./garbro-1.0.6-linux-x64.flatpak
-flatpak run io.github.love_in_idleness.GARbro-no-wpf
+flatpak run io.github.love_in_idleness.GARbro-lazer
 ```
 
 These bundles include .NET and video tools. Flathub catalog publication is pending;

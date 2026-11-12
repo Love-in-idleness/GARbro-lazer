@@ -28,7 +28,7 @@
   "EmptyHint": "この場所には表示する項目がありません。",
   "NoMatches": "一致するファイルがありません",
   "SearchHint": "別のファイル名を試すか、検索をクリアしてください。",
-  "Authors": "原作者：morkt · MIT · GARbro-no-wpf コントリビューター",
+  "Authors": "原作者：morkt · MIT · GARbro-lazer コントリビューター",
   "LegalNotice": "以下のライセンスと著作権表示は原文のまま掲載しています。",
   "InterruptedTask": "前回の処理は中断されました。完了した出力は保持されています。入力を開き直して再試行してください。",
   "Parameter.AFAEncodingCP": "AFA ファイル名の文字コード",

@@ -10,7 +10,7 @@ from pathlib import Path
 from patched_dependencies import local_packages
 
 ROOT=Path(__file__).resolve().parents[1]
-APP='io.github.love_in_idleness.GARbro-no-wpf'
+APP='io.github.love_in_idleness.GARbro-lazer'
 
 def package_records(assets, local=()):
     packages={name.lower():library for name,library in assets['libraries'].items() if library['type']=='package'}

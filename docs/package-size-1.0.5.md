@@ -17,6 +17,6 @@
 
 Windows x64 已通过自带运行时启动、CLI 列出归档、工作进程解码、GUI 打开归档、视频探测和解码首帧检查。ARM64 已构建并通过 SDK 打包校验。Linux x64 已通过解包后的 CLI / 工作进程启动检查，并核对 DEB 内两个系统入口指向同一个应用目录。压缩清单读取和打包规则另有定向回归；未运行全量测试或 macOS 测试。
 
-Windows 构建与上传文件：[Actions 42956251259](https://github.com/Love-in-idleness/GARbro-no-wpf/actions/runs/42956251259)，对应应用源提交 `bb6bd15e`。下载 `store-upload` 产物后，提交其中的 `garbro-1.0.5-store.msixupload` 到 Partner Center。产物还包含安装 bundle 和两个架构的精确大小 JSON；上传文件包含两个架构，每台设备使用对应架构的包。
+Windows 构建与上传文件：[Actions 42956251259](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/42956251259)，对应应用源提交 `bb6bd15e`。下载 `store-upload` 产物后，提交其中的 `garbro-1.0.5-store.msixupload` 到 Partner Center。产物还包含安装 bundle 和两个架构的精确大小 JSON；上传文件包含两个架构，每台设备使用对应架构的包。
 
 本轮只准备并验证上传文件，没有向 Partner Center 提交，也没有创建公开的 GitHub Release。商店显示的大小需在新包审核上线后更新。

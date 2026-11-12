@@ -39,7 +39,7 @@ compact_application(application)
 (application/'libSDL2-2.0.so').unlink(missing_ok=True)
 spec=importlib.util.spec_from_file_location('installer_support',root/'tools/installer_support.py')
 installer=importlib.util.module_from_spec(spec);spec.loader.exec_module(installer)
-app='io.github.love_in_idleness.GARbro-no-wpf'
+app='io.github.love_in_idleness.GARbro-lazer'
 data=Path('/app/share');binary=Path('/app/bin');binary.mkdir(parents=True,exist_ok=True)
 for name,target in [('garbro-desktop','GARbro.Desktop'),('garbro','garbro')]:
     (binary/name).symlink_to(application/target)

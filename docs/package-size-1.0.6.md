@@ -29,8 +29,8 @@ Windows x64 运行时改写直接减少 18,046,440 字节，ARM64 减少 21,912,
 
 定向检查包括类型转发规范化、核对失败规则、原型格式清单和归档列表一致性、未改写文件与运行时配置逐字节一致，以及现有打包与商店身份检查。Windows 构建会核对两个架构，并在 x64 启动 GUI、CLI、解码进程和视频工具。没有运行全量测试或 macOS 测试。
 
-最终 [Actions 42988217993](https://github.com/Love-in-idleness/GARbro-no-wpf/actions/runs/42988217993) 全部通过，应用源提交 `e07fc1a2`。两个架构均通过成员与资源核对、Windows SDK 打包；x64 通过自带运行时启动、CLI 列出归档、工作进程解码、GUI 打开归档、视频探测和首帧解码。ARM64 未做真实设备启动验收。
+最终 [Actions 42988217993](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/42988217993) 全部通过，应用源提交 `e07fc1a2`。两个架构均通过成员与资源核对、Windows SDK 打包；x64 通过自带运行时启动、CLI 列出归档、工作进程解码、GUI 打开归档、视频探测和首帧解码。ARM64 未做真实设备启动验收。
 
-下载 [store-upload 构建产物](https://github.com/Love-in-idleness/GARbro-no-wpf/actions/runs/42988217993/artifacts/13840522132)，向 Partner Center 上传其中的 **`garbro-1.0.6-store.msixupload`**。产物还提供 MSIX bundle、每个架构的大小和运行时核对 JSON。构建产物同时包含两个架构和两种交付格式；表中数值是每台设备选择的单架构包。产物 ZIP 的 SHA-256：`3c3e9fe41bce53811f962569af63abe1a5890564653d0df8a65bb2d8ef0732f2`。
+下载 [store-upload 构建产物](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/42988217993/artifacts/13840522132)，向 Partner Center 上传其中的 **`garbro-1.0.6-store.msixupload`**。产物还提供 MSIX bundle、每个架构的大小和运行时核对 JSON。构建产物同时包含两个架构和两种交付格式；表中数值是每台设备选择的单架构包。产物 ZIP 的 SHA-256：`3c3e9fe41bce53811f962569af63abe1a5890564653d0df8a65bb2d8ef0732f2`。
 
 版本准备为 **1.0.6**，商店内部版本 **1.0.6.0**，避免复用已有上传版本。不创建 GitHub Release，也不自动向 Partner Center 提交；商店公开显示的大小只在新包审核上线后变化。

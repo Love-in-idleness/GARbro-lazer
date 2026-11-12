@@ -37,7 +37,7 @@
 - 重复操作在内容相同的 A、B 路径间切换，避免把 WPF 忽略同路径重新打开计作一次加载。图片重复访问允许使用应用自身缓存。
 - 测试文件是小型合成 XFL、72 字节 PNG，以及含一万个空文件的目录，不代表大型游戏、网络磁盘或复杂图像的用时。
 - 原始 45 组进程记录、每次用时、输入 SHA-256、UI 调度延迟和源提交见 [JSON](benchmarks/v1.0.2/windows-x64.json)。构建与测量可由 [GUI comparison workflow](../.github/workflows/gui-comparison.yml) 复现。
-- 本次执行记录 / Recorded run: [GitHub Actions](https://github.com/Love-in-idleness/GARbro-no-wpf/actions/runs/41590453953)。
+- 本次执行记录 / Recorded run: [GitHub Actions](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/41590453953)。
 
 ## English
 
