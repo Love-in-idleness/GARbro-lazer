@@ -59,7 +59,7 @@ public static class MediaTools
         });
         try
         {
-            long limit = long.TryParse(Environment.GetEnvironmentVariable(MemoryVariable), out long configured) && configured >= 64L << 20 ? configured : 1L << 30;
+            long limit = WorkerSupervisor.ChildMemoryLimit;
             using var parent = Process.GetCurrentProcess();
             var clock = Stopwatch.StartNew();
             while (!process.WaitForExit(50))
@@ -96,7 +96,7 @@ public static class MediaTools
         });
         try
         {
-            long limit=long.TryParse(Environment.GetEnvironmentVariable(MemoryVariable),out long configured) && configured>=64L<<20?configured:1L<<30;
+            long limit=WorkerSupervisor.ChildMemoryLimit;
             using var parent=Process.GetCurrentProcess();var clock=Stopwatch.StartNew();
             while(!process.WaitForExit(50))
             {
@@ -141,7 +141,7 @@ public static class MediaTools
         long fileLimit=maxBytes==long.MaxValue?long.MaxValue:maxBytes+1;
         using var process=Start("ffmpeg",new[]{"-xerror"}.Concat(Input(input)).Concat(encoding).Concat(new[]{"-fs",fileLimit.ToString(System.Globalization.CultureInfo.InvariantCulture),"-n",output}));
         var errors=ReadErrors(process);var clock=Stopwatch.StartNew();using var parent=Process.GetCurrentProcess();
-        long memory=long.TryParse(Environment.GetEnvironmentVariable(MemoryVariable),out long configured) && configured>=64L<<20?configured:1L<<30;
+        long memory=WorkerSupervisor.ChildMemoryLimit;
         try
         {
             while(!process.WaitForExit(50))

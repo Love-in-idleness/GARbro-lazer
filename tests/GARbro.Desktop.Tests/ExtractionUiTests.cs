@@ -115,6 +115,32 @@ public sealed class ExtractionUiTests
         finally {owner.Close();}
     }
     [AvaloniaFact]
+    public async Task BatchConversionAcceptsScriptsWithOtherFormatsDisabled()
+    {
+        var owner = new AppWindow();
+        owner.Show();
+        var text = new DesktopText("en-US");
+        try
+        {
+            var result = Dialogs.Conversion(owner, text, new[] {
+                new ResourceFormatInfo("PNG", "PNG", "image", "PNG", new[] { "png" }, true, null, null)
+            }, Path.GetTempPath(), 1, offerScripts: true);
+            var dialog = Assert.Single(owner.DesktopHost.OwnedWindows);
+            var controls = dialog.GetVisualDescendants().ToArray();
+            Assert.True(controls.OfType<CheckBox>().Single(c => c.Name == "ConvertScripts").IsChecked);
+            foreach (var selector in controls.OfType<ComboBox>().Where(c =>
+                c.Name is "ImageOutputFormat" or "AudioOutputFormat" or "VideoOutputFormat"))
+                selector.SelectedIndex = 0;
+            controls.OfType<Button>().Single(c => c.Content as string == text["Start"])
+                .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            var choice = await result;
+            Assert.True(choice.ConvertScripts);
+            Assert.Null(choice.FormatId);
+        }
+        finally { owner.Close(); }
+    }
+
+    [AvaloniaFact]
     public async Task BatchConversionReportsSkippedTypesAndWritesTheSelectedWebp()
     {
         string root=Path.Combine(Path.GetTempPath(),"garbro-batch-ui-"+Guid.NewGuid()),input=Path.Combine(root,"input"),output=Path.Combine(root,"out");Directory.CreateDirectory(input);

@@ -38,7 +38,7 @@ Limits cover the whole recursive operation; increase them in Settings when neede
 
 Create archive uses the selected files/directories, or the current directory
 when nothing is selected. Select a writable format and review its parameters.
-Convert multimedia writes new image/audio files to the chosen destination.
+Batch convert writes new image/audio files to the chosen destination.
 Physical files can be moved to the operating system's recycle bin after confirmation.
 
 ## Preview
@@ -100,5 +100,13 @@ Discard options affect output copies only. Game source files are preserved. Fail
 Choose **WebP (lossless)** under Image output format when extracting or converting. Transparency is retained. The conversion dialog reports converted, skipped and failed files separately; types set to Keep original format are skipped. Creating an archive, extracting and converting all keep the selection captured when the command starts.
 
 `garbro convert image.png -o image.webp` chooses WebP from the output extension. WAV, FLAC, M4A, MP4 and MKV work in the same way. Use `garbro extract --help` for media conversion during extraction, including `--image-format webp`, `--audio-format wav`, `--video-format mp4`, `--discard-original-media` and `--discard-child-archives`. The last option requires `--nested`. Source files are preserved.
+
+## Convert scripts
+
+Select a GSC or RPYC file on disk or in an archive, open **Convert** and enable **Convert scripts**. GSC becomes UTF-8 TSC. RPYC becomes RPY.
+
+Install [LiarsoftTool](https://github.com/Love-in-idleness/LiarsoftTool) 2.3.1 or later and [unrpyc](https://github.com/CensoredUsername/unrpyc) 2.x. Put the tools on `PATH` or set `GARBRO_LIARSOFTTOOL` and `GARBRO_UNRPYC` to their absolute paths before starting GARbro. For `unrpyc.py`, install Python 3.9 or newer on `PATH` too. Flatpak needs helpers that can run inside its sandbox.
+
+`garbro convert scene.gsc -o scene.tsc --encoding gbk` selects GBK explicitly. Auto lets LiarsoftTool detect the encoding. Use `garbro convert scripts.rpa --entry game/script.rpyc -o script.rpy` for an archive entry, using the entry name shown by `garbro list`.
 
 `--recursive` traverses disk folders; `--nested` expands child archives. Ordinary recursive disk scans skip unrecognized files and keep relative directories. Global options may precede the command; `--` protects input filenames beginning with a dash. Existing single-archive extraction and JSON field names remain supported.

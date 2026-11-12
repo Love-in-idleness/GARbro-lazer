@@ -28,7 +28,7 @@ Ctrl/Cmd+T 新建标签，Ctrl/Cmd+W 关闭标签，Ctrl+Tab / Ctrl+Shift+Tab �
 递归任务共享输出限制，可在设置中调整时间和内存上限。
 
 “创建归档”使用所选文件、目录；未选择时使用当前目录。选择可写格式并检查对应参数。
-“批量媒体转换”将图像或音频写入指定目录。磁盘文件在确认后可移入系统回收站。
+“批量转换”将图像或音频写入指定目录。磁盘文件在确认后可移入系统回收站。
 
 ## 预览
 
@@ -72,12 +72,20 @@ Alt+Shift+T/M/S 切换工具栏、菜单栏、状态栏；Alt 可恢复隐藏菜
 
 图像、音频、视频各有独立的输出格式。音频可选自动通用格式、WAV、FLAC、M4A；视频可选 MP4 或保留音视频流的 MKV。“保持原格式”只复制资源，不转换。普通文件直接写入输出目录，归档展开到同名 `.unpacked` 目录。
 
-“不保留原始多媒体”和“不保留子归档”仅清理输出副本，源游戏文件不修改。转换或子归档处理失败会列出具体条目，并保留可恢复的副本；不要把“没有符合条件的文件”当作提取成功。批量媒体转换使用相同的格式选项。
+“不保留原始多媒体”和“不保留子归档”仅清理输出副本，源游戏文件不修改。转换或子归档处理失败会列出具体条目，并保留可恢复的副本；不要把“没有符合条件的文件”当作提取成功。批量转换使用相同的格式选项。
 
 ## WebP 与命令行转换
 
 提取或批量转换时，在“图像输出格式”中选择 **WebP（无损）**，即可保留透明通道进行转换。转换结果会分别显示成功、跳过和失败数；设为“保持原格式”的类型会跳过。创建归档、提取和转换均使用点击命令时的选择范围。
 
 `garbro convert image.png -o image.webp` 会按输出扩展名选用 WebP。WAV、FLAC、M4A、MP4、MKV 的用法相同。用 `garbro extract --help` 查看提取时的转换选项，例如 `--image-format webp`、`--audio-format wav`、`--video-format mp4`，以及清理输出副本的 `--discard-original-media` 和 `--discard-child-archives`。后者须配合 `--nested`。这些操作始终保留源文件。
+
+## 脚本转换
+
+选中磁盘或归档中的 GSC、RPYC 文件，打开「转换」并勾选「转换脚本」。GSC 导出为 UTF-8 TSC，RPYC 导出为 RPY。
+
+安装 [LiarsoftTool](https://github.com/Love-in-idleness/LiarsoftTool) 2.3.1 或更新版本，以及 [unrpyc](https://github.com/CensoredUsername/unrpyc) 2.x。将工具加入 `PATH`，或在启动 GARbro 前，将 `GARBRO_LIARSOFTTOOL` 和 `GARBRO_UNRPYC` 分别设为工具的绝对路径。使用 `unrpyc.py` 时，还需将 Python 3.9 或更新版本加入 `PATH`。Flatpak 需要能在其沙箱内运行的工具。
+
+`garbro convert scene.gsc -o scene.tsc --encoding gbk` 显式指定 GBK。选择「自动」时由 LiarsoftTool 检测编码。转换归档条目可用 `garbro convert scripts.rpa --entry game/script.rpyc -o script.rpy`，条目名称以 `garbro list` 的结果为准。
 
 `--recursive` 遍历磁盘目录，`--nested` 展开子归档。普通磁盘递归扫描会跳过无法识别的文件，保留相对目录。全局参数可放在命令前；文件名以短横线开头时，可放在 `--` 后。原有单归档提取用法和 JSON 字段保持兼容。

@@ -1,6 +1,7 @@
 namespace GARbro.Domain
 
 open System
+open System.IO
 
 /// Selection is an intersection with the browsed directory, never a request to widen the scope.
 [<AbstractClass; Sealed>]
@@ -46,3 +47,13 @@ type MediaOutputFormats private () =
 [<AbstractClass; Sealed>]
 type ImageOutputFormats private () =
     static member Common = [| "PNG"; "WEBP"; "BMP"; "JPEG"; "TIFF"; "TGA" |]
+
+[<AbstractClass; Sealed>]
+type ScriptOutputFormats private () =
+    static member ForInput(name: string) =
+        match (Path.GetExtension(name) |> Option.ofObj |> Option.defaultValue "").ToLowerInvariant() with
+        | ".gsc" -> "TSC"
+        | ".rpyc" -> "RPY"
+        | _ -> null
+
+    static member Supports(format: string) = format = "TSC" || format = "RPY"

@@ -313,7 +313,10 @@ public static partial class ResourceService
     }
     public static (string Format,string Output) MediaConversionTarget(ResourceSession session,string name,string output,ResourceExtractionOptions options)
     {
-        string kind=MediaKind(session,name,options.TypeOverrides?.GetValueOrDefault(name));
+        string forcedType=options.TypeOverrides?.GetValueOrDefault(name);
+        if ((forcedType is null or "script") && ScriptOutputFormats.ForInput(name) is string script)
+            return options.ConvertScripts ? (script,Path.ChangeExtension(output,script.ToLowerInvariant())) : (null,null);
+        string kind=MediaKind(session,name,forcedType);
         string format=kind switch {"image"=>options.ImageFormat,"audio"=>options.AudioFormat,"video"=>options.VideoFormat,_=>null};
         if(format==null)return (null,null);
         format=MediaOutputFormats.Normalize(format);
@@ -321,20 +324,23 @@ public static partial class ResourceService
         return (format,Path.ChangeExtension(output,extension));
     }
 
-    public static ResourceConversion ConvertFile(ResourceSession session, string name, string output, string formatId, OverwritePolicy overwrite, long maxBytes = 2L << 30, ISet<string> completed = null, bool adjustImageOffset = false, ISet<string> prohibited = null)
+    public static ResourceConversion ConvertFile(ResourceSession session, string name, string output, string formatId, OverwritePolicy overwrite, long maxBytes = 2L << 30, ISet<string> completed = null, bool adjustImageOffset = false, ISet<string> prohibited = null, CancellationToken cancellation = default)
     {
         formatId=MediaOutputFormats.Normalize(formatId);
         if (formatId == "AUTO") formatId = "AUDIO";
         if (formatId is "FLAC" or "M4A" or "MP4" or "MKV")
             return ConvertStandardMedia(session,name,output,formatId,overwrite,maxBytes,completed,prohibited);
+        bool script = ScriptOutputFormats.Supports(formatId);
+        if (script && ScriptOutputFormats.ForInput(name) != formatId)
+            throw new NotSupportedException("The selected script output requires GSC → TSC or RPYC → RPY.");
         string scratch = WorkerTemporaryFiles.CreateDirectory(Path.GetTempPath());
         string temporary = null;
         try
         {
-            string path = Path.Combine(scratch, Path.GetFileName(name));
+            string path = Path.Combine(scratch, script ? "input" + Path.GetExtension(name).ToLowerInvariant() : Path.GetFileName(name));
             using (var sourceInput = session.OpenEntry(name))
             using (var target = File.Create(path)) CopyBounded(sourceInput, target, 2L << 30);
-            using var input = new BinaryStream(File.OpenRead(path), name);
+            using var input = script ? null : new BinaryStream(File.OpenRead(path), name);
             using var audio = formatId is "WAV" or "AUDIO" ? AudioFormat.Read(input) : null;
             if(formatId is "WAV" or "AUDIO" && audio==null)
                 return ConvertStandardMedia(session,name,output,"WAV",overwrite,maxBytes,completed,prohibited);
@@ -359,7 +365,9 @@ public static partial class ResourceService
             using (var file = new FileStream(temporary, FileMode.CreateNew, FileAccess.ReadWrite))
             using (var bounded = new BoundedOutput(file, maxBytes))
             {
-                if (audio != null)
+                if (script)
+                    ScriptTools.Convert(path, bounded, formatId, maxBytes, cancellation);
+                else if (audio != null)
                 {
                     if (passthrough) { audio.Source.Position = 0; CopyBounded(audio.Source, bounded, maxBytes); }
                     else AudioFormat.Wav.Write(audio, bounded);

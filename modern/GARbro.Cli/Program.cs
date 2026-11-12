@@ -163,13 +163,17 @@ internal static class Program
                     throw new ArgumentException("convert requires one input and an output file.");
                 var target=MediaOutputFormats.Normalize(Get("--to",Path.GetExtension(output).TrimStart('.')));
                 string input=Path.GetFullPath(files[0]);output=Path.GetFullPath(output);
+                string entry=Get("--entry");
+                bool script=ScriptOutputFormats.Supports(target);
+                if(entry!=null && !script)
+                    throw new ArgumentException("--entry is only supported for script conversion.");
                 if(input.Equals(output,OperatingSystem.IsWindows()?StringComparison.OrdinalIgnoreCase:StringComparison.Ordinal))
                     throw new IOException("Cannot replace a source document. Choose another destination.");
-                if (target is "WAV" or "FLAC" or "M4A" or "MP4" or "MKV" or "AUTO" or "AUDIO")
+                if (script || target is "WAV" or "FLAC" or "M4A" or "MP4" or "MKV" or "AUTO" or "AUDIO")
                 {
                     if(Get("--format")!=null)throw new ArgumentException("Forced input formats are only supported for image conversion.");
-                    using var resource=new ResourceSession(new(Path.GetDirectoryName(input)),provider);
-                    var result=ResourceService.ConvertFile(resource,Path.GetFileName(input),output,target,overwrite,maxEntry);
+                    using var resource=new ResourceSession(new(entry==null?Path.GetDirectoryName(input):input),provider);
+                    var result=ResourceService.ConvertFile(resource,entry??Path.GetFileName(input),output,target,overwrite,maxEntry,cancellation:cancel.Token);
                     if (json)
                         Emit(new { input = files[0], output=result.Path, format=target });
                     else

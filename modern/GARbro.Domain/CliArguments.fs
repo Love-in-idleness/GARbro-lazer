@@ -18,7 +18,7 @@ type CliArguments private () =
     static member Parse(args: string[]) : CliInvocation =
         let commands = set [ "formats"; "schemes"; "probe"; "list"; "extract"; "convert" ]
         let flags = set [ "--json"; "--recursive"; "--nested"; "--discard-child-archives"; "--discard-original-media"; "--help"; "-h"; "--version" ]
-        let options = set [ "--output"; "--format"; "--type"; "--to"; "--overwrite"; "--options"; "--scheme"; "--schemes"; "--max-depth"; "--max-entry"; "--max-total"; "--max-ratio"; "--timeout"; "--max-memory"; "--max-pixels"; "--encoding"; "--image-format"; "--audio-format"; "--video-format" ]
+        let options = set [ "--output"; "--format"; "--type"; "--to"; "--entry"; "--overwrite"; "--options"; "--scheme"; "--schemes"; "--max-depth"; "--max-entry"; "--max-total"; "--max-ratio"; "--timeout"; "--max-memory"; "--max-pixels"; "--encoding"; "--image-format"; "--audio-format"; "--video-format" ]
         let values = Dictionary<string,string>(StringComparer.Ordinal)
         let enabled = HashSet<string>(StringComparer.Ordinal)
         let inputs = ResizeArray<string>()
@@ -73,7 +73,7 @@ type CliArguments private () =
                 | "formats" -> set [ "--type" ]
                 | "schemes" -> Set.empty
                 | "probe" | "list" -> Set.union decoder disk
-                | "convert" -> Set.union decoder (set [ "--output"; "--to"; "--overwrite"; "--max-entry"; "--max-pixels" ])
+                | "convert" -> Set.union decoder (set [ "--output"; "--to"; "--entry"; "--overwrite"; "--max-entry"; "--max-pixels" ])
                 | "extract" -> Set.unionMany [ decoder; disk; set [ "--output"; "--overwrite"; "--nested"; "--max-entry"; "--max-total"; "--max-ratio"; "--image-format"; "--audio-format"; "--video-format"; "--discard-child-archives"; "--discard-original-media" ] ]
                 | _ -> Set.empty
             for key in Seq.append values.Keys enabled do

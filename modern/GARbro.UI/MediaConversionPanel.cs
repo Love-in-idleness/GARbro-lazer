@@ -14,13 +14,15 @@ namespace GARbro.Desktop;
 public sealed class MediaConversionPanel : StackPanel
 {
     readonly ComboBox image,audio,video;
+    readonly CheckBox scripts;
     public event Action Changed;
     static string Value(ComboBox selector) => (selector.SelectedItem as UiChoice)?.Value is {Length:>0} value?value:null;
     public string ImageFormat => Value(image);
     public string AudioFormat => Value(audio);
     public string VideoFormat => Value(video);
-    public bool HasConversion => ImageFormat!=null || AudioFormat!=null || VideoFormat!=null;
-    public MediaConversionPanel(DesktopText text,ResourceFormatInfo[] imageFormats=null,bool batch=false)
+    public bool ConvertScripts => scripts?.IsChecked==true;
+    public bool HasConversion => ImageFormat!=null || AudioFormat!=null || VideoFormat!=null || ConvertScripts;
+    public MediaConversionPanel(DesktopText text,ResourceFormatInfo[] imageFormats=null,bool batch=false,bool offerScripts=false)
     {
         Spacing=10;var columns=new Grid {ColumnDefinitions=new("*,*,*"),ColumnSpacing=12,RowSpacing=8};Children.Add(columns);
         ComboBox Selector(string name,string label,UiChoice[] choices,int initial)
@@ -46,5 +48,16 @@ public sealed class MediaConversionPanel : StackPanel
             for(int i=0;i<columns.Children.Count;i++){Grid.SetColumn(columns.Children[i],narrow?0:i);Grid.SetRow(columns.Children[i],narrow?i:0);}
         };
         Children.Add(new TextBlock {Text=text["MediaConversionHint"],TextWrapping=TextWrapping.Wrap,Classes={"muted"}});
+        if (offerScripts)
+        {
+            scripts = new CheckBox
+            {
+                Name = "ConvertScripts", IsChecked = true,
+                Content = new TextBlock { Text = text["ConvertScripts"], TextWrapping = TextWrapping.Wrap }
+            };
+            scripts.IsCheckedChanged += (_, _) => Changed?.Invoke();
+            Children.Add(scripts);
+            Children.Add(new TextBlock { Text = text["ScriptConverterHint"], TextWrapping = TextWrapping.Wrap, Classes = { "muted" } });
+        }
     }
 }

@@ -43,7 +43,9 @@ jobs:
           SDL_AUDIODRIVER: dummy
       - name: Check CLI behavior once
         if: steps.scope.outputs.app == 'true'
-        run: python tools/smoke-cli.py
+        run: |
+          dotnet build modern/GARbro.Cli/GARbro.Cli.csproj -c Release
+          python tools/smoke-cli.py
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

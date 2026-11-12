@@ -287,7 +287,8 @@ public sealed partial class MainWindow
         {
             catalog??=await Request<ResourceFormatInfo[]>(new("resource-catalog",null));
             if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return (ConversionChoice)null;}
-            return await Dialogs.Conversion(this,Text,catalog.Where(f=>f.Type=="image"&&f.CanWrite).ToArray(),Settings.OutputDirectory,selected.Length);
+            bool offerScripts=!UiPlatform.IsMobile && selected.Any(e=>ScriptOutputFormats.ForInput(e.Name)!=null);
+            return await Dialogs.Conversion(this,Text,catalog.Where(f=>f.Type=="image"&&f.CanWrite).ToArray(),Settings.OutputDirectory,selected.Length,offerScripts);
         });
         if(choice==null)return;
         if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return;}
@@ -306,7 +307,7 @@ public sealed partial class MainWindow
                     string target=ExtractionPath.Resolve(choice.Output,ExtractionScope.RelativeName(source.Directory,entry.Name));
                     var result=await Request<ResourceConversion>(new("resource-convert",null,Location:source,Entry:entry.Name,Output:target,FormatId:"MEDIA",Overwrite:choice.Overwrite,
                         ResourceOptions:new(ImageFormat:choice.FormatId,AudioFormat:choice.AudioFormat,VideoFormat:choice.VideoFormat,
-                            TypeOverrides:overrides,DiscardOriginalMedia:choice.DiscardOriginalMedia)),operation.Token);
+                            TypeOverrides:overrides,DiscardOriginalMedia:choice.DiscardOriginalMedia,ConvertScripts:choice.ConvertScripts)),operation.Token);
                     if(result.Path!=null && result.Written)done++;else skipped++;
                 }
                 catch(WorkerOperationException e){failures.Add(entry.DisplayName+": "+e.Message);DesktopServices.Log(e);}

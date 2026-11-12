@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using GameRes;
+using GARbro.Domain;
 using GARbro.Media;
 using Newtonsoft.Json;
 using JsonSerializer = System.Text.Json.JsonSerializer;
@@ -80,7 +81,7 @@ public sealed class ResourceSession : IDisposable
         if (physical)
         {
             var items = new DirectoryInfo(Location.RootPath).EnumerateFileSystemInfos().Select(f =>
-                new BrowserEntry(f.Name, f.Name, f is DirectoryInfo ? "directory" : MediaInfo.IsVideoName(f.Name) ? "video" : MediaInfo.IsAudioName(f.Name)?"audio":FormatCatalog.Instance.GetTypeFromName(f.Name),
+                new BrowserEntry(f.Name, f.Name, f is DirectoryInfo ? "directory" : LightweightResources.Type(f.Name, FormatCatalog.Instance.GetTypeFromName(f.Name)),
                     f is FileInfo file ? file.Length : 0, f is DirectoryInfo)).ToArray();
             return new(Location, "directory", true, items);
         }
@@ -101,7 +102,7 @@ public sealed class ResourceSession : IDisposable
                 string directory = prefix + rest[..slash];
                 if (dirs.Add(directory)) entries.Add(new(directory, rest[..slash], "directory", 0, true));
             }
-            else entries.Add(new(entry.Name, rest, MediaInfo.IsVideoName(entry.Name) ? "video" : MediaInfo.IsAudioName(entry.Name)?"audio":entry.Type, entry.Size, false, id));
+            else entries.Add(new(entry.Name, rest, LightweightResources.Type(entry.Name, entry.Type ?? ""), entry.Size, false, id));
         }
         return new(Location with { Fingerprint = ArchiveFingerprint.Read(Location.RootPath) }, Synthetic ? "media" : Archive.Tag, false, entries.ToArray(), FormatIdentity.Of(Archive.Format));
     }
@@ -175,7 +176,7 @@ public static partial class ResourceService
         string forcedType = null, long offset = 0, IOptionsProvider options = null, string previewMode = "auto", string previewEncoding = null, string output = null, int width = 0, int height = 0)
     {
         using var session = BrowserDecoderSession.Open(location, options);
-        if (previewMode == "hex")
+        if (previewMode == "hex" || forcedType == null && ScriptOutputFormats.ForInput(name) != null)
         {
             using var input = session.OpenEntry(name);
             return LightweightResources.ReadPage(input, name, offset, true, previewEncoding ?? context.TextEncoding);

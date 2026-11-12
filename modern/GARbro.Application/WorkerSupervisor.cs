@@ -25,6 +25,10 @@ namespace GARbro.Application
     /// <summary>Keep decoder crashes and unresponsive operations outside the caller.</summary>
     public static class WorkerSupervisor
     {
+        internal static long ChildMemoryLimit =>
+            long.TryParse(Environment.GetEnvironmentVariable(MediaTools.MemoryVariable), out long limit) && limit >= 64L << 20
+                ? limit : 1L << 30;
+
         [DllImport("kernel32.dll", ExactSpelling=true)]
         static extern int GetCurrentPackageFullName(ref uint length, IntPtr packageName);
         static bool HasPackageIdentity()

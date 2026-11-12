@@ -25,7 +25,8 @@ public sealed record DecoderContext(string TextEncoding = "auto", string Languag
     static readonly JsonSerializerOptions compatibleSettings = new()
     { NumberHandling = JsonNumberHandling.AllowReadingFromString };
     public Encoding ResolveEncoding() => string.IsNullOrWhiteSpace(TextEncoding) || TextEncoding == "auto" ? null :
-        int.TryParse(TextEncoding, out int cp) ? Encoding.GetEncoding(cp) : Encoding.GetEncoding(TextEncoding.ToLowerInvariant() switch { "gbk" => "gbk", "shift-jis" or "shift_jis" => "shift_jis", _ => TextEncoding });
+        int.TryParse(TextEncoding, out int cp) ? Encoding.GetEncoding(cp) : Encoding.GetEncoding(TextEncoding.ToLowerInvariant() switch
+        { "cp936" => "gbk", "cp932" or "shift-jis" or "shift_jis" => "shift_jis", _ => TextEncoding });
 
     public void Apply()
     {
@@ -81,7 +82,7 @@ public sealed record VideoArtifact(string Path, long Bytes, GARbro.Media.VideoIn
 public sealed record ResourceExtractionOptions(bool Recursive = false, int MaxDepth = 8, string[] Types = null,
     string ImageFormat = null, bool ConvertAudio = false, bool AdjustImageOffset = false, Dictionary<string, string> TypeOverrides = null,
     bool DiscardChildArchives = false, bool DiscardOriginalMedia = false, string AudioFormat = null, string VideoFormat = null,
-    bool? RecurseDirectories = null);
+    bool? RecurseDirectories = null, bool ConvertScripts = false);
 public sealed record ResourceJobReport(ExtractedFile[] Files, string[] Errors, long Bytes, int Entries = 0);
 public sealed record ResourceConversion(string Path, long Bytes, bool Written = true);
 public sealed class InvalidSchemeDatabaseException(string message) : IOException(message);
