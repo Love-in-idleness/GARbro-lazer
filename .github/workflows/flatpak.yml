@@ -42,7 +42,9 @@ jobs:
         run: |
           python3 tools/check-flatpak.py
           appstreamcli validate --no-net packaging/flatpak/*.metainfo.xml
-          flatpak run --filesystem="$PWD" --command=flatpak-builder-lint org.flatpak.Builder manifest artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json
+          # The existing application ID resolves through GitHub's repository rename.
+          test "$(curl -fsSL --max-time 30 -o /dev/null -w '%{url_effective}' https://github.com/love-in-idleness/garbro-no-wpf)" = https://github.com/Love-in-idleness/GARbro-lazer
+          flatpak run --filesystem="$PWD" --command=flatpak-builder-lint org.flatpak.Builder --exceptions --user-exceptions packaging/flatpak/lint-exceptions.json manifest artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json
       - name: Build without network access in the build sandbox
         run: |
           dbus-run-session -- flatpak run --filesystem="$PWD" org.flatpak.Builder --user --force-clean --compose-url-policy=full --mirror-screenshots-url=https://dl.flathub.org/media/ --repo=artifacts/flatpak-repo --install-deps-from=flathub build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-no-wpf.json
@@ -59,7 +61,7 @@ jobs:
       - name: Validate the built repository with Flathub tooling
         run: |
           python3 tools/inspect-flatpak-media.py build-flatpak
-          flatpak run --filesystem="$PWD" --command=flatpak-builder-lint org.flatpak.Builder repo artifacts/flatpak-repo
+          flatpak run --filesystem="$PWD" --command=flatpak-builder-lint org.flatpak.Builder --exceptions --user-exceptions packaging/flatpak/lint-exceptions.json repo artifacts/flatpak-repo
       - name: Package the immutable Flathub submission
         if: matrix.arch == 'x86_64'
         run: python3 tools/package-flathub.py
