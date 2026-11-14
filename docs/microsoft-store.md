@@ -20,7 +20,7 @@ reserved by Store requirements. Increment this independently for every new Store
 submission, including repeated application previews; never reuse a submitted
 package version.
 
-The `Microsoft Store packages` workflow prepares upload artifacts. Submission
+The `Microsoft Store packages` workflow runs through Release or a manual dispatch, avoiding a second build for the same release push. It prepares upload artifacts. Submission
 still requires an authorized Partner Center account, listing screenshots,
 privacy-policy URL, age-rating questionnaire and certification answers. The
 Store page/deep link should be advertised after the product is live.

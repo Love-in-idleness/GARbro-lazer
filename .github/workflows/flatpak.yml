@@ -5,7 +5,7 @@ on:
     inputs:
       package_version:
         type: string
-        default: 1.0.4
+        default: 1.1.0
 permissions:
   contents: read
 concurrency:
@@ -24,7 +24,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     env:
-      GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.0.4' }}
+      GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.1.0' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -46,7 +46,7 @@ jobs:
       - name: Build without network access in the build sandbox
         run: |
           dbus-run-session -- flatpak run --filesystem="$PWD" org.flatpak.Builder --user --force-clean --compose-url-policy=full --mirror-screenshots-url=https://dl.flathub.org/media/ --repo=artifacts/flatpak-repo --install-deps-from=flathub build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-lazer.json
-          flatpak build-bundle artifacts/flatpak-repo artifacts/garbro-${{ inputs.package_version || '1.0.4' }}-linux-${{ matrix.arch == 'aarch64' && 'arm64' || 'x64' }}.flatpak io.github.love_in_idleness.GARbro-lazer
+          flatpak build-bundle artifacts/flatpak-repo artifacts/garbro-${{ inputs.package_version || '1.1.0' }}-linux-${{ matrix.arch == 'aarch64' && 'arm64' || 'x64' }}.flatpak io.github.love_in_idleness.GARbro-lazer
       - name: Verify self-contained CLI and worker in the sandbox
         run: |
           dbus-run-session -- flatpak-builder --run build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-lazer.json garbro --help
