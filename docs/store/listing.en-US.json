@@ -1,0 +1,23 @@
+{
+  "title": "GARbro",
+  "shortDescription": "Browse game resources, preview media and extract archives.",
+  "description": "Open game resource archives and folders, look through their contents and extract the files you need. Preview images, text, audio and video without leaving the app. Playback starts only when you press Play.\n\nBrowse nested archives, extract recursively, create supported archive formats and convert images or audio. Choose filename encoding, output location, conflict handling and optional cleanup of extracted copies. Your source game files are preserved.\n\nGARbro includes light and dark themes, English, Simplified Chinese, Russian and Japanese interfaces, configurable keyboard shortcuts, offline help and a command-line tool. The Store package includes the required .NET runtime.\n\nSome game-specific encryption methods and format variants are unsupported or unverified. You must supply any required game keys or passwords. GARbro does not include game assets.",
+  "features": [
+    "Game archives and folders",
+    "Manual image, audio and video preview",
+    "Nested and recursive extraction",
+    "Image/audio conversion",
+    "Light/dark themes and filename encoding",
+    "English, Simplified Chinese, Russian and Japanese",
+    "Command-line tools included",
+    "Configurable keyboard shortcuts and archive file associations"
+  ],
+  "keywords": [
+    "game resources",
+    "archive",
+    "extract",
+    "preview"
+  ],
+  "supportUrl": "https://github.com/Love-in-idleness/GARbro-lazer/issues",
+  "privacyUrl": "https://github.com/Love-in-idleness/GARbro-lazer/blob/migration/net10/docs/privacy.md"
+}

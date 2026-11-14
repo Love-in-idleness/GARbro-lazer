@@ -26,7 +26,14 @@
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+
+#endif
 
 namespace GameRes.Formats.Peach
 {
@@ -104,7 +111,7 @@ namespace GameRes.Formats.Peach
             {
                 WaveAudio.WriteRiffHeader (mem, format, pcm_size);
                 mem.Position = 0;
-                mem.Read (output, 0, 0x2C);
+                mem.ReadExactlyCompat (output, 0, 0x2C);
             }
 
             return new BinMemoryStream (output);

@@ -26,8 +26,13 @@
 using System;
 using System.IO;
 using System.Linq;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
 
 namespace GameRes
 {
@@ -126,11 +131,8 @@ namespace GameRes
         public static ImageData Create (ImageMetaData info, PixelFormat format, BitmapPalette palette,
                                         Array pixel_data)
         {
-            if (format.BitsPerPixel == 4)
-                return Create(info, format, palette, pixel_data,
-                    (int)info.Width*format.BitsPerPixel/8);
             return Create(info, format, palette, pixel_data,
-                (int)info.Width*((format.BitsPerPixel+7)/8));
+                checked((int)(((long)info.Width * format.BitsPerPixel + 7) / 8)));
         }
 
         public static ImageData CreateFlipped (ImageMetaData info, PixelFormat format, BitmapPalette palette,
@@ -138,7 +140,11 @@ namespace GameRes
         {
             var bitmap = BitmapSource.Create ((int)info.Width, (int)info.Height, DefaultDpiX, DefaultDpiY,
                                               format, palette, pixel_data, stride);
+#if NET8_0_OR_GREATER
+            var flipped = bitmap.FlipVertical();
+#else
             var flipped = new TransformedBitmap (bitmap, new ScaleTransform { ScaleY = -1 });
+#endif
             flipped.Freeze();
             return new ImageData (flipped, info);
         }

@@ -26,7 +26,14 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+
 using GameRes.Utility;
 
 namespace GameRes.Formats.Brownie
@@ -110,7 +117,7 @@ namespace GameRes.Formats.Brownie
                 }
                 else
                 {
-                    m_input.Read (m_output, dst, Stride);
+                    m_input.AsStream.ReadExactlyCompat (m_output, dst, Stride);
                 }
                 dst += Stride;
             }
@@ -148,7 +155,7 @@ namespace GameRes.Formats.Brownie
 
         int ReadBitsLine (int dst)
         {
-            m_input.Read (m_bits, 0, m_bits.Length);
+            m_input.AsStream.ReadExactlyCompat (m_bits, 0, m_bits.Length);
             int bsrc = 0;
             int count = Stride;
             while (bsrc < m_bits.Length && count > 0)

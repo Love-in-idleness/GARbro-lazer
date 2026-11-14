@@ -1,0 +1,22 @@
+<Project>
+  <ItemGroup>
+    <Compile Include="../../Experimental/Artemis/ImageIPT.cs" Link="Experimental/Artemis/ImageIPT.cs" />
+    <Compile Include="../../Experimental/CatSystem/ArcIRIS.cs" Link="Experimental/CatSystem/ArcIRIS.cs" />
+    <Compile Include="../../Experimental/CellWorks/ArcDB.cs" Link="Experimental/CellWorks/ArcDB.cs" />
+    <Compile Include="../../Experimental/CatSystem/ImageATX.cs" Link="Experimental/CatSystem/ImageATX.cs" />
+    <Compile Include="../../Experimental/Artemis/GplexBuffers.cs" Link="Experimental/Artemis/GplexBuffers.cs" />
+    <Compile Include="../../Experimental/Microsoft/ArcEXE.cs" Link="Experimental/Microsoft/ArcEXE.cs" />
+    <Compile Include="../../Experimental/Microsoft/ArcNE.cs" Link="Experimental/Microsoft/ArcNE.cs" />
+    <Compile Include="../../Experimental/Opus/AudioOPUS.cs" Link="Experimental/Opus/AudioOPUS.cs" />
+    <Compile Include="../../Experimental/RPGMaker/ArcRGSS.cs" Link="Experimental/RPGMaker/ArcRGSS.cs" />
+    <Compile Include="../../Experimental/RPGMaker/AudioRPGMV.cs" Link="Experimental/RPGMaker/AudioRPGMV.cs" />
+    <Compile Include="../../Experimental/RPGMaker/ImageRPGMV.cs" Link="Experimental/RPGMaker/ImageRPGMV.cs" />
+    <Compile Include="../../Experimental/Artemis/ShiftReduceParserCode.cs" Link="Experimental/Artemis/ShiftReduceParserCode.cs" />
+    <Compile Include="../../Experimental/SakanaGL/ArcSX.cs" Link="Experimental/SakanaGL/ArcSX.cs" />
+    <Compile Include="../../Experimental/WebP/ImageWEBP.cs" Link="Experimental/WebP/ImageWEBP.cs" />
+    <Compile Include="../../Experimental/Artemis/IPT.Parser.cs" Link="Experimental/Artemis/IPT.Parser.cs" />
+    <Compile Include="../../Experimental/Artemis/IPT.Parser.Generated.cs" Link="Experimental/Artemis/IPT.Parser.Generated.cs" />
+    <Compile Include="../../Experimental/Artemis/IPT.Scanner.cs" Link="Experimental/Artemis/IPT.Scanner.cs" />
+    <Compile Include="../../Experimental/Artemis/IPT.Scanner.Generated.cs" Link="Experimental/Artemis/IPT.Scanner.Generated.cs" />
+  </ItemGroup>
+</Project>

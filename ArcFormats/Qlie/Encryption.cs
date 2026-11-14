@@ -106,7 +106,7 @@ namespace GameRes.Formats.Qlie
             for (int k = 0; k < name_length; ++k)
                 name[k] ^= (byte)(((k + 1) ^ key) + k + 1);
 
-            return Encodings.cp932.GetString (name, 0, name_length);
+            return Encodings.ResourceEncoding.GetString (name, 0, name_length);
         }
 
         public override void DecryptEntry (byte[] data, int offset, int length, QlieEntry entry)
@@ -160,7 +160,7 @@ namespace GameRes.Formats.Qlie
             for (int k = 0; k < name_length; ++k)
                 name[k] ^= (byte)(((k + 1) ^ key) + k + 1);
 
-            return Encodings.cp932.GetString (name, 0, name_length);
+            return Encodings.ResourceEncoding.GetString (name, 0, name_length);
         }
 
         public override void DecryptEntry (byte[] data, int offset, int length, QlieEntry entry)

@@ -99,7 +99,7 @@ namespace GameRes.Formats.Eve
             input = new PrefixStream (header, input);
             input.Position = 10;
             using (input = new LzssStream (input))
-                input.Read (data, 0, unpacked_size);
+                input.ReadExactlyCompat (data, 0, unpacked_size);
             if (data.AsciiEqual ("BPR01"))
                 return new PackedStream<BprDecompressor> (Stream.Null, new BprDecompressor (data));
             else

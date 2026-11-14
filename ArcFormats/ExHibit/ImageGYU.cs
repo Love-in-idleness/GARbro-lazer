@@ -27,14 +27,26 @@ using System;
 using System.ComponentModel.Composition;
 using System.Collections.Generic;
 using System.IO;
+using System.Globalization;
 using System.Linq;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media.Imaging;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media;
+#endif
 using GameRes.Utility;
 using GameRes.Compression;
 using GameRes.Cryptography;
 using GameRes.Formats.Strings;
 using System.Collections;
+#if !NET8_0_OR_GREATER
+using System.Windows;
+#endif
 
 namespace GameRes.Formats.ExHibit
 {
@@ -46,6 +58,7 @@ namespace GameRes.Formats.ExHibit
         public int  DataSize;
         public int  AlphaSize;
         public int  PaletteSize;
+        public string BaseFileName; //Full path of the base image
     }
 
     [Serializable]
@@ -81,7 +94,7 @@ namespace GameRes.Formats.ExHibit
         public override ImageMetaData ReadMetaData (IBinaryStream stream)
         {
             stream.Position = 4;
-            return new GyuMetaData
+            var info = new GyuMetaData
             {
                 Flags   = stream.ReadUInt16(),
                 CompressionMode = stream.ReadUInt16(),
@@ -93,13 +106,37 @@ namespace GameRes.Formats.ExHibit
                 AlphaSize   = stream.ReadInt32(),
                 PaletteSize = stream.ReadInt32(),
             };
+
+            if (info.Flags == 0x80 && stream.Length > 1044) //Diff image
+            {
+                stream.Position = stream.Length - 1008;
+                var meta_ary = stream.ReadCString(14).Split(',');
+                if (meta_ary.Length == 3)
+                {
+                    if (meta_ary[0].Length == 0 || !meta_ary[0].All(c => c >= '0' && c <= '9')
+                        || !int.TryParse(meta_ary[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int x)
+                        || !int.TryParse(meta_ary[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out int y))
+                        throw new InvalidFormatException();
+                    info.BaseFileName = VFS.CombinePath(VFS.GetDirectoryName(stream.Name) ?? "", meta_ary[0].PadLeft(4, '0') + ".gyu");
+                    info.OffsetX = x;
+                    info.OffsetY = y;
+                }
+            }
+
+            return info;
         }
 
         IDictionary CurrentMap = null;
 
         public override ImageData Read (IBinaryStream stream, ImageMetaData info)
         {
-            var meta = (GyuMetaData)info;
+            return Read(stream, (GyuMetaData)info, 0);
+        }
+
+        private ImageData Read (IBinaryStream stream, GyuMetaData meta, int depth)
+        {
+            if (depth >= 32) // Bound malformed or cyclic base-image chains.
+                throw new InvalidFormatException();
             if (0 == meta.Key)
             {
                 object token = null;
@@ -123,7 +160,63 @@ namespace GameRes.Formats.ExHibit
             }
             var reader = new GyuReader (stream.AsStream, meta);
             reader.Unpack();
-            return ImageData.CreateFlipped (meta, reader.Format, reader.Palette, reader.Data, reader.Stride);
+            var image = ImageData.CreateFlipped(meta, reader.Format, reader.Palette, reader.Data, reader.Stride);
+
+            if (meta.Flags == 0x80) //Diff image
+                image = CompositeImage(image, meta, depth);
+
+            return image;
+        }
+
+        private ImageData CompositeImage(ImageData image, GyuMetaData meta, int depth)
+        {
+#if !NET8_0_OR_GREATER
+            int byte_depth = 4;
+            int stride;
+            int offset;
+            byte[] pixels;
+#endif
+
+            if (!string.IsNullOrEmpty(meta.BaseFileName) && VFS.FileExists(meta.BaseFileName))
+            {
+                using (var input = VFS.OpenBinaryStream(meta.BaseFileName))
+                {
+                    var base_meta = (GyuMetaData)ReadMetaData(input);
+                    base_meta.FileName = meta.BaseFileName;
+                    var base_image = Read(input, base_meta, depth + 1);
+                    if (meta.OffsetX < 0 || meta.OffsetY < 0
+                        || (long)meta.OffsetX + image.Width > base_image.Width
+                        || (long)meta.OffsetY + image.Height > base_image.Height)
+                        throw new InvalidFormatException();
+#if NET8_0_OR_GREATER
+                    image = new ImageData(base_image.Bitmap.Convert(PixelFormats.Bgra32)
+                        .WithRegion(image.Bitmap, PixelRect.Empty, meta.OffsetX, meta.OffsetY));
+#else
+                    stride = (int)base_image.Width * byte_depth;
+                    offset = meta.OffsetY * stride + meta.OffsetX * byte_depth;
+                    pixels = new byte[stride * base_image.Height];
+
+                    var formated_base_source = new FormatConvertedBitmap(base_image.Bitmap, PixelFormats.Bgra32, null, 100); //24bit -> 32bit with alpha
+                    formated_base_source.CopyPixels(Int32Rect.Empty, pixels, stride, 0);
+
+                    var formated_source = new FormatConvertedBitmap(image.Bitmap, PixelFormats.Bgra32, null, 100); //24bit -> 32bit with alpha
+                    formated_source.CopyPixels(Int32Rect.Empty, pixels, stride, offset);
+
+                    image = new ImageData(BitmapImage.Create(
+                        (int)base_image.Width,
+                        (int)base_image.Height,
+                        ImageData.DefaultDpiX,
+                        ImageData.DefaultDpiY,
+                        PixelFormats.Bgra32,
+                        null,
+                        pixels,
+                        stride
+                        ));
+#endif
+                }
+            }
+
+            return image;
         }
 
         public override void Write (Stream file, ImageData image)
@@ -144,8 +237,12 @@ namespace GameRes.Formats.ExHibit
 
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             var titles = DefaultScheme.NumericKeys.Keys.Concat (DefaultScheme.StringKeys.Keys).OrderBy (x => x);
             return new GUI.WidgetGYU (titles);
+        #endif
         }
 
         IDictionary GetScheme (string title)

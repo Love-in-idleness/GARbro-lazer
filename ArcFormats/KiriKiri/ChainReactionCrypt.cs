@@ -126,7 +126,7 @@ namespace GameRes.Formats.KiriKiri
                 return null;
             var bin = new byte[list_bin.UnpackedSize];
             using (var input = arc.OpenEntry (list_bin))
-                input.Read (bin, 0, bin.Length);
+                input.ReadExactlyCompat (bin, 0, bin.Length);
             return bin;
         }
 

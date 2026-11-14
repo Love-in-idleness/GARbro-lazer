@@ -30,7 +30,13 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Text;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 
 // [070302][G-mode] Keitai Shoujo
 
@@ -246,7 +252,7 @@ namespace GameRes.Formats.Kogado
             using (var decrypted = new XoredStream (m_input.AsStream, 0xFF, true))
             using (var lzss = new LzssStream (decrypted))
             {
-                lzss.Read (data, 0, data.Length);
+                lzss.ReadExactlyCompat (data, 0, data.Length);
             }
             m_input.Position = start_pos + size;
             return data;
@@ -288,7 +294,7 @@ namespace GameRes.Formats.Kogado
         private ImageData GetImageData ()
         {
             var pixels = new byte[Info.iWidth * Info.iHeight * 4];
-            m_input.Read (pixels, 0, pixels.Length);
+            m_input.ReadExactlyCompat (pixels, 0, pixels.Length);
             return ImageData.Create (Info, Format, null, pixels);
         }
 

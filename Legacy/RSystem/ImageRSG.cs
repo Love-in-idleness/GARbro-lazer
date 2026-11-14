@@ -25,7 +25,14 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+
 using GameRes.Utility;
 
 // [030428][Berserker Freyja] Kikaijikake no Yakata
@@ -108,14 +115,14 @@ namespace GameRes.Formats.RSystem
         {
             for (int i = 0; i < count; ++i)
             {
-                m_input.Read (m_output, m_dst, 3);
+                m_input.AsStream.ReadExactlyCompat (m_output, m_dst, 3);
                 m_dst += 4;
             }
         }
 
         void Chunk10 (int count)
         {
-            m_input.Read (m_output, m_dst, 3);
+            m_input.AsStream.ReadExactlyCompat (m_output, m_dst, 3);
             count *= 4;
             Binary.CopyOverlapped (m_output, m_dst, m_dst+4, count-4);
             m_dst += count;

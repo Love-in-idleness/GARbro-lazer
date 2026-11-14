@@ -26,7 +26,14 @@
 using GameRes.Compression;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.Jam
 {
@@ -56,7 +63,11 @@ namespace GameRes.Formats.Jam
             file.Position = 4;
             using (var input = new HuffmanStream (file.AsStream, true))
             {
+                #if NET8_0_OR_GREATER
+                var decoder = new RasterDecoder(input);
+                #else
                 var decoder = new BmpBitmapDecoder (input, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                #endif
                 return new ImageData (decoder.Frames[0], info);
             }
         }

@@ -70,7 +70,7 @@ namespace GameRes.Formats.Banana // namespace is arbitrary, actual format source
                     if (name_buffer[j] < 0x20 || name_buffer[j] >= 0xFD)
                         return null;
                 }
-                string name = Encodings.cp932.GetString (name_buffer, 0, name_length);
+                string name = Encodings.ResourceEncoding.GetString (name_buffer, 0, name_length);
 
                 var entry = FormatCatalog.Instance.Create<PackedEntry> (name);
                 entry.Offset = Binary.BigEndian (file.View.ReadUInt32 (index_offset));

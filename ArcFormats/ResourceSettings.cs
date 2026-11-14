@@ -35,6 +35,11 @@ namespace GameRes.Formats
 
         public override object Value {
             get {
+                Encoding selected;
+                if (Encodings.ResourceEncodingSettings.TryGetValue(Name, out selected))
+                    return selected;
+                if (Encodings.ResourceEncodingOverride != null)
+                    return Encodings.ResourceEncodingOverride;
                 try
                 {
                     return Encoding.GetEncoding ((int)base.Value);

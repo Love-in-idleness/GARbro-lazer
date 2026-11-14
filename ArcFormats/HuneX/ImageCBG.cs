@@ -26,7 +26,13 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -113,14 +119,14 @@ namespace GameRes.Formats.HuneX
             m_input.Position = 0x30;
             for (int i = 0; i < count; i++)
             {
-                m_input.Read (len, 0, 4);
+                m_input.ReadExactlyCompat (len, 0, 4);
                 offsets[i] = BitConverter.ToUInt32 (len, 0);
             }
             for (int i = 0; i < count; i++)
             {
                 m_input.Seek (offsets[i], SeekOrigin.Begin);
                 uint height = (uint)Math.Min (m_info.StripeHeight, m_info.Height - m_info.StripeHeight * i);
-                m_input.Read (len, 0, 4);
+                m_input.ReadExactlyCompat (len, 0, 4);
                 var packed = new byte[BitConverter.ToUInt32 (len, 0)];
                 var weights = ReadWeightTable (m_input, 0x100);
                 var tree = new HuffmanTree (weights);

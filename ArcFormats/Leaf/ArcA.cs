@@ -98,7 +98,7 @@ namespace GameRes.Formats.Leaf
         Stream Decrypt (Stream input, uint length, byte key)
         {
             var data = new byte[length];
-            input.Read (data, 0, data.Length);
+            input.ReadExactlyCompat (data, 0, data.Length);
             uint width = data.ToUInt32 (0);
             uint height = data.ToUInt32 (4);
             uint image_size = width * height;

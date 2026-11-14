@@ -113,7 +113,7 @@ namespace GameRes.Formats.WildBug
                         checksum += buffer[j];
                     if (hash != checksum)
                         return null;
-                    dir_table[dir_id] = Encodings.cp932.GetString (buffer, 0, name_length).TrimStart ('\\');
+                    dir_table[dir_id] = Encodings.ResourceEncoding.GetString (buffer, 0, name_length).TrimStart ('\\');
                     dir_offset += 5u + name_length;
                 }
             }
@@ -138,7 +138,7 @@ namespace GameRes.Formats.WildBug
                     if (hash != checksum)
                         return null;
                     var dir_name = dir_table[dir_id];
-                    var name = dir_table[dir_id] + Encodings.cp932.GetString (buffer, 0, name_length);
+                    var name = dir_table[dir_id] + Encodings.ResourceEncoding.GetString (buffer, 0, name_length);
                     var entry = FormatCatalog.Instance.Create<Entry> (name);
                     entry.Offset = file.View.ReadUInt32 (res_offset+4);
                     entry.Size   = file.View.ReadUInt32 (res_offset+8);

@@ -26,8 +26,16 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 using GameRes.Utility;
 
 namespace GameRes.Formats.Triangle
@@ -71,8 +79,12 @@ namespace GameRes.Formats.Triangle
             Unpack (file, output);
             using (var bmp = new BinMemoryStream (output, file.Name))
             {
-                var decoder = new BmpBitmapDecoder (bmp, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                #if NET8_0_OR_GREATER
+var frame = RasterCodec.Decode(bmp);
+#else
+var decoder = new BmpBitmapDecoder (bmp, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
                 var frame = decoder.Frames[0];
+#endif
                 frame.Freeze();
                 return new ImageData (frame, info);
             }

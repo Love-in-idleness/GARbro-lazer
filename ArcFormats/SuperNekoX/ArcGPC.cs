@@ -209,7 +209,7 @@ namespace GameRes.Formats.SuperNekoX
                         count |= input.ReadByte();
                     }
                     count = Math.Min (count, output.Length-dst);
-                    input.Read (output, dst, count);
+                    input.ReadExactlyCompat (output, dst, count);
                 }
                 dst += count;
             }

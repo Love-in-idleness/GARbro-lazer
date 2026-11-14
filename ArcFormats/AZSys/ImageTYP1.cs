@@ -25,8 +25,16 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 using GameRes.Compression;
 
 namespace GameRes.Formats.AZSys
@@ -128,7 +136,7 @@ namespace GameRes.Formats.AZSys
                 {
                     m_input.Position = m_info.HasPalette ? 0x40E : 0xE;
                     using (var z = new ZLibStream (m_input, CompressionMode.Decompress, true))
-                        z.Read (m_output, 0, m_output.Length);
+                        z.ReadExactlyCompat (m_output, 0, m_output.Length);
                 }
                 else if (8 == m_info.BPP)
                     UnpackIndexed();
@@ -143,7 +151,7 @@ namespace GameRes.Formats.AZSys
                 else
                     m_input.Position = 0x422;
                 using (var input = new ZLibStream (m_input, CompressionMode.Decompress, true))
-                    input.Read (m_output, 0, m_output.Length);
+                    input.ReadExactlyCompat (m_output, 0, m_output.Length);
             }
 
             static byte[] StreamMap  = new byte[] { 3, 2, 1, 0 };

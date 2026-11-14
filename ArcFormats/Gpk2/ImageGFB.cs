@@ -26,8 +26,16 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 using GameRes.Compression;
 
 namespace GameRes.Formats.Gpk2
@@ -75,7 +83,7 @@ namespace GameRes.Formats.Gpk2
             if (0 != meta.PackedSize)
             {
                 using (var lzss = new LzssStream (stream.AsStream, LzssMode.Decompress, true))
-                    lzss.Read (pixels, 0, pixels.Length);
+                    lzss.ReadExactlyCompat (pixels, 0, pixels.Length);
             }
             else
                 stream.Read (pixels, 0, pixels.Length);

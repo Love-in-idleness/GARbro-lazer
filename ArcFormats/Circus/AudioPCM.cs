@@ -112,7 +112,7 @@ namespace GameRes.Formats.Circus
             else if (XpcmCompression.Zlib == mode)
             {
                 using (var z = new ZLibStream (input.AsStream, CompressionMode.Decompress, true))
-                    z.Read (m_encoded, 0, m_encoded.Length);
+                    z.ReadExactlyCompat (m_encoded, 0, m_encoded.Length);
             }
             else
                 throw new InvalidFormatException ("Unknown PCM compression mode");

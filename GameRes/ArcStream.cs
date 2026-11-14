@@ -92,6 +92,10 @@ namespace GameRes
 
         public ArcViewStream (ArcView file, long offset, long size, string name = null)
         {
+            if (offset < 0 || offset > file.MaxOffset)
+                throw new ArgumentOutOfRangeException (nameof(offset));
+            if (size < 0 || size > file.MaxOffset - offset)
+                throw new ArgumentOutOfRangeException (nameof(size));
             m_view = new ArcView.Frame (file, offset, (uint)Math.Min (size, MaxFrameSize));
             m_start = offset;
             m_size = size;
@@ -113,7 +117,7 @@ namespace GameRes
         /// </summary>
         public uint ReadSignature ()
         {
-            return m_view.ReadUInt32 (m_start);
+            return m_size < 4 ? 0 : m_view.ReadUInt32 (m_start);
         }
 
         byte[]      m_header;
@@ -141,6 +145,11 @@ namespace GameRes
         {
             if (null == m_buffer)
                 m_buffer = new byte[DefaultBufferSize];
+            if (m_position >= m_size)
+            {
+                m_buffer_pos = m_buffer_len = 0;
+                return;
+            }
             uint length = (uint)Math.Min (m_size - m_position, m_buffer.Length);
             m_buffer_len = m_view.Read (m_start + m_position, m_buffer, 0, length);
             m_position += m_buffer_len;
@@ -180,6 +189,7 @@ namespace GameRes
 
         public int PeekByte ()
         {
+            if (disposed) throw new ObjectDisposedException (nameof(ArcViewStream));
             if (m_buffer_pos == m_buffer_len)
                 RefillBuffer();
             if (m_buffer_pos == m_buffer_len)
@@ -359,6 +369,8 @@ namespace GameRes
 
         public byte[] ReadBytes (int count)
         {
+            if (disposed) throw new ObjectDisposedException (nameof(ArcViewStream));
+            if (count < 0) throw new ArgumentOutOfRangeException (nameof(count));
             if (m_buffer_pos + count <= m_buffer_len && m_buffer_len != 0)
             {
                 var data = new CowArray<byte> (m_buffer, m_buffer_pos, count).ToArray();
@@ -381,10 +393,13 @@ namespace GameRes
 
         public override long Seek (long offset, SeekOrigin origin)
         {
+            if (disposed) throw new ObjectDisposedException (nameof(ArcViewStream));
             switch (origin)
             {
-            case SeekOrigin.Current:    offset += Position; break;
-            case SeekOrigin.End:        offset += m_size; break;
+            case SeekOrigin.Begin: break;
+            case SeekOrigin.Current: offset = checked(offset + Position); break;
+            case SeekOrigin.End: offset = checked(offset + m_size); break;
+            default: throw new ArgumentOutOfRangeException (nameof(origin));
             }
             Position = offset;
             return offset;
@@ -397,6 +412,10 @@ namespace GameRes
 
         public override int Read (byte[] buffer, int offset, int count)
         {
+            if (disposed) throw new ObjectDisposedException (nameof(ArcViewStream));
+            if (buffer == null) throw new ArgumentNullException (nameof(buffer));
+            if (offset < 0 || count < 0 || offset > buffer.Length - count)
+                throw new ArgumentOutOfRangeException (nameof(count));
             int read_from_buffer = ReadFromBuffer (buffer, offset, count);
             offset += read_from_buffer;
             count -= read_from_buffer;

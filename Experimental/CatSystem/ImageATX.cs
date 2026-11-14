@@ -28,9 +28,17 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Text;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+using WriteableBitmap = GARbro.Imaging.MutablePixelBuffer;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using Newtonsoft.Json;
 
 using SharpZip = ICSharpCode.SharpZipLib.Zip;
@@ -110,7 +118,11 @@ namespace GameRes.Formats.CatSystem {
             if (0x04034b50 != stream.Signature) // 'PK\3\4'
                 return null;
 
+#if NET8_0_OR_GREATER
+            using var zf = new SharpZip.ZipFile(stream.AsStream) { IsStreamOwner = false };
+#else
             var zf = new SharpZip.ZipFile(stream.AsStream);
+#endif
             SharpZip.ZipEntry info_entry;
 
             if ((info_entry = zf.GetEntry("atlas.json")) == null)
@@ -128,7 +140,11 @@ namespace GameRes.Formats.CatSystem {
 
         public override ImageData Read(IBinaryStream stream, ImageMetaData info) {
             var amd = (AtlasMetaData)info;
+#if NET8_0_OR_GREATER
+            using var zf = new SharpZip.ZipFile(stream.AsStream) { IsStreamOwner = false };
+#else
             var zf = new SharpZip.ZipFile(stream.AsStream);
+#endif
             var textures = new Dictionary<int, byte[]>();
             var bitmap = new WriteableBitmap(amd.iWidth, amd.iHeight,
                     ImageData.DefaultDpiX, ImageData.DefaultDpiY, PixelFormats.Bgra32, null);
@@ -151,11 +167,19 @@ namespace GameRes.Formats.CatSystem {
                     }
                 }
                 using (var mem = new MemoryStream(textures[mesh.texNo])) {
+#if NET8_0_OR_GREATER
+                    var decoder = new RasterDecoder(mem);
+#else
                     var decoder = BitmapDecoder.Create(mem,
                             BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+#endif
                     BitmapSource frame = decoder.Frames[0];
                     if (frame.Format.BitsPerPixel != 32)
+                        #if NET8_0_OR_GREATER
+                        frame = frame.Convert(PixelFormats.Bgra32);
+                        #else
                         frame = new FormatConvertedBitmap(frame, PixelFormats.Bgra32, null, 0);
+                        #endif
                     int width = (int)mesh.width, height = (int)mesh.height;
                     var rect = new Int32Rect((int)mesh.viewX, (int)mesh.viewY, width, height);
                     int stride = width * 4;

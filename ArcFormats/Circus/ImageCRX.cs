@@ -26,9 +26,19 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 using GameRes.Compression;
 using GameRes.Utility;
 
@@ -115,12 +125,16 @@ namespace GameRes.Formats.Circus
 
             if (pixelFormat != bitmap.Format)
             {
+#if NET8_0_OR_GREATER
+                bitmap = image.Bitmap.Convert(pixelFormat);
+#else
                 var converted_bitmap = new FormatConvertedBitmap ();
                 converted_bitmap.BeginInit ();
                 converted_bitmap.Source = image.Bitmap;
                 converted_bitmap.DestinationFormat = pixelFormat;
                 converted_bitmap.EndInit ();
                 bitmap = converted_bitmap;
+#endif
             }
 
             var data = new byte[image.Height * stride];

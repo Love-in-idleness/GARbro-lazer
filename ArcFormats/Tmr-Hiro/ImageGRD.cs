@@ -26,7 +26,13 @@
 using GameRes.Utility;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using System.Collections.Generic;
 
 namespace GameRes.Formats.TmrHiro
@@ -195,7 +201,7 @@ namespace GameRes.Formats.TmrHiro
                 }
                 else if (count > 0)
                 {
-                    input.Read (m_channel, dst, count);
+                    input.ReadExactlyCompat (m_channel, dst, count);
                     src += count;
                     dst += count;
                 }

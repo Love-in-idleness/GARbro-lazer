@@ -1,5 +1,10 @@
 name: .NET Framework Build
-on: [push, pull_request]
+on:
+  workflow_dispatch:
+  workflow_call:
+concurrency:
+  group: legacy-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: windows-latest
@@ -12,10 +17,31 @@ jobs:
         uses: microsoft/setup-msbuild@v2
       # Restore NuGet packages
       - name: Restore
-        run: nuget restore
+        run: nuget restore GARbro.sln
       # Build the solution
       - name: Build
         run: msbuild /p:Configuration=Release /p:Platform="Any CPU" GARbro.sln
+      - name: Verify legacy fixture outputs
+        shell: powershell
+        run: ./tools/test-legacy-fixtures.ps1
+      - name: Export legacy runtime catalog
+        shell: powershell
+        run: ./tools/export-legacy-catalog.ps1
+      - name: Verify portable pixels against WPF
+        if: always()
+        shell: powershell
+        run: ./tools/test-wpf-pixels.ps1
+      - name: Verify PE resources against Windows APIs
+        shell: powershell
+        run: ./tools/test-pe-resources.ps1
+      - name: Upload legacy catalog
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: legacy-runtime-catalog
+          path: |
+            artifacts/legacy-catalog.json
+            artifacts/Formats.json
       # Publish the artifacts
       - name: Publish Artifact
         if: success()

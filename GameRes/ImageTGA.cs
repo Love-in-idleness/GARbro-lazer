@@ -26,10 +26,19 @@
 using System;
 using System.IO;
 using System.Text;
+
+
+
+using System.ComponentModel.Composition;
+
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.ComponentModel.Composition;
+#endif
 
 namespace GameRes
 {
@@ -94,12 +103,16 @@ namespace GameRes
                     stride = (int)image.Width*4;
                     if (PixelFormats.Bgra32 != bitmap.Format)
                     {
+#if NET8_0_OR_GREATER
+                        bitmap = bitmap.Convert (PixelFormats.Bgra32);
+#else
                         var converted_bitmap = new FormatConvertedBitmap();
                         converted_bitmap.BeginInit();
                         converted_bitmap.Source = image.Bitmap;
                         converted_bitmap.DestinationFormat = PixelFormats.Bgra32;
                         converted_bitmap.EndInit();
                         bitmap = converted_bitmap;
+#endif
                     }
                 }
                 file.Write ((byte)bpp);

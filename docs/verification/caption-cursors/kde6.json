@@ -1,0 +1,86 @@
+{
+  "initial": {
+    "sequence": 0,
+    "ready": true,
+    "targets": {
+      "width": 1280,
+      "height": 900,
+      "blank": {
+        "x": 555,
+        "y": 769
+      },
+      "text": {
+        "x": 1154,
+        "y": 196
+      },
+      "popup": {
+        "x": 981,
+        "y": 129
+      },
+      "captions": {
+        "PART_MinimizeButton": {
+          "x": 1161,
+          "y": 20
+        },
+        "PART_MaximizeButton": {
+          "x": 1209,
+          "y": 20
+        },
+        "PART_CloseButton": {
+          "x": 1257,
+          "y": 20
+        }
+      }
+    },
+    "uiAssembly": "/opt/garbro/desktop/GARbro.UI.dll",
+    "backendAssembly": "/opt/garbro/desktop/Avalonia.Wayland.dll",
+    "backendSha256": "e827f63428c443b8a0c0be9af68594e43d3a0e9e1dd6e5aab821ed895f202e6b"
+  },
+  "samples": [
+    {
+      "theme": "breeze_cursors",
+      "size": 24,
+      "shape": [
+        64,
+        64,
+        256
+      ],
+      "visibleSize": [
+        14,
+        22
+      ],
+      "sha256": "aaf5467fa81f7cb36aee88c31ec064c41ef909c8a2284b51d7878290d8094704"
+    },
+    {
+      "theme": "breeze_cursors",
+      "size": 48,
+      "shape": [
+        64,
+        64,
+        256
+      ],
+      "visibleSize": [
+        31,
+        45
+      ],
+      "sha256": "3a91b215e31bd98a1e41d76085868c0c16207fba8a18000c8d79f9e7cf6d357f"
+    },
+    {
+      "theme": "Breeze_Light",
+      "size": 48,
+      "shape": [
+        64,
+        64,
+        256
+      ],
+      "visibleSize": [
+        31,
+        45
+      ],
+      "sha256": "1073b0cc265fd438396b92d93442e2d768642c4c27d507bab46e93535a2a9242"
+    }
+  ],
+  "standardCursorProtocol": true,
+  "fallbackSize": null,
+  "capture": "Nested KWin output / native XFixes cursor snapshots"
+}

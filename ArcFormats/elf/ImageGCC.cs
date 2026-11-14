@@ -28,7 +28,13 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using GameRes.Compression;
 using GameRes.Utility;
 
@@ -95,7 +101,7 @@ namespace GameRes.Formats.Elf
             public Reader (Stream input, GccMetaData info)
             {
                 m_input = new byte[input.Length];
-                input.Read (m_input, 0, m_input.Length);
+                input.ReadExactlyCompat (m_input, 0, m_input.Length);
                 m_info = info;
                 m_width = (int)m_info.Width;
                 m_height = (int)m_info.Height;

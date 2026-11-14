@@ -258,7 +258,7 @@ namespace GameRes.Formats.Cri
             {
                 m_input = new byte[input.Length];
                 input.Position = m_data_offset;
-                input.Read (m_input, m_data_offset, m_input.Length-m_data_offset);
+                input.ReadExactlyCompat (m_input, m_data_offset, m_input.Length-m_data_offset);
             }
             else
             {

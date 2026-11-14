@@ -28,7 +28,9 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Text;
+#if !NET8_0_OR_GREATER
 using System.Web.Script.Serialization;
+#endif
 
 namespace GameRes.Formats.RPGMaker
 {
@@ -54,7 +56,7 @@ namespace GameRes.Formats.RPGMaker
             var header = file.ReadHeader (0x14);
             if (header[4] != 'V')
                 return null;
-            var key = RpgmvDecryptor.LastKey ?? RpgmvDecryptor.FindKeyFor (file.Name);
+            var key = RpgmvDecryptor.FindKeyFor (file.Name) ?? RpgmvDecryptor.LastKey;
             if (null == key)
                 return null;
             for (int i = 0; i < 4; ++i)
@@ -100,6 +102,8 @@ namespace GameRes.Formats.RPGMaker
         {
             input.Position = 0x10;
             var header = input.ReadBytes (key.Length);
+            if (header.Length != key.Length)
+                throw new EndOfStreamException ("Truncated RPG Maker encrypted header.");
             for (int i = 0; i < key.Length; ++i)
                 header[i] ^= key[i];
             var result = new PrefixStream (header, new StreamRegion (input.AsStream, input.Position, leave_open));
@@ -108,7 +112,7 @@ namespace GameRes.Formats.RPGMaker
 
         static byte[] GetKeyFromString (string hex)
         {
-            if ((hex.Length & 1) != 0)
+            if (hex == null || hex.Length != 32 || System.Linq.Enumerable.Any(hex, c => !System.Uri.IsHexDigit(c)))
                 throw new System.ArgumentException ("invalid key string");
             var key = new byte[hex.Length/2];
             for (int i = 0; i < key.Length; ++i)
@@ -129,11 +133,16 @@ namespace GameRes.Formats.RPGMaker
         static byte[] ParseSystemJson (string filename)
         {
             var json = File.ReadAllText (filename, Encoding.UTF8);
+#if NET8_0_OR_GREATER
+            var sys = Newtonsoft.Json.Linq.JObject.Parse(json);
+            var key = (string)sys["encryptionKey"];
+#else
             var serializer = new JavaScriptSerializer();
             var sys = serializer.DeserializeObject (json) as IDictionary;
             if (null == sys)
                 return null;
             var key = sys["encryptionKey"] as string;
+#endif
             if (null == key)
                 return null;
             return GetKeyFromString (key);
@@ -152,12 +161,12 @@ namespace GameRes.Formats.RPGMaker
         static IEnumerable<string> FindSystemJson (string filename)
         {
             var dir_name = Path.GetDirectoryName (filename);
-            yield return Path.Combine (dir_name, @"..\..\data\System.json");
-            yield return Path.Combine (dir_name, @"..\..\..\www\data\System.json");
-            yield return Path.Combine (dir_name, @"..\..\..\data\System.json");
-            yield return Path.Combine (dir_name, @"..\..\..\..\data\System.json");
-            yield return Path.Combine (dir_name, @"..\data\System.json");
-            yield return Path.Combine (dir_name, @"data\System.json");
+            yield return Path.GetFullPath(Path.Combine(dir_name, @"..\..\data\System.json".Replace('\\', Path.DirectorySeparatorChar)));
+            yield return Path.GetFullPath(Path.Combine(dir_name, @"..\..\..\www\data\System.json".Replace('\\', Path.DirectorySeparatorChar)));
+            yield return Path.GetFullPath(Path.Combine(dir_name, @"..\..\..\data\System.json".Replace('\\', Path.DirectorySeparatorChar)));
+            yield return Path.GetFullPath(Path.Combine(dir_name, @"..\..\..\..\data\System.json".Replace('\\', Path.DirectorySeparatorChar)));
+            yield return Path.GetFullPath(Path.Combine(dir_name, @"..\data\System.json".Replace('\\', Path.DirectorySeparatorChar)));
+            yield return Path.GetFullPath(Path.Combine(dir_name, @"data\System.json".Replace('\\', Path.DirectorySeparatorChar)));
         }
 
         internal static readonly byte[] DefaultKey = {

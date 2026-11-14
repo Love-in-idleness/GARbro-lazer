@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><AssemblyName>ArcLegacy.Portable</AssemblyName><RootNamespace>GameRes.Legacy</RootNamespace></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../GARbro.Formats/GARbro.Formats.csproj" />
+  </ItemGroup>
+  <Import Project="DecoderSources.props" />
+</Project>

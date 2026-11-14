@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../GARbro.Application/GARbro.Application.csproj" />
+    <ProjectReference Include="../GARbro.Domain/GARbro.Domain.fsproj" />
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <AvaloniaResource Include="Assets/**" />
+    <EmbeddedResource Include="../../LICENSE" LogicalName="GARbro.UI.LICENSE" />
+    <EmbeddedResource Include="../../docs/third-party.md" LogicalName="GARbro.UI.third-party.md" />
+    <EmbeddedResource Include="../../docs/linux-desktop.md" LogicalName="GARbro.UI.linux-desktop.md" />
+    <EmbeddedResource Include="../../docs/compatibility/portable-status.json" LogicalName="GARbro.UI.portable-status.json" />
+    <EmbeddedResource Include="../../docs/manual.*.md" WithCulture="false" LogicalName="GARbro.UI.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../../docs/troubleshoot.*.md" WithCulture="false" LogicalName="GARbro.UI.%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

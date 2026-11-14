@@ -26,8 +26,15 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Utility;
 
 namespace GameRes.Formats.Ivory
@@ -116,7 +123,11 @@ namespace GameRes.Formats.Ivory
             PakOpener.Decrypt (input, info.JpegKey);
             using (var img = new MemoryStream (input))
             {
+                #if NET8_0_OR_GREATER
+                var decoder = new RasterDecoder(img);
+                #else
                 var decoder = new JpegBitmapDecoder (img, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                #endif
                 var frame = decoder.Frames[0];
                 frame.Freeze();
                 return new ImageData (frame, info);

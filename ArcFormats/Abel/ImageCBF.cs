@@ -26,7 +26,13 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using GameRes.Compression;
 using GameRes.Utility;
 
@@ -162,7 +168,7 @@ namespace GameRes.Formats.Abel
         {
             m_input.Position = 0x18;
             using (var lzss = new LzssStream (m_input.AsStream, LzssMode.Decompress, true))
-                lzss.Read (m_output, 0, m_output.Length);
+                lzss.ReadExactlyCompat (m_output, 0, m_output.Length);
             for (int i = 3; i < m_output.Length; ++i)
                 m_output[i] += m_output[i-3];
             var pixels = new byte[m_output.Length];

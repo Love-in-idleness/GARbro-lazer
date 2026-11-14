@@ -25,8 +25,15 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.Lazycrew
 {
@@ -70,7 +77,7 @@ namespace GameRes.Formats.Lazycrew
             else if (m_info.IsCompressed)
                 UnpackRle (pixels);
             else
-                m_input.Read (pixels, 0, pixels.Length);
+                m_input.AsStream.ReadExactlyCompat (pixels, 0, pixels.Length);
 
             if (m_info.HasAlpha && m_info.BPP != 4)
             {
@@ -82,7 +89,7 @@ namespace GameRes.Formats.Lazycrew
                 if (is_compressed)
                     UnpackRle (alpha);
                 else
-                    m_input.Read (alpha, 0, pixels.Length);
+                    m_input.AsStream.ReadExactlyCompat (alpha, 0, pixels.Length);
                 return ApplyAlpha (pixels, alpha);
             }
             return ImageData.Create (m_info, GetPixelFormat(), m_palette, pixels, m_stride);
@@ -138,7 +145,7 @@ namespace GameRes.Formats.Lazycrew
                 }
                 else
                 {
-                    m_input.Read (output, dst, ++count);
+                    m_input.AsStream.ReadExactlyCompat (output, dst, ++count);
                 }
                 dst += count;
             }

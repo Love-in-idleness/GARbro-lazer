@@ -39,6 +39,7 @@ namespace GameRes
 
         /// <summary>Tag that identifies this archive format.</summary>
         public string Tag { get { return m_interface.Tag; } }
+        public ArchiveFormat Format { get { return m_interface; } }
 
         /// <summary>Short archive format description.</summary>
         public string Description { get { return m_interface.Description; } }
@@ -88,6 +89,11 @@ namespace GameRes
                             file = null; // file ownership passed to ArcFile
                             return arc;
                         }
+                    }
+                    catch (ResourceParametersRequiredException X)
+                    {
+                        FormatCatalog.Instance.LastError = X;
+                        return null;
                     }
                     catch (OperationCanceledException X)
                     {

@@ -106,7 +106,7 @@ namespace GameRes.Formats.Tama
                 file.View.Read (name_offset+4, name_buffer, 0, (uint)name_length);
                 for (int j = 0; j < name_length; ++j)
                     name_buffer[j] ^= 0xFF;
-                var name = Encodings.cp932.GetString (name_buffer, 0, name_length);
+                var name = Encodings.ResourceEncoding.GetString (name_buffer, 0, name_length);
 
                 var entry = FormatCatalog.Instance.Create<EpkEntry> (name);
                 entry.Offset = file.View.ReadInt64 (index_offset+0x10);

@@ -33,7 +33,7 @@ using GameRes.Utility;
 
 namespace GameRes.Formats
 {
-    public class ExeFile
+    public partial class ExeFile
     {
         ArcView                     m_file;
         Dictionary<string, Section> m_section_table;
@@ -332,6 +332,7 @@ namespace GameRes.Formats
         /// <summary>
         /// Helper class for executable file resources access.
         /// </summary>
+#if !NET8_0_OR_GREATER
         public sealed class ResourceAccessor : IDisposable
         {
             IntPtr      m_exe;
@@ -513,6 +514,7 @@ namespace GameRes.Formats
                 public uint FileDateLS;
             }
         }
+#endif
     }
 
     static internal class NativeMethods

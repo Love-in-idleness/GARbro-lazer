@@ -29,6 +29,7 @@ using NAudio.Wave;
 
 namespace GameRes.Formats
 {
+#if !NET8_0_OR_GREATER
     public class Mp3Input : SoundInput
     {
         int             m_bitrate;
@@ -85,6 +86,8 @@ namespace GameRes.Formats
         }
         #endregion
     }
+
+#endif
 
     [Export(typeof(AudioFormat))]
     public class Mp3Audio : AudioFormat

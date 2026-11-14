@@ -27,8 +27,15 @@ using GameRes.Utility;
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.Izumi
 {
@@ -199,7 +206,7 @@ namespace GameRes.Formats.Izumi
                         count = ctl & 0xF;
                         if (0 == count)
                             count = m_input.ReadUInt8();
-                        m_input.Read (plane, dst, count);
+                        m_input.AsStream.ReadExactlyCompat (plane, dst, count);
                         dst += count;
                     }
                     else
@@ -314,7 +321,7 @@ namespace GameRes.Formats.Izumi
                                 count = m_input.ReadUInt8();
                             if (ctl < 0x40)
                             {
-                                m_input.Read (plane, dst, 4);
+                                m_input.AsStream.ReadExactlyCompat (plane, dst, 4);
                                 count <<= 2;
                                 Binary.CopyOverlapped (plane, dst, dst + 4, count - 4);
                                 dst += count;

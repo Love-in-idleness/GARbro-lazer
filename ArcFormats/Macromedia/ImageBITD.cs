@@ -28,8 +28,16 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 using GameRes.Utility;
 
 namespace GameRes.Formats.Macromedia
@@ -99,8 +107,12 @@ namespace GameRes.Formats.Macromedia
             m_input.Position = 0;
             if (SourceFormat == ImageFormat.Jpeg)
             {
-                var decoder = new JpegBitmapDecoder (m_input, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                #if NET8_0_OR_GREATER
+bitmap = RasterCodec.Decode(m_input);
+#else
+var decoder = new JpegBitmapDecoder (m_input, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
                 bitmap = decoder.Frames[0];
+#endif
                 if (null == AlphaChannel)
                     return new ImageData (bitmap, m_info);
             }
@@ -109,7 +121,7 @@ namespace GameRes.Formats.Macromedia
             else if (m_output.Length != m_input.Length)
                 Unpack8bpp();
             else
-                m_input.Read (m_output, 0, m_output.Length);
+                m_input.ReadExactlyCompat (m_output, 0, m_output.Length);
 
             if (AlphaChannel != null)
             {
@@ -118,7 +130,11 @@ namespace GameRes.Formats.Macromedia
                     if (bitmap == null)
                         bitmap = BitmapSource.Create (m_width, m_height, ImageData.DefaultDpiX, ImageData.DefaultDpiY, Format, m_palette, m_output, m_stride);
                     if (Info.BPP != 32)
+                        #if NET8_0_OR_GREATER
+                        bitmap = bitmap.Convert(PixelFormats.Bgr32);
+                        #else
                         bitmap = new FormatConvertedBitmap (bitmap, PixelFormats.Bgr32, null, 0);
+                        #endif
                     m_stride = bitmap.PixelWidth * 4;
                     m_output = new byte[bitmap.PixelHeight * m_stride];
                     bitmap.CopyPixels (m_output, m_stride, 0);
@@ -195,7 +211,7 @@ namespace GameRes.Formats.Macromedia
                 }
                 else
                 {
-                    m_input.Read (scan_line, pos+x, count);
+                    m_input.ReadExactlyCompat (scan_line, pos+x, count);
                     x += count;
                 }
             }

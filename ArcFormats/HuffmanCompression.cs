@@ -132,7 +132,7 @@ namespace GameRes.Compression
             using (var packed = new BinMemoryStream (m_src, m_input_pos, m_remaining))
             using (var hstr = new HuffmanStream (packed))
             {
-                hstr.Read (m_dst, 0, m_dst.Length);
+                hstr.ReadExactlyCompat (m_dst, 0, m_dst.Length);
                 return m_dst;
             }
         }

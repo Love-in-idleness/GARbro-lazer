@@ -27,8 +27,16 @@ using System;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Text;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 using GameRes.Utility;
 
 namespace GameRes.Formats.MAI
@@ -133,7 +141,7 @@ namespace GameRes.Formats.MAI
                 if (m_compressed)
                     RleDecoder.Unpack (m_input, m_data_length, m_pixels, m_pixel_size);
                 else
-                    m_input.Read (m_pixels, 0, m_pixels.Length);
+                    m_input.ReadExactlyCompat (m_pixels, 0, m_pixels.Length);
             }
         }
     }
@@ -246,12 +254,12 @@ namespace GameRes.Formats.MAI
                 if (m_info.IsCompressed)
                     RleDecoder.Unpack (m_input, (int)m_info.DataLength, m_output, m_pixel_size);
                 else
-                    m_input.Read (m_output, 0, m_output.Length);
+                    m_input.ReadExactlyCompat (m_output, 0, m_output.Length);
                 m_input.Position = m_info.MaskOffset;
                 if (m_info.IsMaskCompressed)
                     RleDecoder.Unpack (m_input, (int)m_info.MaskLength, m_alpha, 1);
                 else
-                    m_input.Read (m_alpha, 0, m_alpha.Length);
+                    m_input.ReadExactlyCompat (m_alpha, 0, m_alpha.Length);
 
                 Action<int, int, byte> copy_pixel;
                 if (m_pixel_size > 1)

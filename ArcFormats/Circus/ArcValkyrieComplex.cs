@@ -85,7 +85,7 @@ namespace GameRes.Formats.Circus
             for (uint i = 0; i < count; ++i)
             {
                 int name_length = LittleEndian.ToInt32 (index, index_pos);
-                var name = Encodings.cp932.GetString (index, names_pos, name_length);
+                var name = Encodings.ResourceEncoding.GetString (index, names_pos, name_length);
                 var entry = FormatCatalog.Instance.Create<Entry> (name);
                 entry.Offset = LittleEndian.ToUInt32 (index, index_pos+4);
                 entry.Size   = LittleEndian.ToUInt32 (index, index_pos+8);

@@ -25,7 +25,14 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+
+#endif
 
 // [990521][Sepia] Hikari no Naka de Dakishimete
 
@@ -55,7 +62,7 @@ namespace GameRes.Formats.Hmp
             file.Position = 0x24;
             int stride = info.iWidth * 2;
             var pixels = new byte[stride * info.iHeight];
-            file.Read (pixels, 0, pixels.Length);
+            file.AsStream.ReadExactlyCompat (pixels, 0, pixels.Length);
             return ImageData.CreateFlipped (info, PixelFormats.Bgr555, null, pixels, stride);
         }
 

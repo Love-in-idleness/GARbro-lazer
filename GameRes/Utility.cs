@@ -122,7 +122,7 @@ namespace GameRes.Utility
 
         public static string GetCString (byte[] data, int index, int length_limit)
         {
-            return GetCString (data, index, length_limit, Encodings.cp932);
+            return GetCString (data, index, length_limit, Encodings.ResourceEncoding);
         }
 
         public static string GetCString (byte[] data, int index, Encoding enc)
@@ -132,7 +132,7 @@ namespace GameRes.Utility
 
         public static string GetCString (byte[] data, int index)
         {
-            return GetCString (data, index, data.Length - index, Encodings.cp932);
+            return GetCString (data, index, data.Length - index, Encodings.ResourceEncoding);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

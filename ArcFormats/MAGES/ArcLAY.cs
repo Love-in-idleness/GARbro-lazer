@@ -28,9 +28,17 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+using WriteableBitmap = GARbro.Imaging.MutablePixelBuffer;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.MAGES
 {
@@ -135,6 +143,22 @@ namespace GameRes.Formats.MAGES
         {
             var lent = (LayEntry)entry;
             var larc = (LayArchive)arc;
+#if NET8_0_OR_GREATER
+            var canvas = PixelBuffer.Create(DefaultWidth, DefaultHeight, ImageData.DefaultDpiX,
+                ImageData.DefaultDpiY, PixelFormats.Pbgra32, null,
+                new byte[checked(DefaultWidth * DefaultHeight * 4)], DefaultWidth * 4);
+            if (lent.Id != 1 && larc.LayerMap.TryGetValue(1, out var baseLayer))
+                canvas = DrawLayer(canvas, larc.Source, larc.GetTiles(baseLayer));
+            if ((lent.Id >> 28) == 4)
+            {
+                uint faceId = (lent.Id >> 8) & 0xF | 0x20000000;
+                if (larc.LayerMap.TryGetValue(faceId, out var faceLayer)
+                    || larc.LayerMap.TryGetValue(faceId - 1, out faceLayer))
+                    canvas = DrawLayer(canvas, larc.Source, larc.GetTiles(faceLayer));
+            }
+            canvas = DrawLayer(canvas, larc.Source, larc.GetTiles(lent));
+            return new BitmapSourceDecoder(canvas);
+#else
             var visual = new DrawingVisual();
             using (var context = visual.RenderOpen())
             {
@@ -158,8 +182,23 @@ namespace GameRes.Formats.MAGES
                                               ImageData.DefaultDpiY, PixelFormats.Pbgra32);
             bmp.Render (visual);
             return new BitmapSourceDecoder (bmp);
+#endif
         }
 
+#if NET8_0_OR_GREATER
+        PixelBuffer DrawLayer(PixelBuffer canvas, PixelBuffer source, IEnumerable<LayCoord> tiles)
+        {
+            foreach (var coord in tiles)
+            {
+                double x = coord.TargetX + DefaultWidth / 2, y = coord.TargetY + DefaultHeight / 2;
+                if (x != Math.Truncate(x) || y != Math.Truncate(y))
+                    throw new NotSupportedException("Fractional MAGES tile coordinates require a resampling backend.");
+                var tile = source.Crop(new Int32Rect((int)coord.SourceX, (int)coord.SourceY, BlockSize, BlockSize));
+                canvas = PixelCompositor.Over(canvas, tile, checked((int)x), checked((int)y));
+            }
+            return canvas;
+        }
+#else
         void DrawLayer (DrawingContext context, BitmapSource source, IEnumerable<LayCoord> tiles)
         {
             foreach (var coord in tiles)
@@ -171,5 +210,6 @@ namespace GameRes.Formats.MAGES
                 context.DrawImage (tile, dst_rect);
             }
         }
+#endif
     }
 }

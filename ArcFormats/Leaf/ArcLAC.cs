@@ -116,7 +116,7 @@ namespace GameRes.Formats.Leaf
                 }
                 if (0 == l)
                     return null;
-                var name = Encodings.cp932.GetString (name_buf, 0, l);
+                var name = Encodings.ResourceEncoding.GetString (name_buf, 0, l);
                 var entry = FormatCatalog.Instance.Create<PackedEntry> (name);
                 entry.IsPacked = 0 != name_buf[0x1F];
                 entry.Size = file.View.ReadUInt32 (index_offset);
@@ -186,7 +186,7 @@ namespace GameRes.Formats.Leaf
                     using (var input = File.OpenRead(entry.Name))
                     {
                         byte[] rawData = new byte[input.Length];
-                        input.Read (rawData, 0, (int)input.Length);
+                        input.ReadExactlyCompat (rawData, 0, (int)input.Length);
 
                         // Compress
                         byte[] compressedData = LeafLzss.Compress (rawData, 0);

@@ -134,7 +134,7 @@ namespace GameRes.Formats.Valkyria
             using (var fs = File.OpenRead (file_path))
             {
                 fs.Position = 0x10E;
-                fs.Read (info, 0, 260);
+                fs.ReadExactlyCompat (info, 0, 260);
                 fs.Close ();
             }
             var key = new byte[4];

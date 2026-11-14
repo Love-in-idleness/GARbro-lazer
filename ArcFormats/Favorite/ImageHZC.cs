@@ -29,9 +29,17 @@ using System;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Text;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+using WriteableBitmap = GARbro.Imaging.MutablePixelBuffer;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.FVP
 {
@@ -92,7 +100,11 @@ namespace GameRes.Formats.FVP
                             throw new InvalidFormatException ("Failed to decode base image.");
                         var converted = image.Bitmap;
                         if (converted.Format != format)
+                            #if NET8_0_OR_GREATER
+                            converted = converted.Convert(format);
+                            #else
                             converted = new FormatConvertedBitmap (converted, format, null, 0);
+                            #endif
                         var stride = converted.PixelWidth * 4;
                         var size = stride * converted.PixelHeight;
                         var pixels = new byte[size];
@@ -121,7 +133,11 @@ namespace GameRes.Formats.FVP
                 // Blend two images
                 var converted = image.Bitmap;
                 if (converted.Format != format)
+                    #if NET8_0_OR_GREATER
+                    converted = converted.Convert(format);
+                    #else
                     converted = new FormatConvertedBitmap (converted, format, null, 0);
+                    #endif
                 var rect = new Int32Rect (0, 0, converted.PixelWidth, converted.PixelHeight);
                 BlendBitmap (converted, rect, bitmap, 0, 0);
                 bitmap.Freeze ();
@@ -138,6 +154,13 @@ namespace GameRes.Formats.FVP
             int src_stride = source.Width * 4;
             var pixels = new byte[src_stride * source.Height];
             bitmap.CopyPixels (source, pixels, src_stride, 0);
+#if NET8_0_OR_GREATER
+            if (x < 0 || y < 0 || source.Width > output.PixelWidth - x || source.Height > output.PixelHeight - y)
+                throw new InvalidFormatException("HZC overlay exceeds the canvas.");
+            output.Lock();
+            try
+            {
+#endif
             unsafe
             {
                 int dst_stride = output.BackBufferStride;
@@ -172,6 +195,10 @@ namespace GameRes.Formats.FVP
                     buffer += dst_stride;
                 }
             }
+#if NET8_0_OR_GREATER
+            }
+            finally { output.Unlock(); }
+#endif
         }
 
         public override void Write (Stream file, ImageData image)
@@ -242,8 +269,7 @@ namespace GameRes.Formats.FVP
             long offset = 0;
             for (;;)
             {
-                if (pixels.Length != Source.Read (pixels, 0, pixels.Length))
-                    throw new EndOfStreamException();
+                Source.ReadExactlyCompat (pixels, 0, pixels.Length);
                 if (offset >= m_frame_offset)
                     break;
                 offset += m_frame_size;

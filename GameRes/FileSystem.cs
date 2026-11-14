@@ -31,6 +31,10 @@ using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
 using GameRes.Strings;
 
+#if NET8_0_OR_GREATER
+using FileFormatException = System.IO.IOException;
+#endif
+
 namespace GameRes
 {
     public interface IFileSystem : IDisposable
@@ -663,6 +667,9 @@ namespace GameRes
 
     public static class VFS
     {
+        // Resource browsers can keep containers instead of implicitly flattening them.
+        public static bool PreserveNestedArchives { get; set; }
+
         private static FileSystemStack m_vfs = new FileSystemStack();
 
         /// <summary>

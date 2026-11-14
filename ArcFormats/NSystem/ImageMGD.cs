@@ -25,8 +25,15 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.NSystem
 {
@@ -97,8 +104,12 @@ namespace GameRes.Formats.NSystem
             case 2:
                 using (var png = new StreamRegion (file.AsStream, file.Position, data_size, true))
                 {
+                    #if NET8_0_OR_GREATER
+                    var decoder = new RasterDecoder(png);
+                    #else
                     var decoder = new PngBitmapDecoder (png, 
                         BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                    #endif
                     var frame = decoder.Frames[0];
                     frame.Freeze();
                     return new ImageData (frame, info);

@@ -28,7 +28,14 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Text.RegularExpressions;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+
 using GameRes.Compression;
 
 namespace GameRes.Formats.Rain
@@ -172,14 +179,14 @@ namespace GameRes.Formats.Rain
                     {
                         if ((blocks[i] >> 16) != 0)
                         {
-                            m_input.Read (output, dst, row_length);
+                            m_input.AsStream.ReadExactlyCompat (output, dst, row_length);
                             dst += row_length;
                         }
                         i += 2;
                     }
                     if (row_length != 0)
                     {
-                        m_input.Read (output, dst, 7 * count * row_length);
+                        m_input.AsStream.ReadExactlyCompat (output, dst, 7 * count * row_length);
                         dst += 7 * count * row_length;
                     }
                     x += count;

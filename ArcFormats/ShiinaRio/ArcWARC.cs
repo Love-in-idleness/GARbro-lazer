@@ -246,7 +246,7 @@ namespace GameRes.Formats.ShiinaRio // 椎名里緒
                 throw new ApplicationException ("Invalid decryption scheme");
             var src = new MemoryStream (input, 8, input.Length-8);
             using (var zlib = new ZLibStream (src, CompressionMode.Decompress))
-                zlib.Read (output, 0, output.Length);
+                zlib.ReadExactlyCompat (output, 0, output.Length);
         }
 
         void UnpackYLZ (byte[] input, byte[] output)
@@ -290,7 +290,11 @@ namespace GameRes.Formats.ShiinaRio // 椎名里緒
 
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetWARC();
+        #endif
         }
 
         EncryptionScheme QueryEncryption (string arc_name)

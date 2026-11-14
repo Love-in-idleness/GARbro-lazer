@@ -71,7 +71,7 @@ namespace GameRes.Formats.Megu
                 file.View.Read (index_offset+10, name_buf, 0, (uint)name_size);
                 if (100 == flag)
                     MgdOpener.Decrypt (name_buf, 0, name_size);
-                var name = Encodings.cp932.GetString (name_buf, 0, name_size);
+                var name = Encodings.ResourceEncoding.GetString (name_buf, 0, name_size);
                 name = Path.ChangeExtension (name, GetExtFromFormatId (format));
 
                 var entry = FormatCatalog.Instance.Create<MgsEntry> (name);

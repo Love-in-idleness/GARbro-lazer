@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../GARbro.Imaging/GARbro.Imaging.csproj" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="Hjg.Pngcs" />
+    <PackageReference Include="BitMiracle.LibTiff.NET" />
+  </ItemGroup>
+</Project>

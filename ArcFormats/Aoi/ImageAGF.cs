@@ -28,8 +28,15 @@ using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Utility;
 
 namespace GameRes.Formats.Aoi
@@ -173,7 +180,11 @@ namespace GameRes.Formats.Aoi
             if (bitmap.PixelWidth != info.Width || bitmap.PixelHeight != info.Height)
                 return;
             if (bitmap.Format.BitsPerPixel != 32)
+                #if NET8_0_OR_GREATER
+                bitmap = bitmap.Convert(PixelFormats.Bgra32);
+                #else
                 bitmap = new FormatConvertedBitmap (bitmap, PixelFormats.Bgra32, null, 0);
+                #endif
 
             int stride = bitmap.PixelWidth * 4;
             byte[] pixels = new byte[stride * bitmap.PixelHeight];

@@ -64,10 +64,10 @@ namespace GameRes.Formats.Kasane
                     uint offset     = idx.ReadUInt32();
                     if (name_length > name_buffer.Length)
                         return null;
-                    idx.Read (name_buffer, 0, name_length);
+                    idx.ReadExactlyCompat (name_buffer, 0, name_length);
                     for (int j = 0; j < name_length; ++j)
                         name_buffer[j] ^= 0x55;
-                    var name = Encodings.cp932.GetString (name_buffer, 0, name_length);
+                    var name = Encodings.ResourceEncoding.GetString (name_buffer, 0, name_length);
                     var entry = FormatCatalog.Instance.Create<Entry> (name);
                     entry.Offset = offset;
                     entry.Size   = size;

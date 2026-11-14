@@ -113,7 +113,7 @@ namespace GameRes.Formats.DenSdk
             {
                 using (var input = file.CreateStream (0x30, packed_size))
                 using (var zindex = new ZLibStream (input, CompressionMode.Decompress))
-                    zindex.Read (index, 0, index.Length);
+                    zindex.ReadExactlyCompat (index, 0, index.Length);
                 base_offset = 0x30 + packed_size;
             }
             else

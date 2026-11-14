@@ -110,7 +110,7 @@ namespace GameRes.Formats.Musica
                 using (input)
                 {
                     var data = new byte[entry.AlignedSize];
-                    input.Read (data, 0, data.Length);
+                    input.ReadExactlyCompat (data, 0, data.Length);
                     for (int i = 0; i < data.Length; ++i)
                         data[i] = MovKey[data[i]];
                     return new BinMemoryStream (data, entry.Name);
@@ -144,7 +144,7 @@ namespace GameRes.Formats.Musica
             using (input)
             {
                 var data = new byte[entry.AlignedSize];
-                input.Read (data, 0, data.Length);
+                input.ReadExactlyCompat (data, 0, data.Length);
                 for (int i = 0; i < data.Length; ++i)
                     data[i] = MovKey[(i >> 16) & 0xFF, data[i]];
                 return new BinMemoryStream (data, entry.Name);
@@ -352,7 +352,11 @@ namespace GameRes.Formats.Musica
 
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetPAZ (this);
+        #endif
         }
 
         PazScheme GetScheme (string title)

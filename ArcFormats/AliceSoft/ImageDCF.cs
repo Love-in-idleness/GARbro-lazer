@@ -28,7 +28,13 @@ using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using GameRes.Compression;
 using GameRes.Utility;
 
@@ -153,7 +159,7 @@ namespace GameRes.Formats.AliceSoft
                         continue;
                     m_mask = new byte[unpacked_size];
                     using (var input = new ZLibStream (m_input.AsStream, CompressionMode.Decompress, true))
-                        input.Read (m_mask, 0, unpacked_size);
+                        input.ReadExactlyCompat (m_mask, 0, unpacked_size);
                 }
                 else if (0x6C647470 == id) // 'ptdl'
                 {

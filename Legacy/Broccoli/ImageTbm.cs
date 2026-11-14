@@ -26,7 +26,14 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+
 using GameRes.Utility;
 
 namespace GameRes.Formats.Broccoli
@@ -143,7 +150,7 @@ namespace GameRes.Formats.Broccoli
                 var row = new byte[src_row];
                 for (int y = 0; y < ch; ++y)
                 {
-                    file.Read (row, 0, src_row);
+                    file.AsStream.ReadExactlyCompat (row, 0, src_row);
                     int dst = ((py+y)*width + px) * 4;
                     if (4 == bytes_per_pixel)
                     {

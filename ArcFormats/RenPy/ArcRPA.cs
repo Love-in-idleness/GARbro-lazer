@@ -136,10 +136,16 @@ namespace GameRes.Formats.RenPy
             return new RpaOptions { Key = Properties.Settings.Default.RPAKey };
         }
 
+#if !NET8_0_OR_GREATER
         public override object GetCreationWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.CreateRPAWidget();
+        #endif
         }
+#endif
 
         public override void Create (Stream output, IEnumerable<Entry> list, ResourceOptions options,
                                      EntryCallback callback)
@@ -166,7 +172,7 @@ namespace GameRes.Formats.RenPy
                     rpa_entry.Header        = new byte[header_size];
                     rpa_entry.UnpackedSize  = (uint)size ^ rpa_options.Key;
                     rpa_entry.Size          = (uint)(size - header_size);
-                    file.Read (rpa_entry.Header, 0, header_size);
+                    file.ReadExactlyCompat (rpa_entry.Header, 0, header_size);
                     file.CopyTo (output);
                 }
                 var py_name = new PyString (name);
@@ -715,13 +721,13 @@ namespace GameRes.Formats.RenPy
             else if (count > 8)
             {
                 var bytes = new byte[count];
-                m_stream.Read (bytes, 0, count);
+                m_stream.ReadExactlyCompat (bytes, 0, count);
                 return new BigInteger (bytes);
             }
             else
             {
                 var bytes = new byte[8];
-                m_stream.Read (bytes, 0, count);
+                m_stream.ReadExactlyCompat (bytes, 0, count);
                 if (0 != (bytes[count-1] & 0x80)) // sign bit is set
                 {
                     for (int i = count; i < bytes.Length; ++i)

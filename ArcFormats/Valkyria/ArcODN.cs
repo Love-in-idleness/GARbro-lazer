@@ -31,7 +31,13 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using GameRes.Formats.Strings;
 using GameRes.Utility;
 
@@ -446,7 +452,7 @@ namespace GameRes.Formats.Valkyria
                 {
                     int stride = (int)Info.Width * Info.BPP / 8;
                     var pixels = new byte[stride * (int)Info.Height];
-                    Source.Read (pixels, 0, pixels.Length);
+                    Source.ReadExactlyCompat (pixels, 0, pixels.Length);
                     m_data = ImageData.CreateFlipped (Info, Format, null, pixels, stride);
                 }
                 return m_data;

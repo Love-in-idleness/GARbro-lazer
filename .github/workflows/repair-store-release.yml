@@ -1,0 +1,63 @@
+name: Repair Store release assets
+on:
+  push:
+    paths: [release/repair-store.txt]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release to repair
+        type: string
+        default: v1.0.4
+      store_run_id:
+        description: Run containing the already built Store upload artifact
+        type: string
+        default: '42677808924'
+permissions:
+  contents: read
+concurrency:
+  group: repair-store-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.plan.outputs.tag }}
+      version: ${{ steps.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: plan
+        run: python3 tools/release.py --tag "$REPAIR_TAG"
+        env:
+          REPAIR_TAG: ${{ inputs.tag || 'v1.0.4' }}
+      - name: Hide the incomplete release while repairing Store uploads
+        run: gh release edit "$REPAIR_TAG" --repo "$GITHUB_REPOSITORY" --draft=true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPAIR_TAG: ${{ steps.plan.outputs.tag }}
+  repair:
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - uses: actions/download-artifact@v4
+        with:
+          name: store-upload
+          path: artifacts/store-repair
+          run-id: ${{ inputs.store_run_id || '42677808924' }}
+          github-token: ${{ github.token }}
+      - name: Verify Store manifests and replace only Store assets and checksums
+        run: python tools/repair-store-release.py --tag "$REPAIR_TAG" --assets artifacts/store-repair --store-run "$STORE_RUN_ID"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPAIR_TAG: ${{ needs.prepare.outputs.tag }}
+          STORE_RUN_ID: ${{ inputs.store_run_id || '42677808924' }}

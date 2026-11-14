@@ -133,7 +133,7 @@ namespace GameRes.Formats.AirNovel
                 return input;
             var data = new byte[zent.UnpackedSize];
             using (input)
-                input.Read (data, 0, data.Length);
+                input.ReadExactlyCompat (data, 0, data.Length);
             int enc_len;
             if (zent.Name.HasExtension (".an"))
                 enc_len = data.Length;

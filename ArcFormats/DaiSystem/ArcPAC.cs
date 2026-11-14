@@ -61,7 +61,7 @@ namespace GameRes.Formats.DaiSystem
                 int name_end = Array.IndexOf<byte> (index, (byte)',', index_offset);
                 if (-1 == name_end)
                     return null;
-                var name = Encodings.cp932.GetString (index, index_offset, name_end - index_offset);
+                var name = Encodings.ResourceEncoding.GetString (index, index_offset, name_end - index_offset);
                 index_offset = name_end + 1;
                 var entry = FormatCatalog.Instance.Create<Entry> (name);
                 entry.Offset = BigEndian.ToUInt32 (index, index_offset);

@@ -26,8 +26,16 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 using GameRes.Compression;
 
 namespace GameRes.Formats.Cherry
@@ -226,7 +234,7 @@ namespace GameRes.Formats.Cherry
                 // flip pixels vertically
                 for (int dst = m_stride * (m_info.iHeight-1); dst >= 0; dst -= m_stride)
                 {
-                    lzs.Read (m_image_data, dst, m_stride);
+                    lzs.ReadExactlyCompat (m_image_data, dst, m_stride);
                 }
             }
             return ImageData.Create (m_info, Format, Palette, m_image_data, m_stride);
@@ -266,7 +274,7 @@ namespace GameRes.Formats.Cherry
         private ImageData ReadEncrypted ()
         {
             var data = new byte[m_input.Length - m_info.HeaderSize];
-            m_input.Read (data, 0, data.Length);
+            m_input.ReadExactlyCompat (data, 0, data.Length);
             Pak2Opener.Decrypt (data, 0, data.Length);
             using (var input = new MemoryStream (data))
                 return ReadV3 (input, true);

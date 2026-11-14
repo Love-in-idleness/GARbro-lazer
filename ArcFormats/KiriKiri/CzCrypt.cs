@@ -50,7 +50,7 @@ namespace GameRes.Formats.KiriKiri
                 return input;
 
             var header = new byte[15];
-            input.Read (header, 0, 15);
+            input.ReadExactlyCompat (header, 0, 15);
             if (CzMagic == header.ToUInt32 (0))
             {
                 var type = new char[3] {
@@ -64,7 +64,7 @@ namespace GameRes.Formats.KiriKiri
                 if (packed_size < entry.UnpackedSize && 0 == ((packed_size-5) & 0xF))
                 {
                     var data = new byte[packed_size];
-                    input.Read (data, 0, packed_size);
+                    input.ReadExactlyCompat (data, 0, packed_size);
                     input.Dispose();
                     data = CzDecryptData (data);
                     input = new BinMemoryStream (data);
@@ -103,7 +103,7 @@ namespace GameRes.Formats.KiriKiri
                 using (var dec = new InputCryptoStream (enc, aes.CreateDecryptor()))
                 {
                     var original = new byte[original_size];
-                    dec.Read (original, 0, original_size);
+                    dec.ReadExactlyCompat (original, 0, original_size);
                     return original;
                 }
             }

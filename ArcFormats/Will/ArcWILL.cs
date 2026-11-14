@@ -150,7 +150,11 @@ namespace GameRes.Formats.Will
 
         public override object GetCreationWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.CreateARCWidget();
+        #endif
         }
 
         internal class ArcEntry : Entry

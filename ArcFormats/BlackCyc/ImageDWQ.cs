@@ -29,8 +29,16 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 using GameRes.Utility;
 
 namespace GameRes.Formats.BlackCyc
@@ -168,8 +176,12 @@ namespace GameRes.Formats.BlackCyc
 
                 case 7: // JPEG+MASK
                     {
-                        var decoder = new JpegBitmapDecoder (input, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                        #if NET8_0_OR_GREATER
+bitmap = RasterCodec.Decode(input);
+#else
+var decoder = new JpegBitmapDecoder (input, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
                         bitmap = decoder.Frames[0];
+#endif
                         break;
                     }
 
@@ -227,7 +239,11 @@ namespace GameRes.Formats.BlackCyc
         private BitmapSource ApplyAlphaChannel (BitmapSource bitmap, byte[] alpha)
         {
             if (bitmap.Format.BitsPerPixel != 32)
+                #if NET8_0_OR_GREATER
+                bitmap = bitmap.Convert(PixelFormats.Bgr32);
+                #else
                 bitmap = new FormatConvertedBitmap (bitmap, PixelFormats.Bgr32, null, 0);
+                #endif
 
             int stride = bitmap.PixelWidth * 4;
             byte[] pixels = new byte[stride * bitmap.PixelHeight];

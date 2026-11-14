@@ -25,8 +25,15 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.KeroQ
 {
@@ -79,7 +86,7 @@ namespace GameRes.Formats.KeroQ
             else
                 format = PixelFormats.Bgr24;
             var pixels = new byte[(int)info.Width * (int)info.Height * (info.BPP / 8)];
-            file.Read (pixels, 0, pixels.Length);
+            file.AsStream.ReadExactlyCompat (pixels, 0, pixels.Length);
             if (alpha != null)
             {
                 pixels = ApplyAlphaChannel (meta, pixels, palette, alpha);

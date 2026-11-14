@@ -45,6 +45,10 @@ namespace GameRes.Formats
 
         public override SoundInput TryOpen (IBinaryStream file)
         {
+#if NET8_0_OR_GREATER
+            if (!OperatingSystem.IsWindows())
+                throw new PlatformNotSupportedException ("WMA decoding requires Windows Media Foundation.");
+#endif
             return new WmaInput (file.AsStream);
         }
     }

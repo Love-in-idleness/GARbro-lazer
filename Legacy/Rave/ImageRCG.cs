@@ -1,4 +1,4 @@
-﻿//! \file       ImageRCG.cs
+//! \file       ImageRCG.cs
 //! \date       Sat Aug 15 2026
 //! \brief      Rave RCG image format.
 //
@@ -25,7 +25,14 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+
 using GameRes.Compression;
 
 namespace GameRes.Formats.Rave
@@ -60,7 +67,7 @@ namespace GameRes.Formats.Rave
         {
             stream.Position = 4;
             var data = new byte[info.iWidth * info.iHeight * 3];
-            stream.Read (data, 0, data.Length);
+            stream.AsStream.ReadExactlyCompat (data, 0, data.Length);
             return ImageData.Create (info, PixelFormats.Bgr24, null, data);
         }
 
@@ -113,12 +120,12 @@ namespace GameRes.Formats.Rave
             {
                 using (var zstream = new ZLibStream (stream.AsStream, CompressionMode.Decompress, true))
                 {
-                    zstream.Read (data, 0, data.Length);
+                    zstream.ReadExactlyCompat (data, 0, data.Length);
                 }
             }
             else
             {
-                stream.Read (data, 0, data.Length);
+                stream.AsStream.ReadExactlyCompat (data, 0, data.Length);
             }
             ReverseChannels (data, bytes_per_pixel);
             return ImageData.Create (info, bytes_per_pixel == 3 ? PixelFormats.Bgr24 : PixelFormats.Bgra32, null, data);

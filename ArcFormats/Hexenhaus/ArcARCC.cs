@@ -109,7 +109,7 @@ namespace GameRes.Formats.Hexenhaus
         {
             for (int i = 0; i < length; ++i)
                 name[i] ^= 0x69;
-            return Encodings.cp932.GetString (name, 0, length);
+            return Encodings.ResourceEncoding.GetString (name, 0, length);
         }
     }
 }

@@ -27,7 +27,12 @@ using System;
 using System.IO;
 using System.Text;
 using System.ComponentModel.Composition;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+#else
 using System.Windows.Media.Imaging;
+#endif
 using GameRes.Utility;
 using System.Collections.Generic;
 
@@ -49,19 +54,27 @@ namespace GameRes
 
         public override ImageData Read (IBinaryStream file, ImageMetaData info)
         {
+#if NET8_0_OR_GREATER
+            return new ImageData (RasterCodec.Decode (file.AsStream), info);
+#else
             var decoder = new TiffBitmapDecoder (file.AsStream,
                 BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
             var frame = decoder.Frames[0];
             frame.Freeze();
             return new ImageData (frame, info);
+#endif
         }
 
         public override void Write (Stream file, ImageData image)
         {
+#if NET8_0_OR_GREATER
+            RasterCodec.Encode (image.Bitmap, file, "TIFF");
+#else
             var encoder = new TiffBitmapEncoder();
             encoder.Compression = TiffCompressOption.Zip;
             encoder.Frames.Add (BitmapFrame.Create (image.Bitmap, null, null, null));
             encoder.Save (file);
+#endif
         }
 
         enum TIFF

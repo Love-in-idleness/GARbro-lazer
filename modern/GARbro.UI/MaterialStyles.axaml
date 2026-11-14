@@ -1,0 +1,266 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="GARbro.Desktop.MaterialStyles">
+  <Styles.Resources>
+  <ControlTheme x:Key="GarbroCaptionButton" TargetType="Button">
+    <Setter Property="Background" Value="{DynamicResource CaptionButtonHoverBackground}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource CaptionButtonPressedBackground}" />
+    <Setter Property="Foreground" Value="{DynamicResource CaptionButtonForeground}"/>
+    <Setter Property="Width" Value="46"/>
+    <Setter Property="Height" Value="40"/>
+    <Setter Property="MinHeight" Value="40"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="CornerRadius" Value="16"/>
+    <Setter Property="FocusAdorner" Value="{x:Null}"/>
+    <Setter Property="VerticalAlignment" Value="Stretch"/>
+    <Setter Property="(WindowDecorationProperties.ElementRole)" Value="DecorationsElement"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel Background="Transparent">
+          <Border Name="PART_CaptionSurface" Width="32" Height="32"
+                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                  CornerRadius="16" ClipToBounds="True" Background="Transparent"
+                  BorderBrush="Transparent" BorderThickness="1.5">
+            <ContentPresenter Name="PART_ContentPresenter" Background="Transparent"
+                              HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                              Foreground="{TemplateBinding Foreground}"
+                              Content="{TemplateBinding Content}"/>
+          </Border>
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+
+    <Style Selector="^:pointerover:not(:disabled) /template/ Border#PART_CaptionSurface">
+      <Setter Property="Background" Value="{TemplateBinding Background}" />
+    </Style>
+
+    <Style Selector="^:pressed:not(:disabled) /template/ Border#PART_CaptionSurface">
+      <Setter Property="Background" Value="{TemplateBinding BorderBrush}" />
+    </Style>
+    <Style Selector="^:focus-visible /template/ Border#PART_CaptionSurface">
+      <Setter Property="BorderBrush" Value="{TemplateBinding Foreground}" />
+    </Style>
+    <Style Selector="^:disabled"><Setter Property="Opacity" Value="0.38" /></Style>
+  </ControlTheme>
+  <ControlTheme x:Key="GarbroCloseCaptionButton" TargetType="Button" BasedOn="{StaticResource GarbroCaptionButton}">
+    <Setter Property="Background" Value="#e81123" />
+    <Setter Property="BorderBrush" Value="#f1707a" />
+    <Style Selector="^:pointerover:not(:disabled), ^:pressed:not(:disabled)">
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+  </ControlTheme>
+
+    <ControlTheme x:Key="GarbroWindowDecorations" TargetType="WindowDrawnDecorations"
+                  BasedOn="{StaticResource {x:Type WindowDrawnDecorations}}">
+      <Setter Property="DefaultTitleBarHeight" Value="40" />
+      <Setter Property="Template">
+      <WindowDrawnDecorationsTemplate>
+        <WindowDrawnDecorationsContent>
+
+          <WindowDrawnDecorationsContent.Underlay>
+            <Panel x:Name="PART_UnderlayWrapper">
+              <Border x:Name="PART_WindowBorder"
+                      Background="{DynamicResource M3Surface}" CornerRadius="16"
+                      BorderThickness="{TemplateBinding FrameThickness}"
+                      BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                      IsHitTestVisible="False" />
+              <!-- Titlebar: background, title text, and drag area live in underlay -->
+              <Border x:Name="PART_TitleBar" CornerRadius="16,16,0,0" ClipToBounds="True" VerticalAlignment="Top"
+                     Height="{TemplateBinding TitleBarHeight}"
+                     Background="{DynamicResource TitleBarBackgroundBrush}"
+                     IsVisible="{TemplateBinding HasTitleBar}"
+                     WindowDecorationProperties.ElementRole="TitleBar" />
+
+            </Panel>
+          </WindowDrawnDecorationsContent.Underlay>
+
+          <WindowDrawnDecorationsContent.Overlay>
+            <!-- Overlay: only interactive caption buttons -->
+            <Panel x:Name="PART_OverlayWrapper">
+              <!-- Title text lives in overlay so it renders above client content -->
+              <Panel x:Name="PART_TitleTextPanel" VerticalAlignment="Top"
+                     Height="{TemplateBinding TitleBarHeight}"
+                     IsHitTestVisible="False"
+                     IsVisible="{TemplateBinding HasTitleBar}">
+                <TextBlock Text="{TemplateBinding Title}"
+                           VerticalAlignment="Center"
+                           Margin="12,0,0,0"
+                           FontSize="12" />
+              </Panel>
+              <StackPanel x:Name="PART_OverlayPanel"
+                          VerticalAlignment="Top"
+                          HorizontalAlignment="Right"
+                          Height="{TemplateBinding TitleBarHeight}"
+                          IsVisible="{TemplateBinding HasTitleBar}"
+                          Orientation="Horizontal"
+                          Spacing="2"
+                          TextElement.FontSize="10">
+                <Button x:Name="PART_FullScreenButton" Classes="captionButton"
+                        Theme="{StaticResource GarbroCaptionButton}"
+                        WindowDecorationProperties.ElementRole="FullScreenButton">
+                  <Path Width="14" Height="14" StrokeThickness="1.25" StrokeLineCap="Round" StrokeJoin="Round"
+                        Stroke="{Binding $parent[Button].Foreground}"
+                        Data="M1,5 V1 H5 M9,1 H13 V5 M13,9 V13 H9 M5,13 H1 V9" />
+                </Button>
+                <Button x:Name="PART_MinimizeButton" Classes="captionButton"
+                        Theme="{StaticResource GarbroCaptionButton}"
+                        WindowDecorationProperties.ElementRole="MinimizeButton">
+                  <Path Width="14" Height="14" StrokeThickness="1.25" StrokeLineCap="Round"
+                        Stroke="{Binding $parent[Button].Foreground}" Data="M1,7 H13" />
+                </Button>
+                <Button x:Name="PART_MaximizeButton" Classes="captionButton"
+                        Theme="{StaticResource GarbroCaptionButton}"
+                        WindowDecorationProperties.ElementRole="MaximizeButton">
+                  <Path Name="PART_CaptionWindowGlyph" Width="14" Height="14"
+                        StrokeThickness="1.25" StrokeLineCap="Round" StrokeJoin="Round"
+                        Stroke="{Binding $parent[Button].Foreground}"
+                        Data="M4,2 H10 A2,2 0 0 1 12,4 V10 A2,2 0 0 1 10,12 H4 A2,2 0 0 1 2,10 V4 A2,2 0 0 1 4,2 Z" />
+                </Button>
+                <Button x:Name="PART_CloseButton" Classes="captionButton"
+                        Theme="{StaticResource GarbroCloseCaptionButton}"
+                        WindowDecorationProperties.ElementRole="CloseButton">
+                  <Path Width="14" Height="14" StrokeThickness="1.25" StrokeLineCap="Round"
+                        Stroke="{Binding $parent[Button].Foreground}" Data="M2,2 L12,12 M12,2 L2,12" />
+                </Button>
+              </StackPanel>
+            </Panel>
+          </WindowDrawnDecorationsContent.Overlay>
+
+          <WindowDrawnDecorationsContent.FullscreenPopover>
+            <Panel Height="{TemplateBinding DefaultTitleBarHeight}"
+                   VerticalAlignment="Top"
+                   Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                   WindowDecorationProperties.ElementRole="DecorationsElement">
+              <TextBlock Text="{TemplateBinding Title}"
+                         VerticalAlignment="Center"
+                         Margin="12,0,106,0" TextTrimming="CharacterEllipsis"
+                         FontSize="12" />
+              <StackPanel HorizontalAlignment="Right"
+                          Orientation="Horizontal"
+                          Spacing="2"
+                          TextElement.FontSize="10">
+                <Button x:Name="PART_PopoverFullScreenButton" Classes="captionButton"
+                        Theme="{StaticResource GarbroCaptionButton}"
+                        WindowDecorationProperties.ElementRole="FullScreenButton">
+                  <Path Width="14" Height="14" StrokeThickness="1.25" StrokeLineCap="Round" StrokeJoin="Round"
+                        Stroke="{Binding $parent[Button].Foreground}"
+                        Data="M1,5 H5 V1 M9,1 V5 H13 M13,9 H9 V13 M5,13 V9 H1" />
+                </Button>
+                <Button x:Name="PART_PopoverCloseButton" Classes="captionButton"
+                        Theme="{StaticResource GarbroCloseCaptionButton}"
+                        WindowDecorationProperties.ElementRole="CloseButton">
+                  <Path Width="14" Height="14" StrokeThickness="1.25" StrokeLineCap="Round"
+                        Stroke="{Binding $parent[Button].Foreground}" Data="M2,2 L12,12 M12,2 L2,12" />
+                </Button>
+              </StackPanel>
+            </Panel>
+          </WindowDrawnDecorationsContent.FullscreenPopover>
+
+        </WindowDrawnDecorationsContent>
+      </WindowDrawnDecorationsTemplate>
+    </Setter>
+      <Style Selector="^ /template/ Border#PART_WindowBorder"><Setter Property="CornerRadius" Value="16" /></Style>
+      <Style Selector="^:maximized /template/ Border#PART_WindowBorder, ^:fullscreen /template/ Border#PART_WindowBorder"><Setter Property="CornerRadius" Value="0" /></Style>
+      <Style Selector="^:maximized /template/ Border#PART_TitleBar, ^:fullscreen /template/ Border#PART_TitleBar"><Setter Property="CornerRadius" Value="0" /></Style>
+      <Style Selector="^ /template/ Button">
+        <Setter Property="Width" Value="46" /><Setter Property="Height" Value="40" />
+        <Setter Property="MinHeight" Value="40" /><Setter Property="Padding" Value="0" />
+      </Style>
+      <Style Selector="^:maximized /template/ Path#PART_CaptionWindowGlyph">
+        <Setter Property="Data" Value="M5,3 V2.5 Q5,1 6.5,1 H11.5 Q13,1 13,2.5 V7.5 Q13,9 11.5,9 H11 M2.5,5 H7.5 Q9,5 9,6.5 V11.5 Q9,13 7.5,13 H2.5 Q1,13 1,11.5 V6.5 Q1,5 2.5,5 Z" />
+      </Style>
+      <Style Selector="^ /template/ Button#PART_FullScreenButton"><Setter Property="IsVisible" Value="False" /></Style>
+      <Style Selector="^ /template/ Button#PART_MinimizeButton"><Setter Property="IsVisible" Value="True" /></Style>
+      <Style Selector="^ /template/ Button#PART_MaximizeButton"><Setter Property="IsVisible" Value="True" /></Style>
+      <Style Selector="^ /template/ Panel#PART_TitleTextPanel TextBlock">
+        <Setter Property="Margin" Value="12,0,154,0" /><Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
+      </Style>
+    </ControlTheme>
+  </Styles.Resources>
+  <Style Selector="Window, :is(UserControl).page">
+    <Setter Property="Background" Value="{DynamicResource M3Surface}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
+  </Style>
+  <Style Selector="Button:not(.captionButton)">
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="MinHeight" Value="{DynamicResource M3ControlHeight}" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Button.iconMenu">
+    <Setter Property="Width" Value="48" /><Setter Property="Height" Value="48" />
+    <Setter Property="CornerRadius" Value="24" /><Setter Property="Padding" Value="12" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button:not(.captionButton):pointerover, Button.iconMenu:pointerover">
+    <Setter Property="Background" Value="{DynamicResource M3PrimaryContainer}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnPrimaryContainer}" />
+  </Style>
+  <Style Selector="Button.iconMenu:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceVariant}" />
+    <Setter Property="Opacity" Value="0.38" />
+  </Style>
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource M3Primary}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnPrimary}" />
+  </Style>
+  <Style Selector="TextBox, ComboBox, NumericUpDown">
+    <Setter Property="CornerRadius" Value="12" /><Setter Property="ClipToBounds" Value="True" /><Setter Property="MinHeight" Value="{DynamicResource M3ControlHeight}" />
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource M3OutlineVariant}" />
+  </Style>
+  <Style Selector="ListBox, TreeView">
+    <Setter Property="CornerRadius" Value="12" /><Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerLow}" />
+    <Setter Property="Padding" Value="8" />
+  </Style>
+  <Style Selector="ListBoxItem">
+    <Setter Property="CornerRadius" Value="12" /><Setter Property="ClipToBounds" Value="True" /><Setter Property="MinHeight" Value="{DynamicResource M3ControlHeight}" />
+    <Setter Property="Margin" Value="0,2" />
+  </Style>
+  <Style Selector="ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource M3PrimaryContainer}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnPrimaryContainer}" />
+  </Style>
+  <Style Selector="Border.surface">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainer}" />
+    <Setter Property="CornerRadius" Value="20" /><Setter Property="Padding" Value="12" /><Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="MenuItem"><Setter Property="MinHeight" Value="{DynamicResource M3ControlHeight}" /></Style>
+  <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceVariant}" /></Style>
+  <Style Selector="TextBlock.error"><Setter Property="Foreground" Value="{DynamicResource M3Error}" /></Style>
+  <Style Selector="Button.columnHeader">
+    <Setter Property="Background" Value="Transparent" /><Setter Property="Foreground" Value="{DynamicResource M3OnSurfaceVariant}" />
+    <Setter Property="FontSize" Value="12" /><Setter Property="Padding" Value="6,4" />
+  </Style>
+  <Style Selector="Button.navigationItem"><Setter Property="Background" Value="{DynamicResource M3SurfaceContainer}" /><Setter Property="CornerRadius" Value="20" /></Style>
+  <Style Selector="Button.navigationItem.selected"><Setter Property="Background" Value="{DynamicResource M3SecondaryContainer}" /><Setter Property="Foreground" Value="{DynamicResource M3OnSecondaryContainer}" /></Style>
+  <Style Selector="ContextMenu">
+    <Setter Property="Background" Value="{DynamicResource M3SurfaceContainerHigh}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3OnSurface}" />
+    <Setter Property="CornerRadius" Value="16" /><Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="ToolTip">
+    <Setter Property="Background" Value="{DynamicResource M3InverseSurface}" />
+    <Setter Property="Foreground" Value="{DynamicResource M3InverseOnSurface}" />
+    <Setter Property="CornerRadius" Value="8" />
+  </Style>
+  <Style Selector="ListBox.browserTabs">
+    <Setter Property="Background" Value="Transparent"/><Setter Property="Padding" Value="0"/>
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
+    <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled"/>
+  </Style>
+  <Style Selector="ListBox.browserTabs ListBoxItem">
+    <Setter Property="Padding" Value="12,4,4,4"/><Setter Property="MinHeight" Value="36"/>
+    <Setter Property="Margin" Value="0"/><Setter Property="CornerRadius" Value="16"/>
+  </Style>
+  <Style Selector="Button.tabClose, Button.tabAdd">
+    <Setter Property="Width" Value="28"/><Setter Property="Height" Value="28"/>
+    <Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="5"/>
+    <Setter Property="CornerRadius" Value="14"/><Setter Property="Background" Value="Transparent"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+</Styles>

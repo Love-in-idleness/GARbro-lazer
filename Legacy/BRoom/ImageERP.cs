@@ -27,8 +27,15 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Utility;
 
 // [030502][Studio B-Room] Wataridori ni Yadorigi o
@@ -213,7 +220,7 @@ namespace GameRes.Formats.BRoom
             int dst = 0;
             while (dst < m_output.Length)
             {
-                m_input.Read (rgb, 0, 3);
+                m_input.AsStream.ReadExactlyCompat (rgb, 0, 3);
                 int count = m_input.ReadByte();
                 if (count < 0)
                     break;

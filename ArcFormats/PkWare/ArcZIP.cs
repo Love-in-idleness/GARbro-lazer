@@ -196,14 +196,22 @@ namespace GameRes.Formats.PkWare
 
         public override ResourceOptions GetOptions (object widget)
         {
+#if NET8_0_OR_GREATER
+            return GetDefaultOptions();
+#else
             if (widget is GUI.WidgetZIP)
                 Properties.Settings.Default.ZIPPassword = ((GUI.WidgetZIP)widget).Password.Text;
             return GetDefaultOptions();
+        #endif
         }
 
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetZIP (DefaultScheme.KnownKeys);
+        #endif
         }
 
         // TODO: GUI widget for options

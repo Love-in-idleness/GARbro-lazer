@@ -58,7 +58,7 @@ namespace GameRes.Formats.Liar
             if (!IsSaneCount (count))
                 return null;
             long data_offset = base_offset + dir_size + 12;
-            if (dir_size >= max_offset || data_offset >= max_offset)
+            if (dir_size >= max_offset || data_offset > max_offset)
                 return null;
 
             file.View.Reserve (base_offset, (uint)(data_offset - base_offset));
@@ -74,7 +74,7 @@ namespace GameRes.Formats.Liar
                 var entry_size   = file.View.ReadUInt32 (cur_offset+36);
                 List<Entry> subdir = null;
                 name = VFS.CombinePath (base_dir, name);
-                if (name.HasExtension (".xfl") && file.View.ReadUInt32 (entry_offset) == Signature)
+                if (!VFS.PreserveNestedArchives && entry_size >= 4 && name.HasExtension (".xfl") && file.View.ReadUInt32 (entry_offset) == Signature)
                 {
                     subdir = ReadDirectory (file, entry_offset, entry_offset + entry_size, name);
                 }
@@ -108,7 +108,7 @@ namespace GameRes.Formats.Liar
                 writer.Write (dir_size);
                 writer.Write (list_size);
 
-                var encoding = Encodings.cp932.WithFatalFallback();
+                var encoding = Encodings.ResourceEncoding.WithFatalFallback();
 
                 byte[] name_buf = new byte[32];
                 int callback_count = 0;
@@ -119,7 +119,7 @@ namespace GameRes.Formats.Liar
                 // first, write names only
                 foreach (var entry in list)
                 {
-                    string name = Path.GetFileName (entry.Name);
+                    string name = entry.Name.Replace('\\', '/');
                     try
                     {
                         int size = encoding.GetBytes (name, 0, name.Length, name_buf, 0);
@@ -223,7 +223,7 @@ namespace GameRes.Formats.Liar
                 long footer_pos = text_offset + text_size;
                 file.BaseStream.Position = footer_pos;
                 script.Footer = new byte[file.BaseStream.Length - footer_pos];
-                file.BaseStream.Read (script.Footer, 0, script.Footer.Length);
+                file.BaseStream.ReadExactlyCompat (script.Footer, 0, script.Footer.Length);
                 return script;
             }
         }

@@ -28,9 +28,16 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Text;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Utility;
 
 namespace GameRes.Formats.Tactics
@@ -85,8 +92,12 @@ namespace GameRes.Formats.Tactics
                 reader.Unpack();
                 using (var bmp = new MemoryStream (reader.Data))
                 {
+                    #if NET8_0_OR_GREATER
+                    var decoder = new RasterDecoder(bmp);
+                    #else
                     var decoder = new BmpBitmapDecoder (bmp,
                         BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                    #endif
                     BitmapSource frame = decoder.Frames[0];
                     frame.Freeze();
                     return new ImageData (frame, info);

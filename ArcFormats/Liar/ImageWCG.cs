@@ -26,11 +26,19 @@
 using System;
 using System.IO;
 using System.ComponentModel.Composition;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
+
+
 using System.Collections.Generic;
 using System.Text;
 using GameRes.Utility;
+
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+#else
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+#endif
 
 namespace GameRes.Formats.Liar
 {
@@ -262,12 +270,16 @@ namespace GameRes.Formats.Liar
                 m_pixels = m_width*m_height;
                 if (bitmap.Format != PixelFormats.Bgra32)
                 {
+#if NET8_0_OR_GREATER
+                    bitmap = bitmap.Convert (PixelFormats.Bgra32);
+#else
                     var converted_bitmap = new FormatConvertedBitmap();
                     converted_bitmap.BeginInit();
                     converted_bitmap.Source = bitmap;
                     converted_bitmap.DestinationFormat = PixelFormats.Bgra32;
                     converted_bitmap.EndInit();
                     bitmap = converted_bitmap;
+#endif
                 }
                 m_data = new byte[m_pixels*4];
                 bitmap.CopyPixels (m_data, bitmap.PixelWidth*4, 0);

@@ -81,7 +81,7 @@ namespace GameRes.Formats.VnEngine
                 int name_length = name_end - current_offset;
                 if (0 == name_length)
                     break;
-                var name = Encodings.cp932.GetString (index, current_offset, name_length);
+                var name = Encodings.ResourceEncoding.GetString (index, current_offset, name_length);
                 var entry = FormatCatalog.Instance.Create<Entry> (name);
                 entry.Offset = offset;
                 entry.Size   = size;

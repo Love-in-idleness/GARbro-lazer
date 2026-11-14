@@ -65,7 +65,7 @@ namespace GameRes.Formats.Megu
                 file.View.Read (index_offset+2, name_buf, 0, (uint)name_size);
                 if (100 == flag)
                     Decrypt (name_buf, 0, name_size);
-                string name = Encodings.cp932.GetString (name_buf, 0, name_size);
+                string name = Encodings.ResourceEncoding.GetString (name_buf, 0, name_size);
                 index_offset += 2 + name_size;
 
                 uint offset = file.View.ReadUInt32 (index_offset+4);

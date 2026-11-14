@@ -28,9 +28,16 @@ using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Utility;
 
 namespace GameRes.Formats.Interheart
@@ -103,9 +110,13 @@ namespace GameRes.Formats.Interheart
           int stride = (int)image.Width * 4;
           byte[] bitmap = new byte[stride * image.Height];
           {
+#if NET8_0_OR_GREATER
+            var image_bgra = image.Bitmap.Convert(PixelFormats.Bgra32);
+#else
             var image_bgra = image.Bitmap.Format != PixelFormats.Bgra32
               ? new FormatConvertedBitmap(image.Bitmap, PixelFormats.Bgra32, null, 0)
               : image.Bitmap;
+#endif
             image_bgra.CopyPixels(bitmap, stride, 0);
           }
           uint[] offset_table = new uint[image.Height];

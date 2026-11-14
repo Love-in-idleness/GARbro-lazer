@@ -25,8 +25,15 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 // [030725][Digital Monkey] Kono Sora ga Tsuieru Toki ni
 
@@ -120,7 +127,7 @@ namespace GameRes.Formats.DigitalMonkey
             m_input.Position = m_info.DataOffset;
             if (10 == m_info.Version)
                 Palette = ImageFormat.ReadPalette (m_input.AsStream, 0x100, PaletteFormat.Bgr);
-            m_input.Read (m_output, 0, m_output.Length);
+            m_input.AsStream.ReadExactlyCompat (m_output, 0, m_output.Length);
             if (!m_info.HasAlpha)
                 return m_output;
             m_input.Position = m_info.AlphaOffset;

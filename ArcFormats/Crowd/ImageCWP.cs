@@ -27,8 +27,16 @@ using System;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Text;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+using WriteableBitmap = GARbro.Imaging.MutablePixelBuffer;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Utility;
 
 namespace GameRes.Formats.Crowd
@@ -97,10 +105,18 @@ namespace GameRes.Formats.Crowd
         {
             using (var png = OpenAsPng (file))
             {
+                #if NET8_0_OR_GREATER
+                var decoder = new RasterDecoder(png);
+                #else
                 var decoder = new PngBitmapDecoder (png, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                #endif
                 BitmapSource frame = decoder.Frames[0];
                 if (frame.Format.BitsPerPixel != 32)
+                    #if NET8_0_OR_GREATER
+                    frame = frame.Convert(PixelFormats.Bgr32);
+                    #else
                     frame = new FormatConvertedBitmap (frame, PixelFormats.Bgr32, null, 0);
+                    #endif
                 int stride = (int)info.Width * 4;
                 var pixels = new byte[(int)info.Height * stride];
                 frame.CopyPixels (pixels, stride, 0);
@@ -130,7 +146,11 @@ namespace GameRes.Formats.Crowd
                 m_bitmap = image.Bitmap;
                 if (m_bitmap.Format.BitsPerPixel < 32)
                 {
+                    #if NET8_0_OR_GREATER
+                    m_bitmap = m_bitmap.Convert(PixelFormats.Bgr32);
+                    #else
                     m_bitmap = new FormatConvertedBitmap (m_bitmap, PixelFormats.Bgr32, null, 0);
+                    #endif
                 }
                 int stride = m_bitmap.PixelWidth * 4;
                 var pixels = new byte[stride*m_bitmap.PixelHeight];
@@ -147,12 +167,18 @@ namespace GameRes.Formats.Crowd
 
             public void Write (Stream file)
             {
+#if !NET8_0_OR_GREATER
                 var encoder = new PngBitmapEncoder();
                 encoder.Frames.Add (BitmapFrame.Create (m_bitmap));
+#endif
                 using (var png = new MemoryStream())
                 using (var cwp = new BinaryWriter (file, System.Text.Encoding.ASCII, true))
                 {
+#if NET8_0_OR_GREATER
+                    RasterCodec.Encode(m_bitmap, png, "PNG");
+#else
                     encoder.Save (png);
+#endif
                     var header = new byte[0x11];
                     png.Position = 0x10;
                     png.Read (header, 0, header.Length);

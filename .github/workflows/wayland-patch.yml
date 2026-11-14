@@ -1,0 +1,65 @@
+name: Reproducible Wayland backend
+on:
+  pull_request:
+    paths:
+      - 'tools/patches/avalonia-wayland/**'
+      - 'tools/build-patched-wayland.py'
+      - 'vendor/nuget/**'
+      - 'modern/**'
+      - 'tests/GARbro.Desktop.NativeSmoke/**'
+      - 'tests/wayland/kde-pointer.c'
+      - 'tools/smoke-kde-cursors.py'
+      - 'Directory.Packages.props'
+      - 'NuGet.Config'
+      - '.github/workflows/wayland-patch.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reproduce:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.403'
+      - run: python3 tools/build-patched-wayland.py --verify
+      - run: dotnet build tests/GARbro.Desktop.NativeSmoke -c Release -r linux-x64 --disable-build-servers -m:1
+      - name: Verify the original assembly identity and public API
+        shell: bash
+        run: |
+          curl --fail --location https://api.nuget.org/v3-flatcontainer/avalonia.wayland/12.1.4/avalonia.wayland.12.1.4.nupkg --output artifacts/original-wayland.nupkg
+          unzip -q artifacts/original-wayland.nupkg -d artifacts/original-wayland
+          dotnet run --project tools/patches/avalonia-wayland/VerifyApi -c Release -- artifacts/original-wayland/lib/net10.0/Avalonia.Wayland.dll tools/patches/avalonia-wayland/bin/Release/net10.0/Avalonia.Wayland.dll tests/GARbro.Desktop.NativeSmoke/bin/Release/net10.0/linux-x64
+  native-cursors:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-26.04
+            rid: linux-x64
+          - runner: ubuntu-26.04-arm
+            rid: linux-arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install the private compositor test dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends kwin-wayland kwin-common breeze-cursor-theme plasma-wayland-protocols python3-dbus gcc libwayland-dev fonts-noto-cjk xvfb libgl1-mesa-dri libegl-mesa0 libegl1 libgles2 libsdl2-2.0-0
+          sudo setcap -r /usr/bin/kwin_wayland || true
+      - run: python3 tools/patched_dependencies.py
+      - run: dotnet build tests/GARbro.Desktop.NativeSmoke -c Release -r ${{ matrix.rid }} -p:AppendRuntimeIdentifierToOutputPath=false -p:SelfContained=false --disable-build-servers -m:1
+      - name: Verify native KDE system cursors and caption circles
+        timeout-minutes: 3
+        run: dbus-run-session -- /usr/bin/python3 tools/smoke-kde-cursors.py --output artifacts/kde-cursors
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kde-cursors-${{ matrix.rid }}
+          path: artifacts/kde-cursors/

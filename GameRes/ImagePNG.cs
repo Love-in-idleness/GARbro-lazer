@@ -27,9 +27,15 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.ComponentModel.Composition;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+#else
 using System.Windows.Media.Imaging;
-using GameRes.Utility;
 using System.Windows.Media;
+#endif
+
+using GameRes.Utility;
 
 namespace GameRes
 {
@@ -46,25 +52,34 @@ namespace GameRes
 
         public override ImageData Read (IBinaryStream file, ImageMetaData info)
         {
+#if NET8_0_OR_GREATER
+            return new ImageData (RasterCodec.Decode (file.AsStream), info);
+#else
             var decoder = new PngBitmapDecoder (file.AsStream,
                 BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
             BitmapSource frame = decoder.Frames[0];
             frame.Freeze();
             return new ImageData (frame, info);
+#endif
         }
 
         public override void Write (Stream file, ImageData image)
         {
+#if NET8_0_OR_GREATER
+            System.Action<Stream> save = output => RasterCodec.Encode (image.Bitmap, output, "PNG");
+#else
             var encoder = new PngBitmapEncoder();
             encoder.Frames.Add (BitmapFrame.Create (image.Bitmap, null, null, null));
+            System.Action<Stream> save = encoder.Save;
+#endif
             if (0 == image.OffsetX && 0 == image.OffsetY)
             {
-                encoder.Save (file);
+                save (file);
                 return;
             }
             using (var mem_stream = new MemoryStream())
             {
-                encoder.Save (mem_stream);
+                save (mem_stream);
                 byte[] buf = mem_stream.GetBuffer();
                 long header_pos = 8;
                 mem_stream.Position = header_pos;

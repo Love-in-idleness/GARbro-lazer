@@ -362,7 +362,11 @@ namespace GameRes.Formats.Cyberworks
 
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetBELL();
+        #endif
         }
 
         public static AImageScheme GetScheme (string title)

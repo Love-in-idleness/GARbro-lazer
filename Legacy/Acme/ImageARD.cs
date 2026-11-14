@@ -25,7 +25,14 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+
+#endif
 
 // [031212][Acme] Hageshiku Botebara! Senpai, Watashi no Ko, Mitomete Kudasai!!
 // [050325][Acme] Project Sex Shuudan Ninshin ~Athlete o Haramasero!~

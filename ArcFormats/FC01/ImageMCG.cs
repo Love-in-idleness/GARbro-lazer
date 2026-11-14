@@ -28,8 +28,16 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 using GameRes.Formats.Strings;
 
 namespace GameRes.Formats.FC01
@@ -136,15 +144,23 @@ namespace GameRes.Formats.FC01
 
         public override ResourceOptions GetOptions (object widget)
         {
+#if NET8_0_OR_GREATER
+            return GetDefaultOptions();
+#else
             var w = widget as GUI.WidgetMCG;
             if (null != w)
                 Properties.Settings.Default.MCGLastKey = w.GetKey ();
             return GetDefaultOptions();
+        #endif
         }
 
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetMCG();
+        #endif
         }
     }
 

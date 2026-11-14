@@ -82,7 +82,7 @@ namespace GameRes.Formats.FamilyAdvSystem
                     using (var enc_names = file.CreateStream (0x20 + index_size, names_size))
                     using (var dec_names = new InputCryptoStream (enc_names, decryptor))
                     {
-                        dec_names.Read (index, (int)index_size, (int)names_size);
+                        dec_names.ReadExactlyCompat (index, (int)index_size, (int)names_size);
                     }
                 }
                 else
@@ -315,7 +315,7 @@ namespace GameRes.Formats.FamilyAdvSystem
             using (var decryptor = m_encryption.CreateDecryptor ((int)(m_block_start >> 12)))
             using (var enc = new BinMemoryStream (m_block))
             using (var dec = new InputCryptoStream (enc, decryptor))
-                dec.Read (m_block, 0, m_block_length);
+                dec.ReadExactlyCompat (m_block, 0, m_block_length);
             return true;
         }
 

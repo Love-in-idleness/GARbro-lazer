@@ -165,7 +165,11 @@ namespace GameRes.Formats.RealLive
 
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetSCENE();
+        #endif
         }
 
         byte[] GuessKey (Stream input)
@@ -174,7 +178,7 @@ namespace GameRes.Formats.RealLive
                 return null;
             var buffer = new byte[input.Length];
             var key = new byte[16];
-            input.Read (buffer, 0, (int)input.Length);
+            input.ReadExactlyCompat (buffer, 0, (int)input.Length);
             uint k = LittleEndian.ToUInt32 (buffer, 0) ^ (uint)input.Length;
             LittleEndian.Pack (k, key, 0);
 

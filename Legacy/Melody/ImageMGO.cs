@@ -27,7 +27,14 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Compression;
 
 // [000303][Melody] Rendezvous
@@ -81,9 +88,13 @@ namespace GameRes.Formats.Melody
             using (var lzss = new PackedStream<LzssDecompressor> (file.AsStream, true))
             {
                 var header = new byte[meta.BmpOffset];
-                lzss.Read (header, 0, header.Length);
+                lzss.ReadExactlyCompat (header, 0, header.Length);
+                #if NET8_0_OR_GREATER
+                var decoder = new RasterDecoder(lzss);
+                #else
                 var decoder = new BmpBitmapDecoder (lzss,
                     BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                #endif
                 var frame = decoder.Frames[0];
                 frame.Freeze();
                 return new ImageData (frame, info);

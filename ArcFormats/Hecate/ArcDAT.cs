@@ -143,7 +143,7 @@ namespace GameRes.Formats.Hecate
                     dec.CopyTo (mem);
                     mem.Position = 0;
                     mem.Read (buffer, 0, (int)mem.Length);
-                    enc.Read (buffer, (int)mem.Length, (int)dent.RemainingSize);
+                    enc.ReadExactlyCompat (buffer, (int)mem.Length, (int)dent.RemainingSize);
                     return new BinMemoryStream (buffer);
                 }
             }

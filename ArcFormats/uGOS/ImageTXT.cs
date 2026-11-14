@@ -28,9 +28,17 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Text.RegularExpressions;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+using WriteableBitmap = GARbro.Imaging.MutablePixelBuffer;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.uGOS
 {
@@ -131,7 +139,11 @@ namespace GameRes.Formats.uGOS
                     bitmap.WritePixels (src_rect, reader.Data, reader.Stride, tile.X, tile.Y);
                 }
             }
+#if NET8_0_OR_GREATER
+            var flipped = bitmap.FlipVertical();
+#else
             var flipped = new TransformedBitmap (bitmap, new ScaleTransform { ScaleY = -1 });
+#endif
             flipped.Freeze();
             return new ImageData (flipped, meta);
         }

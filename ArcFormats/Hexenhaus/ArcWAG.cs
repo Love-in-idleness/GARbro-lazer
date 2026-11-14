@@ -91,7 +91,7 @@ namespace GameRes.Formats.Hexenhaus
                             if (name_length > name_buffer.Length)
                                 name_buffer = new byte[name_length];
                             index.Read (name_buffer, 0, name_length);
-                            entry.Name = Encodings.cp932.GetString (name_buffer, 0, name_length);
+                            entry.Name = Encodings.ResourceEncoding.GetString (name_buffer, 0, name_length);
                             entry.Type = FormatCatalog.Instance.GetTypeFromName (entry.Name);
                             index.ReadInt16();
                         }

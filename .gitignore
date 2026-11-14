@@ -2,6 +2,8 @@ bin
 obj
 tags
 *.exe
+!tests/fixtures/generated/resources32.exe
+!tests/fixtures/generated/resources64.exe
 *.dll
 *.pdb
 *.suo
@@ -15,3 +17,8 @@ Makefile
 packages
 .nuget
 .vs
+
+TestResults/
+artifacts/
+.flatpak-nuget.config
+__pycache__/

@@ -49,7 +49,7 @@ namespace GameRes.Formats.Ags32i
             Stream input = new InputCryptoStream (file.AsStream, new Ags32Transform (key));
             input = new SeekableStream (input);
             var header = new byte[12];
-            input.Read (header, 0, 12);
+            input.ReadExactlyCompat (header, 0, 12);
             if (!header.AsciiEqual (8, "WAVE"))
                 return null;
             input.Position = 0;

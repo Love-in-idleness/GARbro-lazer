@@ -52,8 +52,12 @@ namespace GameRes.Formats.Unity
                 return null;
             using (var inf = VFS.OpenStream (inf_name))
             {
+#if NET8_0_OR_GREATER
+                var list = PortableSerializedIndexes.ReadUnity(inf);
+#else
                 var bin = new BinaryFormatter { Binder = new SpTypeBinder() };
                 var list = bin.Deserialize (inf) as List<LinkerInfo>;
+#endif
                 if (null == list || 0 == list.Count)
                     return null;
                 var base_name = Path.GetFileNameWithoutExtension (file.Name);
@@ -65,6 +69,8 @@ namespace GameRes.Formats.Unity
                 var dir = list.Select (e => new Entry {
                     Name = e.name, Type = type, Offset = e.offset, Size = (uint)e.size
                 }).ToList();
+                if (dir.Any(e => !e.CheckPlacement(file.MaxOffset)))
+                    return null;
                 return new ArcFile (file, this, dir);
             }
         }

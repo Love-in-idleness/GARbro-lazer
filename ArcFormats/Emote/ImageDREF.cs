@@ -31,9 +31,17 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+using WriteableBitmap = GARbro.Imaging.MutablePixelBuffer;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 // not exactly related to Emote engine, but defined in Emote namespace for convenience
 
@@ -153,7 +161,11 @@ namespace GameRes.Formats.Emote
         {
             BitmapSource source = layer.Bitmap;
             if (source.Format.BitsPerPixel != 32)
+                #if NET8_0_OR_GREATER
+                source = source.Convert(PixelFormats.Bgra32);
+                #else
                 source = new FormatConvertedBitmap (source, PixelFormats.Bgra32, null, 0);
+                #endif
 
             // determine coordinates of the intersection of layer and canvas
             var src_rect = new Int32Rect (0, 0, source.PixelWidth, source.PixelHeight);
@@ -174,6 +186,10 @@ namespace GameRes.Formats.Emote
             layer_rect.Intersect (canvas_rect);
             if (layer_rect.Width <= 0 || layer_rect.Height <= 0)
                 return;
+#if NET8_0_OR_GREATER
+            src_rect.Width = Math.Min(src_rect.Width, layer_rect.Width);
+            src_rect.Height = Math.Min(src_rect.Height, layer_rect.Height);
+#endif
 
             // copy out layer area
             int src_stride = src_rect.Width * 4;

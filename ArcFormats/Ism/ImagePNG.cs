@@ -25,8 +25,15 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.Ism
 {
@@ -48,8 +55,12 @@ namespace GameRes.Formats.Ism
 
         public override ImageData Read (IBinaryStream file, ImageMetaData info)
         {
+            #if NET8_0_OR_GREATER
+            var decoder = new RasterDecoder(file.AsStream);
+            #else
             var decoder = new PngBitmapDecoder (file.AsStream,
                 BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+            #endif
             BitmapSource bitmap = decoder.Frames[0];
             if (bitmap.Format != PixelFormats.Bgra32)
                 return new ImageData (bitmap, info);

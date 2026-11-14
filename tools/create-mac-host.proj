@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Target Name="CreateMacHost">
+    <CreateAppHost AppHostSourcePath="$(Template)" AppHostDestinationPath="$(Destination)"
+      AppBinaryName="$(ManagedPath)" IntermediateAssembly="$(MacManagedAssembly)" EnableMacOSCodeSign="$(SignHost)" />
+  </Target>
+</Project>

@@ -25,7 +25,14 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+
 using GameRes.Compression;
 
 // [030912][Wing] Minato Gensou ~Venice Fantastica~
@@ -107,7 +114,7 @@ namespace GameRes.Formats.Wing
             m_input.Position = 0x10;
             var pixels = new byte[m_stride * m_height];
             using (var input = new LzssStream (m_input.AsStream, LzssMode.Decompress, true))
-                input.Read (pixels, 0, pixels.Length);
+                input.ReadExactlyCompat (pixels, 0, pixels.Length);
             if (0x64 == m_info.Method)
                 RestoreRGB (pixels);
             if (50 == m_info.Alpha)

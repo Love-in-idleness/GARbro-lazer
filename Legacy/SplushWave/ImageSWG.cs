@@ -26,8 +26,15 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.SplushWave
 {
@@ -80,7 +87,7 @@ namespace GameRes.Formats.SplushWave
             var pixels = new byte[stride * meta.iHeight];
             if (!meta.IsCompressed)
             {
-                file.Read (pixels, 0, pixels.Length);
+                file.AsStream.ReadExactlyCompat (pixels, 0, pixels.Length);
                 return ImageData.CreateFlipped (meta, format, palette, pixels, stride);
             }
             if (!Decompress (file, pixels, meta.Depth + 2, meta.iWidth, meta.iHeight))

@@ -25,7 +25,14 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+
+#endif
 
 namespace GameRes.Formats.PineSoft
 {
@@ -50,7 +57,7 @@ namespace GameRes.Formats.PineSoft
         {
             var pixels = new byte[info.iWidth * info.iHeight * 4];
             file.Position = 8;
-            file.Read (pixels, 0, pixels.Length);
+            file.AsStream.ReadExactlyCompat (pixels, 0, pixels.Length);
             return ImageData.Create (info, PixelFormats.Bgra32, null, pixels);
         }
 

@@ -111,7 +111,7 @@ namespace GameRes.Formats.Nonono
                 int seed = index.ToInt32 (pos+8);
                 rnd.SRand (seed);
                 Decrypt (name_buffer, 0, name_length, rnd);
-                var name = Encodings.cp932.GetString (name_buffer, 0, name_length);
+                var name = Encodings.ResourceEncoding.GetString (name_buffer, 0, name_length);
                 var entry = Create<NpfEntry> (name);
                 entry.Offset = index.ToUInt32 (pos+4);
                 entry.Size   = index.ToUInt32 (pos+16);

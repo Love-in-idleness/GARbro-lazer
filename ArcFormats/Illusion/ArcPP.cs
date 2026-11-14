@@ -245,7 +245,11 @@ namespace GameRes.Formats.Illusion
 
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetPP (this);
+        #endif
         }
 
         PpEncryptionScheme QueryEncryptionScheme (ArcView file)

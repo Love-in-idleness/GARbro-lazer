@@ -25,8 +25,15 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 // [071231][Cotton Club] Kureuta
 
@@ -65,13 +72,17 @@ namespace GameRes.Formats.CottonClub
             var meta = (LmgMetaData)info;
             var data = new byte[file.Length - 12];
             file.Position = 12;
-            file.Read (data, 0, data.Length);
+            file.AsStream.ReadExactlyCompat (data, 0, data.Length);
             DecryptData (data, file.Name);
             if (3 == meta.Method)
             {
                 using (var input = new BinMemoryStream (data))
                 {
+                    #if NET8_0_OR_GREATER
+                    var decoder = new RasterDecoder(input);
+                    #else
                     var decoder = new JpegBitmapDecoder (input, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                    #endif
                     var frame = decoder.Frames[0];
                     frame.Freeze();
                     return new ImageData (frame, info);

@@ -63,7 +63,7 @@ namespace GameRes.Formats.NScripter
                 if (base_offset - cur_offset < 8)
                     return null;
 
-                string name = Encodings.cp932.GetString (name_buffer, 0, name_len);
+                string name = Encodings.ResourceEncoding.GetString (name_buffer, 0, name_len);
                 var entry = FormatCatalog.Instance.Create<Entry> (name);
                 entry.Offset = Binary.BigEndian (file.View.ReadUInt32 (cur_offset)) + (long)base_offset;
                 entry.Size   = Binary.BigEndian (file.View.ReadUInt32 (cur_offset+4));

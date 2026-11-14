@@ -189,7 +189,7 @@ namespace GameRes.Formats.Malie
         Stream UnpackPsbz (Stream input)
         {
             var header = new byte[8];
-            input.Read (header, 0, 8);
+            input.ReadExactlyCompat (header, 0, 8);
             if (!header.AsciiEqual ("PSBZ"))
             {
                 input.Position = 0;

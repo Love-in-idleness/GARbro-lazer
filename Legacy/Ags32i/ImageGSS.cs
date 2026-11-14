@@ -27,7 +27,14 @@ using System;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Security.Cryptography;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+
 using GameRes.Compression;
 using GameRes.Utility;
 
@@ -64,7 +71,7 @@ namespace GameRes.Formats.Ags32i
             using (var ags = OpenStream (file, key))
             {
                 var header = new byte[0x28];
-                ags.Read (header, 0, 8);
+                ags.ReadExactlyCompat (header, 0, 8);
                 if (!header.AsciiEqual ("GSS\0"))
                     return null;
                 int unpacked_size = header.ToInt32 (4);
@@ -95,10 +102,10 @@ namespace GameRes.Formats.Ags32i
             using (var ags = OpenStream (file, meta.Key))
             {
                 var header = new byte[meta.DataOffset];
-                ags.Read (header, 0, 8);
+                ags.ReadExactlyCompat (header, 0, 8);
                 using (var bmp = new ZLibStream (ags, CompressionMode.Decompress))
                 {
-                    bmp.Read (header, 0, header.Length);
+                    bmp.ReadExactlyCompat (header, 0, header.Length);
                     var pixels = new byte[meta.UnpackedSize - meta.DataOffset];
                     if (pixels.Length != bmp.Read (pixels, 0, pixels.Length))
                         throw new InvalidFormatException();

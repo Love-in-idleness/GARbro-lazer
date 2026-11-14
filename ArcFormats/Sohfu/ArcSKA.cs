@@ -54,7 +54,7 @@ namespace GameRes.Formats.Sohfu
                 int name_len = 0;
                 while (name_len < name_buffer.Length && name_buffer[name_len] != 0)
                     ++name_len;
-                var name = Encodings.cp932.GetString (name_buffer, 0, name_len);
+                var name = Encodings.ResourceEncoding.GetString (name_buffer, 0, name_len);
                 ++name_len;
                 string ext = null;
                 if (name_len < 0x10)

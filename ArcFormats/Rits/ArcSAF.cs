@@ -245,7 +245,7 @@ namespace GameRes.Formats.Rits
         protected virtual string ReadName (int pos)
         {
             m_index[pos] &= 0x7F;
-            string name = Encodings.cp932.GetString (m_index, pos, 0x14);
+            string name = Encodings.ResourceEncoding.GetString (m_index, pos, 0x14);
             return name.TrimEnd();
         }
     }

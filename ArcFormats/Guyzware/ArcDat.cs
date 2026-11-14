@@ -54,7 +54,7 @@ namespace GameRes.Formats.Guyzware
                         nameBytes.Add(b);
                     }
 
-                    name = Encodings.cp932.GetString(nameBytes.ToArray());
+                    name = Encodings.ResourceEncoding.GetString(nameBytes.ToArray());
                 }
                 else
                 {

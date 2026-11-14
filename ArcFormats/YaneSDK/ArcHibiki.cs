@@ -29,7 +29,9 @@ using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+#if !NET8_0_OR_GREATER
 using System.Runtime.Serialization.Formatters.Binary;
+#endif
 using GameRes.Utility;
 
 namespace GameRes.Formats.YaneSDK
@@ -43,11 +45,15 @@ namespace GameRes.Formats.YaneSDK
         public override bool  IsHierarchic { get { return false; } }
         public override bool      CanWrite { get { return false; } }
 
+#if NET8_0_OR_GREATER
+        public static readonly string SchemeFileName = "hibiki_works.json";
+#else
         public static readonly string SchemeFileName = "hibiki_works.dat";
+#endif
 
         public override ArcFile TryOpen (ArcView file)
         {
-            if (!file.Name.HasExtension (".dat"))
+            if (!file.Name.HasExtension (".dat") || file.MaxOffset < 2)
                 return null;
             int count = ReadCount (file);
             if (!IsSaneCount (count))
@@ -65,6 +71,8 @@ namespace GameRes.Formats.YaneSDK
 
         ArcFile TryOpenWithScheme (ArcView file, int count, HibikiDatScheme scheme)
         {
+            if (!IsSaneCount(count) || scheme == null || scheme.ContentKey == null)
+                return null;
             var dat_name = Path.GetFileName (file.Name).ToLowerInvariant();
             IList<HibikiTocRecord> toc_table = null;
             if (scheme.ArcMap != null && scheme.ArcMap.TryGetValue (dat_name, out toc_table))
@@ -111,7 +119,7 @@ namespace GameRes.Formats.YaneSDK
                 {
                     var entry = read_entry (i);
                     if (null == entry || string.IsNullOrWhiteSpace (entry.Name)
-                        || entry.Offset < data_offset || entry.Size > file.MaxOffset)
+                        || entry.Offset < data_offset || !entry.CheckPlacement(file.MaxOffset))
                         return null;
                     dir.Add (entry);
                 }
@@ -169,16 +177,41 @@ namespace GameRes.Formats.YaneSDK
 
         HibikiDatScheme QueryScheme (string arc_name)
         {
-            if (null == KnownSchemes)
+            if (null == KnownSchemes || KnownSchemes.Count == 0)
                 return null;
+#if NET8_0_OR_GREATER
+            if (KnownSchemes.Count > 1)
+            {
+                var title = FormatCatalog.Instance.LookupGame(arc_name);
+                if (title != null && KnownSchemes.TryGetValue(title, out var known))
+                    return known;
+                var options = Query<HibikiOptions>("Select a Hibiki game scheme using the Scheme option.");
+                if (options.Scheme != null && KnownSchemes.TryGetValue(options.Scheme, out known))
+                    return known;
+                throw new InvalidFormatException("Unknown Hibiki game scheme.");
+            }
+#endif
             // XXX add GUI widget to select scheme
             return KnownSchemes.Values.FirstOrDefault();
         }
 
         static Lazy<HibikiScheme> s_Scheme = new Lazy<HibikiScheme> (DeserializeScheme);
 
+#if NET8_0_OR_GREATER
+        HibikiScheme m_scheme;
+        public override ResourceScheme Scheme {
+            get { return m_scheme ?? s_Scheme.Value; }
+            set { m_scheme = HibikiScheme.Validate((HibikiScheme)value); }
+        }
+        public override ResourceOptions GetDefaultOptions () { return new HibikiOptions(); }
+#endif
+
         internal IDictionary<string, HibikiDatScheme> KnownSchemes {
+#if NET8_0_OR_GREATER
+            get { return ((HibikiScheme)Scheme).KnownSchemes; }
+#else
             get { return s_Scheme.Value.KnownSchemes; }
+#endif
         }
 
         static HibikiScheme DeserializeScheme ()
@@ -189,14 +222,18 @@ namespace GameRes.Formats.YaneSDK
                 var scheme_file = Path.Combine (dir, SchemeFileName);
                 using (var input = File.OpenRead (scheme_file))
                 {
+#if NET8_0_OR_GREATER
+                    return HibikiScheme.ReadJson(input);
+#else
                     var bin = new BinaryFormatter();
                     return (HibikiScheme)bin.Deserialize (input);
+#endif
                 }
             }
             catch (Exception X)
             {
                 Trace.WriteLine (X.Message, "hibiki_works scheme deserialization failed");
-                return new HibikiScheme();
+                return new HibikiScheme { KnownSchemes = new Dictionary<string, HibikiDatScheme>() };
             }
         }
     }
@@ -216,7 +253,48 @@ namespace GameRes.Formats.YaneSDK
     public class HibikiScheme : ResourceScheme
     {
         public IDictionary<string, HibikiDatScheme> KnownSchemes;
+#if NET8_0_OR_GREATER
+        public static HibikiScheme ReadJson(Stream input)
+        {
+            const int limit = 64 << 20;
+            if (input.CanSeek && input.Length - input.Position > limit)
+                throw new InvalidDataException("Hibiki scheme exceeds the input limit.");
+            using var limited = new LimitStream(input, limit, true);
+            using var text = new StreamReader(limited);
+            using var json = new Newtonsoft.Json.JsonTextReader(text) { MaxDepth = 64 };
+            var data = Newtonsoft.Json.Linq.JObject.Load(json);
+            if (data.Descendants().OfType<Newtonsoft.Json.Linq.JProperty>().Any(p => p.Name.StartsWith("$", StringComparison.Ordinal)))
+                throw new InvalidDataException("Hibiki scheme cannot contain type or reference metadata.");
+            var serializer = Newtonsoft.Json.JsonSerializer.Create(new Newtonsoft.Json.JsonSerializerSettings {
+                TypeNameHandling = Newtonsoft.Json.TypeNameHandling.None,
+                MissingMemberHandling = Newtonsoft.Json.MissingMemberHandling.Error
+            });
+            return Validate(data.ToObject<HibikiScheme>(serializer));
+        }
+
+        internal static HibikiScheme Validate(HibikiScheme scheme)
+        {
+            if (scheme?.KnownSchemes == null || scheme.KnownSchemes.Count > 4096)
+                throw new InvalidDataException("Invalid Hibiki scheme map.");
+            foreach (var game in scheme.KnownSchemes.Values)
+            {
+                if (game?.ContentKey == null || game.ContentKey.Length > 1 << 20 || game.ArcMap?.Count > 0x40000)
+                    throw new InvalidDataException("Invalid Hibiki content key or archive map.");
+                if (game.ArcMap != null && game.ArcMap.Values.Any(t => t == null || t.Count >= 0x40000
+                    || t.Any(e => e == null || string.IsNullOrWhiteSpace(e.Name))))
+                    throw new InvalidDataException("Invalid Hibiki archive entries.");
+            }
+            return scheme;
+        }
+#endif
     }
+
+#if NET8_0_OR_GREATER
+    public class HibikiOptions : ResourceOptions
+    {
+        public string Scheme;
+    }
+#endif
 
     [Serializable]
     public class HibikiDatScheme

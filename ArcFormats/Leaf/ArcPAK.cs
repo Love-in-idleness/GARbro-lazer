@@ -196,7 +196,7 @@ namespace GameRes.Formats.Leaf
                     using (var input = File.OpenRead(entry.Name))
                     {
                         byte[] rawData = new byte[input.Length];
-                        input.Read (rawData, 0, (int)input.Length);
+                        input.ReadExactlyCompat (rawData, 0, (int)input.Length);
 
                         // Compress
                         byte[] compressedData = LeafLzss.Compress (rawData, 0x20);

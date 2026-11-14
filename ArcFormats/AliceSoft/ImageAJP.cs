@@ -25,8 +25,15 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Compression;
 using GameRes.Utility;
 
@@ -80,8 +87,12 @@ namespace GameRes.Formats.AliceSoft
             byte[] pixels;
             using (var jpeg = DecryptStream (stream.AsStream, meta.ImageOffset, meta.ImageSize))
             {
+                #if NET8_0_OR_GREATER
+                var decoder = new RasterDecoder(jpeg);
+                #else
                 var decoder = new JpegBitmapDecoder (jpeg,
                     BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                #endif
                 BitmapSource bitmap = decoder.Frames[0];
                 if (0 == meta.AlphaOffset || 0 == meta.AlphaSize)
                 {
@@ -89,7 +100,11 @@ namespace GameRes.Formats.AliceSoft
                     return new ImageData (bitmap, info);
                 }
                 if (bitmap.Format.BitsPerPixel != 32)
+                    #if NET8_0_OR_GREATER
+                    bitmap = bitmap.Convert(PixelFormats.Bgr32);
+                    #else
                     bitmap = new FormatConvertedBitmap (bitmap, PixelFormats.Bgr32, null, 0);
+                    #endif
 
                 pixels = new byte[stride * (int)meta.Height];
                 bitmap.CopyPixels (pixels, stride, 0);
@@ -101,7 +116,7 @@ namespace GameRes.Formats.AliceSoft
                 using (mask = new ZLibStream (mask, CompressionMode.Decompress))
                 {
                     alpha = new byte[meta.AlphaUnpacked];
-                    mask.Read (alpha, 0, alpha.Length);
+                    mask.ReadExactlyCompat (alpha, 0, alpha.Length);
                 }
             }
             else
@@ -123,7 +138,7 @@ namespace GameRes.Formats.AliceSoft
         {
             var header = new byte[Key.Length];
             input.Position = offset;
-            input.Read (header, 0, header.Length);
+            input.ReadExactlyCompat (header, 0, header.Length);
             for (int i = 0; i < header.Length; ++i)
                 header[i] ^= Key[i];
             if (size > header.Length)
@@ -138,7 +153,7 @@ namespace GameRes.Formats.AliceSoft
         byte[] ReadMask (Stream input)
         {
             var header = new byte[0x40];
-            input.Read (header, 0, header.Length);
+            input.ReadExactlyCompat (header, 0, header.Length);
             int width       = LittleEndian.ToInt32 (header, 0x18);
             int height      = LittleEndian.ToInt32 (header, 0x1C);
             int data_offset = LittleEndian.ToInt32 (header, 0x20);
@@ -166,7 +181,7 @@ namespace GameRes.Formats.AliceSoft
 
                 case 0xFC:
                     count = input.ReadByte();
-                    input.Read (pixels, dst, 2);
+                    input.ReadExactlyCompat (pixels, dst, 2);
                     count = count * 2 + 4;
                     Binary.CopyOverlapped (pixels, dst, dst+2, count);
                     dst += count+2;

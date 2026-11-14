@@ -83,7 +83,7 @@ namespace GameRes.Formats.Kid
                 else
                 {
                     cps.ReadInt32();
-                    cps.Read(output, 0, unpacked_size);
+                    cps.ReadExactlyCompat(output, 0, unpacked_size);
                 }
                 return new BinMemoryStream(output);
             }

@@ -1,0 +1,80 @@
+name: Release
+on:
+  push:
+    paths: [release/version.txt, release/rebuild.txt]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag, for example v1.0.0 or v1.0.0-rc.1
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.plan.outputs.tag }}
+      version: ${{ steps.plan.outputs.version }}
+      notes: ${{ steps.plan.outputs.notes }}
+      prerelease: ${{ steps.plan.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: plan
+        env:
+          RELEASE_TAG_INPUT: ${{ inputs.tag }}
+        run: python3 tools/release.py
+  portable:
+    needs: plan
+    uses: ./.github/workflows/portable.yml
+    with:
+      package_version: ${{ needs.plan.outputs.version }}
+  flatpak:
+    needs: plan
+    uses: ./.github/workflows/flatpak.yml
+    with:
+      package_version: ${{ needs.plan.outputs.version }}
+  store:
+    needs: plan
+    uses: ./.github/workflows/store.yml
+    with:
+      package_version: ${{ needs.plan.outputs.version }}
+  publish:
+    needs: [plan, portable, store, flatpak]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG_INPUT: ${{ needs.plan.outputs.tag }}
+      RELEASE_NOTES: ${{ needs.plan.outputs.notes }}
+      RELEASE_PRERELEASE: ${{ needs.plan.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: preview-*
+          merge-multiple: true
+          path: artifacts/release
+      - uses: actions/download-artifact@v4
+        with:
+          name: store-upload
+          path: artifacts/release
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: flatpak-*
+          merge-multiple: true
+          path: artifacts/release
+      - run: python3 tools/release.py --artifacts artifacts/release --revision "$GITHUB_SHA"
+      - name: Publish verified packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=()
+          if [[ "$RELEASE_PRERELEASE" == true ]]; then flags+=(--prerelease); fi
+          gh release create "$RELEASE_TAG_INPUT" artifacts/release/* \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "${GITHUB_REPOSITORY##*/} $RELEASE_TAG_INPUT" --notes-file "$RELEASE_NOTES" --draft "${flags[@]}"
+          gh release edit "$RELEASE_TAG_INPUT" --repo "$GITHUB_REPOSITORY" --draft=false

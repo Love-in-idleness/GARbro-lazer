@@ -26,7 +26,14 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Utility;
 
 // [011130][KeroQ] Nijuubako
@@ -76,8 +83,12 @@ namespace GameRes.Formats.KeroQ
         {
             using (var png = new PngRestoreStream (file, (KgdMetaData)info))
             {
+                #if NET8_0_OR_GREATER
+                var decoder = new RasterDecoder(png);
+                #else
                 var decoder = new PngBitmapDecoder (png,
                     BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                #endif
                 var frame = decoder.Frames[0];
                 int pixel_size = (frame.Format.BitsPerPixel + 7) / 8;
                 if (pixel_size < 3)

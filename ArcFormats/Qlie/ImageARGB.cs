@@ -25,8 +25,15 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.Qlie
 {
@@ -78,23 +85,39 @@ namespace GameRes.Formats.Qlie
         {
             var meta = (ArgbMetaData)info;
             file.Position = meta.ImageOffset;
+            #if NET8_0_OR_GREATER
+            var jpeg = new RasterDecoder(file.AsStream);
+            #else
             var jpeg = new JpegBitmapDecoder (file.AsStream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+            #endif
             BitmapSource bitmap = jpeg.Frames[0];
 
             file.Position = meta.ImageOffset + meta.ImageLength;
+            #if NET8_0_OR_GREATER
+            var png = new RasterDecoder(file.AsStream);
+            #else
             var png = new PngBitmapDecoder (file.AsStream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+            #endif
             BitmapSource mask = png.Frames[0];
             if (mask.PixelWidth != bitmap.PixelWidth || mask.PixelHeight != bitmap.PixelHeight)
                 throw new InvalidFormatException ("ARGB bitmap and mask dimensions mismatch");
 
             if (bitmap.Format.BitsPerPixel != 32)
+                #if NET8_0_OR_GREATER
+                bitmap = bitmap.Convert(PixelFormats.Bgr32);
+                #else
                 bitmap = new FormatConvertedBitmap (bitmap, PixelFormats.Bgr32, null, 0);
+                #endif
             int stride = bitmap.PixelWidth * 4;
             var pixels = new byte[stride * bitmap.PixelHeight];
             bitmap.CopyPixels (pixels, stride, 0);
 
             if (mask.Format.BitsPerPixel != 8)
+                #if NET8_0_OR_GREATER
+                mask = mask.Convert(PixelFormats.Gray8);
+                #else
                 mask = new FormatConvertedBitmap (mask, PixelFormats.Gray8, null, 0);
+                #endif
             var alpha = new byte[mask.PixelWidth * mask.PixelHeight];
             mask.CopyPixels (alpha, mask.PixelWidth, 0);
 

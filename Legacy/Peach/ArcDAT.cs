@@ -26,7 +26,14 @@
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+
+#endif
 
 namespace GameRes.Formats.Peach
 {
@@ -160,7 +167,7 @@ namespace GameRes.Formats.Peach
 
             if (m_type == 1)
             {
-                m_input.Read (pixels, 0, pixels.Length);
+                m_input.AsStream.ReadExactlyCompat (pixels, 0, pixels.Length);
             }
             else
             {
@@ -174,7 +181,7 @@ namespace GameRes.Formats.Peach
                 {
                     if (run_type != 0)
                     {
-                        m_input.Read (pixels, dst, len);
+                        m_input.AsStream.ReadExactlyCompat (pixels, dst, len);
                     }
                     run_type ^= 1;
                     dst += len;

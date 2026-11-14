@@ -28,9 +28,16 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Cryptography;
 using GameRes.Formats.Strings;
 using ICSharpCode.SharpZipLib.BZip2;
@@ -100,7 +107,7 @@ namespace GameRes.Formats.Tamamo
                 int name_end = Array.IndexOf<byte> (index, 0, pos);
                 if (-1 == name_end)
                     return null;
-                var name = Encodings.cp932.GetString (index, pos, name_end-pos);
+                var name = Encodings.ResourceEncoding.GetString (index, pos, name_end-pos);
                 pos = name_end+1;
                 uint enc_size = index.ToUInt32 (pos);
                 pos += 4;
@@ -151,8 +158,16 @@ namespace GameRes.Formats.Tamamo
                 using (decoder)
                 {
                     var ev_bitmap = CreateCanvas (800, 600, source, new Int32Rect (0, 0, 800, 512));
+                    #if NET8_0_OR_GREATER
+                    ev_bitmap = CopyRegion (source, new Int32Rect (800, 0, 88, 400), ev_bitmap, 0, 512);
+                    #else
                     CopyRegion (source, new Int32Rect (800, 0, 88, 400), ev_bitmap, 0, 512);
+                    #endif
+                    #if NET8_0_OR_GREATER
+                    ev_bitmap = CopyRegion (source, new Int32Rect (888, 0, 88, 400), ev_bitmap, 400, 512);
+                    #else
                     CopyRegion (source, new Int32Rect (888, 0, 88, 400), ev_bitmap, 400, 512);
+                    #endif
                     return new BitmapSourceDecoder (ev_bitmap);
                 }
             }
@@ -167,12 +182,25 @@ namespace GameRes.Formats.Tamamo
                 {
                     var ev_bitmap = CreateCanvas (1280, 720, source, new Int32Rect (0, 0, 1024, 719));
                     // XXX Senkou no Kishi texture
+                    #if NET8_0_OR_GREATER
+                    ev_bitmap = CopyRegion (source, new Int32Rect (0, 719, 720, 256), ev_bitmap, 1024, 0);
+                    #else
                     CopyRegion (source, new Int32Rect (0, 719, 720, 256), ev_bitmap, 1024, 0);
+                    #endif
                     return new BitmapSourceDecoder (ev_bitmap);
                 }
             }
         }
 
+#if NET8_0_OR_GREATER
+        PixelBuffer CreateCanvas(int width, int height, BitmapSource source, Int32Rect region)
+        {
+            int stride = PixelBuffer.RowBytes(width, source.Format);
+            return PixelBuffer.Create(width, height, ImageData.DefaultDpiX, ImageData.DefaultDpiY,
+                source.Format, source.Palette, new byte[checked(stride * height)], stride)
+                .WithRegion(source, region, 0, 0);
+        }
+#else
         WriteableBitmap CreateCanvas (int width, int height, BitmapSource src_bitmap, Int32Rect base_region)
         {
             var canvas = new WriteableBitmap (width, height, ImageData.DefaultDpiX, ImageData.DefaultDpiY,
@@ -185,10 +213,16 @@ namespace GameRes.Formats.Tamamo
             return canvas;
         }
 
+#endif
+
         /// <summary>
         /// Copy pixels from source region, rotating by 90 degrees counter-clockwise.
         /// </summary>
+#if NET8_0_OR_GREATER
+        PixelBuffer CopyRegion(BitmapSource source, Int32Rect rect, PixelBuffer target, int dst_x, int dst_y)
+#else
         void CopyRegion (BitmapSource source, Int32Rect rect, WriteableBitmap target, int dst_x, int dst_y)
+#endif
         {
             int bpp = source.Format.BitsPerPixel / 8;
             int width = rect.Width;
@@ -214,7 +248,13 @@ namespace GameRes.Formats.Tamamo
                 }
             }
             var target_rect = new Int32Rect (0, 0, height, width);
+#if NET8_0_OR_GREATER
+            var tile = PixelBuffer.Create(height, width, source.DpiX, source.DpiY,
+                source.Format, source.Palette, transformed, dst_stride);
+            return target.WithRegion(tile, target_rect, dst_x, dst_y);
+#else
             target.WritePixels (target_rect, transformed, dst_stride, dst_x, dst_y);
+#endif
         }
 
         PckScheme DefaultScheme = new PckScheme {
@@ -231,7 +271,11 @@ namespace GameRes.Formats.Tamamo
 
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetPCK (KnownKeys.Keys.OrderBy (x => x));
+#endif
         }
 
         public override ResourceOptions GetDefaultOptions ()

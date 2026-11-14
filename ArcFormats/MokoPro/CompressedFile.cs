@@ -53,7 +53,7 @@ namespace GameRes.Formats.Mokopro
             if (m_unpacked_size <= 0)
                 throw new InvalidFormatException();
             m_input = new byte[stream.Length-8];
-            stream.Read (m_input, 0, m_input.Length);
+            stream.ReadExactlyCompat (m_input, 0, m_input.Length);
             Decrypt (m_input, DefaultKey);
         }
 

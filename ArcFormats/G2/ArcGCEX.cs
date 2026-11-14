@@ -88,7 +88,7 @@ namespace GameRes.Formats.G2
                 uint size = LittleEndian.ToUInt32 (index, current_index+0x18);
                 if (size != 0)
                 {
-                    string name = Encodings.cp932.GetString (index, current_filename+2, name_length);
+                    string name = Encodings.ResourceEncoding.GetString (index, current_filename+2, name_length);
                     var entry = new PackedEntry
                     {
                         Name = name,

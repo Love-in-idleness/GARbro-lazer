@@ -25,7 +25,14 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+
+#endif
 
 namespace GameRes.Formats.Zone
 {
@@ -70,7 +77,7 @@ namespace GameRes.Formats.Zone
             if (meta.IsCompressed)
                 ReadRle (file, pixels, meta.RleFlag);
             else
-                file.Read (pixels, 0, pixels.Length);
+                file.AsStream.ReadExactlyCompat (pixels, 0, pixels.Length);
             if (meta.IsCompressed)
                 return ImageData.Create (info, PixelFormats.Indexed8, palette, pixels);
             else

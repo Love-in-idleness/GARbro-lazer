@@ -150,7 +150,7 @@ namespace GameRes.Formats.FC01
                 using (var dec = new InputCryptoStream (enc, des.CreateDecryptor()))
                 {
                     var output = new byte[enc_size];
-                    dec.Read (output, 0, output.Length);
+                    dec.ReadExactlyCompat (output, 0, output.Length);
                     int header_size;
                     if (!entry.IsSpecial)
                     {

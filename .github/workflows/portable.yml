@@ -1,0 +1,134 @@
+name: Portable .NET
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      package_version:
+        type: string
+        default: 1.1.0
+concurrency:
+  group: portable-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  regression:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - id: scope
+        name: Select regressions for the changed files
+        run: python tools/review-changes.py
+      - run: python -m unittest discover -s tools/tests
+      - run: python tools/check-ui-localization.py
+      - uses: actions/setup-dotnet@v4
+        if: steps.scope.outputs.app == 'true'
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install runtime libraries
+        if: steps.scope.outputs.app == 'true'
+        run: sudo apt-get update -q && sudo apt-get install -y --no-install-recommends libsdl2-2.0-0 ffmpeg
+      - name: Run application regressions once
+        if: steps.scope.outputs.app == 'true'
+        run: dotnet test GARbro-lazer.slnx -c Release --logger "trx;LogFilePrefix=regression"
+        env:
+          SDL_AUDIODRIVER: dummy
+      - name: Check CLI behavior once
+        if: steps.scope.outputs.app == 'true'
+        run: |
+          dotnet build modern/GARbro.Cli/GARbro.Cli.csproj -c Release
+          python tools/smoke-cli.py
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: regression-results
+          path: tests/**/TestResults/*.trx
+  package:
+    if: github.event_name != 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-26.04
+            rid: linux-x64
+          - os: windows-latest
+            rid: win-x64
+          - os: ubuntu-26.04-arm
+            rid: linux-arm64
+          - os: windows-11-arm
+            rid: win-arm64
+          # macOS packages only: no Mac tests or ARM64 hosted runner dependency.
+          - os: macos-15-intel
+            rid: osx-arm64
+          - os: macos-15-intel
+            rid: osx-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install Linux runtime libraries
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -q && sudo apt-get install -y --no-install-recommends libsdl2-2.0-0 ffmpeg
+      - name: Install Windows build tools
+        if: runner.os == 'Windows'
+        id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          install: make pkgconf
+          path-type: inherit
+      - uses: actions/cache/restore@v4
+        if: runner.os != 'Linux'
+        id: media-cache
+        with:
+          path: artifacts/media/${{ matrix.rid }}
+          key: media-${{ runner.os }}-${{ runner.arch }}-${{ matrix.rid }}-${{ hashFiles('tools/build-media.py', 'tools/media-codecs.json') }}
+          restore-keys: media-${{ runner.os }}-${{ runner.arch }}-${{ matrix.rid }}-
+      - name: Build native media helpers
+        if: runner.os != 'Linux'
+        run: python tools/build-media.py --rid ${{ matrix.rid }}
+        env:
+          MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
+      - uses: actions/cache/save@v4
+        if: runner.os != 'Linux' && steps.media-cache.outputs.cache-hit != 'true'
+        with:
+          path: artifacts/media/${{ matrix.rid }}
+          key: media-${{ runner.os }}-${{ runner.arch }}-${{ matrix.rid }}-${{ hashFiles('tools/build-media.py', 'tools/media-codecs.json') }}
+      - name: Build archives and installers
+        run: python tools/package-release.py --rid ${{ matrix.rid }} --installer
+        env:
+          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.1.0' }}
+      - name: Check package contents and startup
+        if: runner.os != 'macOS'
+        run: python tools/smoke-package.py --quick --rid ${{ matrix.rid }}
+        env:
+          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.1.0' }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: preview-${{ matrix.rid }}
+          path: |
+            artifacts/*.zip
+            artifacts/*.tar.gz
+            artifacts/*.deb
+            artifacts/*.msix
+            artifacts/*.cer
+            artifacts/*.dmg
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: build-logs-${{ matrix.rid }}
+          path: artifacts/media/build-*/FFmpeg-*/ffbuild/config.log

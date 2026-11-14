@@ -234,7 +234,7 @@ namespace GameRes.Formats.CatSystem
                 }
                 ++k;
             }
-            return Encodings.cp932.GetString (name, 0, i);
+            return Encodings.ResourceEncoding.GetString (name, 0, i);
         }
 
         public static Dictionary<string, KeyData> KnownSchemes { get { return DefaultScheme.KnownKeys; } }
@@ -256,6 +256,9 @@ namespace GameRes.Formats.CatSystem
 
         public override ResourceOptions GetOptions (object w)
         {
+#if NET8_0_OR_GREATER
+            return GetDefaultOptions();
+#else
             var widget = w as GUI.WidgetINT;
             if (null != widget)
             {
@@ -263,16 +266,25 @@ namespace GameRes.Formats.CatSystem
                 return new IntOptions { EncryptionInfo = widget.Info };
             }
             return this.GetDefaultOptions();
+        #endif
         }
 
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetINT ();
+        #endif
         }
 
         public override object GetCreationWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.CreateINTWidget();
+        #endif
         }
 
         uint? QueryEncryptionInfo (string arc_name)

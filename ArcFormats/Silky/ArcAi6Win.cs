@@ -75,7 +75,7 @@ namespace GameRes.Formats.Silky
                     if (VFS.InvalidFileNameChars.Contains (c) && c != '/')
                         return null;
                 }
-                var name = Encodings.cp932.GetString (name_buffer, 0, name_length);
+                var name = Encodings.ResourceEncoding.GetString (name_buffer, 0, name_length);
                 index_offset += 0x104;
                 var entry = FormatCatalog.Instance.Create<PackedEntry> (name);
                 entry.Size          = Binary.BigEndian (file.View.ReadUInt32 (index_offset));

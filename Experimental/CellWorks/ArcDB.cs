@@ -26,7 +26,9 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+#if !NET8_0_OR_GREATER
 using System.Data.SQLite;
+#endif
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -62,6 +64,14 @@ namespace GameRes.Formats.CellWorks
                         var dir = igs.ReadIndex (arc_id);
                         if (0 == dir.Count)
                             return null;
+#if NET8_0_OR_GREATER
+                        foreach (var entry in dir)
+                        {
+                            long stored = entry.Size < 0x100 ? (entry.Size / 16 + 1) * 16 : 0x110L + entry.Size - 0x100;
+                            if (entry.Offset < 0 || entry.Offset > file.MaxOffset || stored > file.MaxOffset - entry.Offset)
+                                throw new InvalidDataException("IGS entry extends beyond the archive.");
+                        }
+#endif
                         return new ArcFile (file, this, dir);
                     }
                 }
@@ -78,6 +88,29 @@ namespace GameRes.Formats.CellWorks
                 aes.Padding = PaddingMode.PKCS7;
                 aes.Key = CreateKey (32, name_bytes);
                 aes.IV = CreateKey (16, name_bytes);
+#if NET8_0_OR_GREATER
+                int length = entry.Size < 0x100 ? ((int)entry.Size / 16 + 1) * 16 : 0x110;
+                byte[] header;
+                try
+                {
+                    var encrypted = arc.File.View.ReadBytes(entry.Offset, (uint)length);
+                    header = aes.DecryptCbc(encrypted, aes.IV, PaddingMode.PKCS7);
+                    if (header.Length != Math.Min(entry.Size, 0x100u))
+                        throw new CryptographicException("Invalid IGS encrypted prefix length.");
+                }
+                catch (CryptographicException) when (length < 0x110 && entry.Offset <= arc.File.MaxOffset - 0x110)
+                {
+                    // Some writers pad short logical entries to a full 256-byte
+                    // prefix before applying PKCS7. Accept it only with valid padding.
+                    var encrypted = arc.File.View.ReadBytes(entry.Offset, 0x110);
+                    var padded = aes.DecryptCbc(encrypted, aes.IV, PaddingMode.PKCS7);
+                    if (padded.Length != 0x100) throw new InvalidDataException("Invalid IGS padded prefix length.");
+                    header = padded.Take((int)entry.Size).ToArray();
+                }
+                if (entry.Size <= 0x100) return new BinMemoryStream(header);
+                var rest = arc.File.CreateStream(entry.Offset + 0x110, entry.Size - 0x100);
+                return new PrefixStream(header, rest);
+#else
                 using (var decryptor = aes.CreateDecryptor())
                 using (var enc = arc.File.CreateStream (entry.Offset, 0x110))
                 using (var input = new CryptoStream (enc, decryptor, CryptoStreamMode.Read))
@@ -89,6 +122,7 @@ namespace GameRes.Formats.CellWorks
                     var rest = arc.File.CreateStream (entry.Offset+0x110, entry.Size-0x100);
                     return new PrefixStream (header, rest);
                 }
+#endif
             }
         }
 
@@ -102,6 +136,7 @@ namespace GameRes.Formats.CellWorks
         }
     }
 
+#if !NET8_0_OR_GREATER
     internal sealed class IgsDbReader : IDisposable
     {
         SQLiteConnection    m_conn;
@@ -191,4 +226,5 @@ namespace GameRes.Formats.CellWorks
             GC.SuppressFinalize (this);
         }
     }
+#endif
 }

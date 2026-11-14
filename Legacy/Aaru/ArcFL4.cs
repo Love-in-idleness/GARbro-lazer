@@ -67,7 +67,7 @@ namespace GameRes.Formats.Aaru
                 uint size = index.ToUInt32 (pos+4);
                 int name_length = index[pos+8];
                 pos += 9;
-                var name = Encodings.cp932.GetString (index, pos, name_length);
+                var name = Encodings.ResourceEncoding.GetString (index, pos, name_length);
                 var entry = FormatCatalog.Instance.Create<PackedEntry> (name);
                 entry.Offset = offset + data_offset;
                 entry.Size   = size;

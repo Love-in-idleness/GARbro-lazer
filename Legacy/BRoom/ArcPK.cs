@@ -116,7 +116,7 @@ namespace GameRes.Formats.BRoom
                     checksum += (uint)name_buffer[j] << ((j & 3) << 3);
                 }
                 checksum &= 0x3FF;
-                var name = Encodings.cp932.GetString (name_buffer, 0, j);
+                var name = Encodings.ResourceEncoding.GetString (name_buffer, 0, j);
                 if (string.IsNullOrWhiteSpace (name))
                     return null;
                 if (name.HasAnyOfExtensions ("", "e", "er"))

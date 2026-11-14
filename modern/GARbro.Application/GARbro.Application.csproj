@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../GARbro.Domain/GARbro.Domain.fsproj" />
+    <ProjectReference Include="../GARbro.Media/GARbro.Media.fsproj" />
+    <ProjectReference Include="../GARbro.Core/GARbro.Core.csproj" />
+    <ProjectReference Include="../GARbro.Formats/GARbro.Formats.csproj" />
+    <ProjectReference Include="../GARbro.Legacy/GARbro.Legacy.csproj" />
+    <ProjectReference Include="../GARbro.Experimental/GARbro.Experimental.csproj" />
+  </ItemGroup>
+  <ItemGroup><EmbeddedResource Include="Locales/*.json" LogicalName="GARbro.Locales.%(Filename).json" /></ItemGroup>
+</Project>

@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "package": "Avalonia.Wayland",
+  "version": "12.1.4-garbro.1",
+  "upstreamVersion": "12.1.4",
+  "upstreamCommit": "2d79ba55fae1b1e71c69f93a668080c9029e6a31",
+  "sourceUrl": "https://codeload.github.com/AvaloniaUI/Avalonia/tar.gz/2d79ba55fae1b1e71c69f93a668080c9029e6a31",
+  "sourceSha256": "9e9ee6ee270bfdc02fbc34296da51ee6242325156d2b67cbed92d2ccbc2e2029",
+  "sdk": "10.0.403",
+  "patchSha256": "12d13c07d68bc6d6543e9ec8248a568668f46084574ea667ae6a4ccfda6680e2",
+  "packageSha256": "f381880313a394f7706dc69bb8c4f990a70267340db191edc564efa9c1ab06a2"
+}

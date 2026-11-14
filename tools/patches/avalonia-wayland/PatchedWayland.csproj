@@ -1,0 +1,62 @@
+<Project>
+  <!-- This rebuilds only the pinned backend against the official framework.
+       Do not inherit GARbro's application version or shared build targets. -->
+  <PropertyGroup>
+    <ImportDirectoryBuildProps>false</ImportDirectoryBuildProps>
+    <ImportDirectoryBuildTargets>false</ImportDirectoryBuildTargets>
+  </PropertyGroup>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <Import Project="$(AvaloniaSourceRoot)/build/SharedVersion.props" />
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>Avalonia.Wayland</AssemblyName>
+    <RootNamespace>Avalonia.Wayland</RootNamespace>
+    <PackageId>Avalonia.Wayland</PackageId>
+    <PackageVersion>12.1.4-garbro.1</PackageVersion>
+    <NuspecFile>PatchedWayland.nuspec</NuspecFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableRuntimeMarshalling>true</EnableRuntimeMarshalling>
+    <Nullable>enable</Nullable>
+    <LangVersion>14.0</LangVersion>
+    <Deterministic>true</Deterministic>
+    <!-- The fixed upstream revision is in the nuspec. The surrounding GARbro
+         checkout must not leak its changing revision into backend PDBs. -->
+    <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
+    <EnableSourceLink>false</EnableSourceLink>
+    <NoWarn>$(NoWarn);CS1591;CS0436</NoWarn>
+    <PathMap>$(AvaloniaSourceRoot)=/upstream,$(MSBuildProjectDirectory)=/patch</PathMap>
+    <RepositoryCommit>2d79ba55fae1b1e71c69f93a668080c9029e6a31</RepositoryCommit>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <Copyright>Copyright 2013-2026 © The AvaloniaUI Project</Copyright>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- NuGet's public reference assemblies intentionally seal private backend
+         contracts. The signed backend must compile against the runtime APIs. -->
+    <PackageReference Include="Avalonia" Version="12.1.4" ExcludeAssets="compile" GeneratePathProperty="true" />
+    <PackageReference Include="Avalonia.FreeDesktop" Version="12.1.4" ExcludeAssets="compile" GeneratePathProperty="true" />
+    <PackageReference Include="NWayland" Version="0.11.0" />
+    <Reference Include="$(PkgAvalonia)/lib/net10.0/*.dll" Private="false" />
+    <Reference Include="$(PkgAvalonia_FreeDesktop)/lib/net10.0/Avalonia.FreeDesktop.dll" Private="false" />
+    <ProjectReference Include="$(AvaloniaSourceRoot)/src/tools/DevGenerators/DevGenerators.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <Compile Include="$(AvaloniaSourceRoot)/src/Avalonia.Wayland/**/*.cs"
+             Exclude="$(AvaloniaSourceRoot)/src/Avalonia.Wayland/**/obj/**;$(AvaloniaSourceRoot)/src/Avalonia.Wayland/**/bin/**" />
+    <Compile Include="$(AvaloniaSourceRoot)/src/Shared/RawEventGrouping.cs" />
+    <Compile Include="$(AvaloniaSourceRoot)/src/Shared/SourceGeneratorAttributes.cs" />
+    <Compile Include="$(AvaloniaSourceRoot)/src/Avalonia.X11/X11IconLoader.cs" />
+    <Compile Include="$(AvaloniaSourceRoot)/src/Avalonia.X11/Selections/UriListHelper.cs" />
+    <Compile Include="$(AvaloniaSourceRoot)/src/Avalonia.X11/Interop/Glib.cs" />
+    <Compile Include="$(AvaloniaSourceRoot)/src/Avalonia.X11/Dispatching/GlibDispatcherImplBase.cs" />
+    <None Include="system-cursors.patch" Pack="true" PackagePath="source-patches/" />
+    <None Include="$(AvaloniaSourceRoot)/licence.md" Pack="true" PackagePath="licenses/MIT.md" />
+  </ItemGroup>
+  <Import Project="$(AvaloniaSourceRoot)/build/TrimmingEnable.props" />
+  <Target Name="SetPatchedNuspecInputs" BeforeTargets="GenerateNuspec">
+    <PropertyGroup>
+      <NuspecProperties>upstream=$(AvaloniaSourceRoot);output=$(TargetDir)</NuspecProperties>
+    </PropertyGroup>
+  </Target>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>

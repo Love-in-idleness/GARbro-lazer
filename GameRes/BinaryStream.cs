@@ -130,7 +130,13 @@ namespace GameRes
             m_should_dispose = !leave_open;
             if (!m_source.CanSeek)
             {
-                m_buffer_end = m_source.Read (m_buffer, 0, 4);
+                while (m_buffer_end < 4)
+                {
+                    int read = m_source.Read (m_buffer, m_buffer_end, 4 - m_buffer_end);
+                    if (read == 0)
+                        break;
+                    m_buffer_end += read;
+                }
                 uint signature = LittleEndian.ToUInt32 (m_buffer, 0);
                 m_signature = new Lazy<uint> (() => signature);
             }
@@ -214,7 +220,13 @@ namespace GameRes
                 if (null == m_header || m_header.Length < size)
                     Array.Resize (ref m_header, (size + 0xF) & ~0xF);
                 Position = m_header_size;
-                m_header_size += Read (m_header, m_header_size, size - m_header_size);
+                while (m_header_size < size)
+                {
+                    int read = Read (m_header, m_header_size, size - m_header_size);
+                    if (read == 0)
+                        break;
+                    m_header_size += read;
+                }
             }
             if (size > m_header_size)
             {
@@ -246,7 +258,13 @@ namespace GameRes
                 m_buffer_pos = 0;
                 m_buffer_end = cached;
             }
-            m_buffer_end += m_source.Read (m_buffer, m_buffer_end, count - cached);
+            while (m_buffer_end - m_buffer_pos < count)
+            {
+                int read = m_source.Read (m_buffer, m_buffer_end, count - (m_buffer_end - m_buffer_pos));
+                if (read == 0)
+                    break;
+                m_buffer_end += read;
+            }
             return Math.Min (count, m_buffer_end - m_buffer_pos);
         }
 
@@ -322,7 +340,7 @@ namespace GameRes
 
         public string ReadCString (int length)
         {
-            return ReadCString (length, Encodings.cp932);
+            return ReadCString (length, Encodings.ResourceEncoding);
         }
 
         public string ReadCString (int length, Encoding enc)
@@ -338,7 +356,7 @@ namespace GameRes
 
         public string ReadCString ()
         {
-            return ReadCString (Encodings.cp932);
+            return ReadCString (Encodings.ResourceEncoding);
         }
 
         public string ReadCString (Encoding enc)
@@ -371,8 +389,14 @@ namespace GameRes
                 m_buffer_pos += cached;
                 count -= cached;
             }
-            if (count > 0)
-                pos += m_source.Read (buffer, pos, count);
+            while (count > 0)
+            {
+                int read = m_source.Read (buffer, pos, count);
+                if (read == 0)
+                    break;
+                pos += read;
+                count -= read;
+            }
             if (pos < buffer.Length)
             {
                 var copy = new byte[pos];
@@ -604,7 +628,7 @@ namespace GameRes
 
         public string ReadCString (int length)
         {
-            return ReadCString (length, Encodings.cp932);
+            return ReadCString (length, Encodings.ResourceEncoding);
         }
 
         public string ReadCString (int length, Encoding enc)
@@ -620,7 +644,7 @@ namespace GameRes
 
         public string ReadCString ()
         {
-            return ReadCString (Encodings.cp932);
+            return ReadCString (Encodings.ResourceEncoding);
         }
 
         public string ReadCString (Encoding enc)

@@ -67,7 +67,7 @@ namespace GameRes.Formats.Entis
                 }
                 if (name_buf.Length == name_length)
                     return null;
-                var name = Encodings.cp932.GetString (name_buf, 0, name_length);
+                var name = Encodings.ResourceEncoding.GetString (name_buf, 0, name_length);
                 var entry = FormatCatalog.Instance.Create<Entry> (name);
                 index_offset += 0x18;
                 entry.Offset = 0x40000 + file.View.ReadUInt32 (index_offset);

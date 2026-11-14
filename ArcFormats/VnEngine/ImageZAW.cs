@@ -25,7 +25,13 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using GameRes.Compression;
 using GameRes.Utility;
 
@@ -65,7 +71,7 @@ namespace GameRes.Formats.VnEngine
             var pixels = new byte[stride * (int)info.Height];
             stream.Position = 0x40;
             using (var input = new ZLibStream (stream.AsStream, CompressionMode.Decompress, true))
-                input.Read (pixels, 0, pixels.Length);
+                input.ReadExactlyCompat (pixels, 0, pixels.Length);
             if (24 == info.BPP)
                 return ImageData.Create (info, PixelFormats.Rgb24, null, pixels, stride);
             if (8 == info.BPP)

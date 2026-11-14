@@ -26,8 +26,16 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 using GameRes.Compression;
 using GameRes.Utility;
 
@@ -131,7 +139,7 @@ namespace GameRes.Formats.Strikes
                     byte flags = input.ReadUInt8();
                     if (packed_size > scanline.Length)
                         break;
-                    input.Read (scanline, 0, packed_size);
+                    input.ReadExactlyCompat (scanline, 0, packed_size);
                     if ((flags & 4) != 0) // LZSS compression
                     {
                         packed_size = PckOpener.LzssUnpack (scanline, packed_size, unpack_buffer);

@@ -232,7 +232,7 @@ namespace GameRes.Formats.NonColor
                         int  length = idx.ReadInt32();
                         lst_stream.Position = offset;
                         var name_bytes = lst.ReadBytes (length);
-                        var name = Encodings.cp932.GetString (name_bytes);
+                        var name = Encodings.ResourceEncoding.GetString (name_bytes);
                         name_map[key] = new NameRecord { Name = name, NameBytes = name_bytes };
                     }
                     LastAccessedScheme = Tuple.Create (scheme.Hash, name_map);
@@ -270,7 +270,11 @@ namespace GameRes.Formats.NonColor
 
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetNCARC();
+        #endif
         }
     }
 

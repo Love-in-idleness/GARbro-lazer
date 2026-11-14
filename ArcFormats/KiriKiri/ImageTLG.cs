@@ -19,7 +19,14 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+
+
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+#else
 using System.Windows.Media;
+#endif
 
 namespace GameRes.Formats.KiriKiri
 {

@@ -60,7 +60,7 @@ namespace GameRes.Formats.Eushully
                         return null;
                     for (int i = 0; i < name_length; ++i)
                         name_buffer[i] ^= 0xFF;
-                    var name = Encodings.cp932.GetString (name_buffer, 0, name_length);
+                    var name = Encodings.ResourceEncoding.GetString (name_buffer, 0, name_length);
                     var entry = new Entry { Name = name + entry_ext, Type = entry_type };
                     idx_offset += name_length;
                     entry.Offset = idx.View.ReadUInt32 (idx_offset);

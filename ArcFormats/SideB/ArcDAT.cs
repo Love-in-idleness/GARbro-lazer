@@ -62,17 +62,23 @@ namespace GameRes.Formats.AttacheCase
 
         public override ArcFile TryOpen (ArcView file)
         {
+            if (file.MaxOffset < 0x60) return null;
             uint header_size = file.View.ReadUInt32 (0x1C);
-            uint data_offset = 0x60 + header_size + header_size % 32;
-            if (data_offset >= file.MaxOffset)
+            long data_start = 0x60L + header_size + header_size % 32;
+            if (header_size > 16 << 20 || data_start > uint.MaxValue || data_start >= file.MaxOffset)
                 return null;
+            uint data_offset = (uint)data_start;
 
             var key = new byte[32];
             Buffer.BlockCopy (DefaultKey, 0, key, 0, Math.Min (DefaultKey.Length, key.Length));
             var iv = file.View.ReadBytes (0x20, 32);
 
             var dir = new List<Entry> ();
+#if NET8_0_OR_GREATER
+            using (var aes = new PortableRijndael256())
+#else
             using (var aes = Rijndael.Create())
+#endif
             {
                 aes.BlockSize = 256;
                 aes.Mode = CipherMode.CBC;
@@ -84,10 +90,10 @@ namespace GameRes.Formats.AttacheCase
                 using (var dec = new InputCryptoStream (enc, aes.CreateDecryptor()))
                 {
                     var info = new byte[header_size];
-                    dec.Read (info, 0, info.Length);
+                    dec.ReadExactlyCompat (info, 0, info.Length);
                     string info_str = Encoding.UTF8.GetString (info);
                     var matches = Regex.Matches (info_str, @"^U_\d+:([^\t]*)\t(\d*)\t", RegexOptions.Multiline);
-                    uint offset = 0;
+                    long offset = 0;
                     foreach (Match match in matches)
                     {
                         string name = match.Groups[1].Value;
@@ -95,8 +101,9 @@ namespace GameRes.Formats.AttacheCase
                         var entry = Create<Entry> (name);
                         entry.Offset = offset;
                         entry.Size = size;
-                        offset += size;
+                        offset = checked(offset + size);
                         dir.Add (entry);
+                        if (dir.Count >= 0x40000) throw new InvalidDataException("Side-B index exceeds the entry limit.");
                     }
                 }
             }
@@ -110,7 +117,11 @@ namespace GameRes.Formats.AttacheCase
         public override Stream OpenEntry (ArcFile arc, Entry entry)
         {
             var aarc = arc as AtcArchive;
+#if NET8_0_OR_GREATER
+            using (var aes = new PortableRijndael256())
+#else
             using (var aes = Rijndael.Create())
+#endif
             {
                 aes.BlockSize = 256;
                 aes.Mode = CipherMode.CBC;
@@ -121,22 +132,22 @@ namespace GameRes.Formats.AttacheCase
                 Stream input = aarc.File.CreateStream (aarc.DataOffset);
                 input = new InputCryptoStream (input, aes.CreateDecryptor());
                 input = new ZLibStream (input, CompressionMode.Decompress);
-                StreamSkip (input, (int)entry.Offset);
+                StreamSkip (input, entry.Offset);
                 return new LimitStream (input, entry.Size);
             }
         }
 
-        void StreamSkip (Stream input, int bytesToSkip)
+        void StreamSkip (Stream input, long bytesToSkip)
         {
             byte[] buffer = new byte[4096];
-            int totalRead = 0;
+            long totalRead = 0;
  
             while (totalRead < bytesToSkip)
             {
-                int toRead = Math.Min (buffer.Length, bytesToSkip - totalRead);
+                int toRead = (int)Math.Min (buffer.Length, bytesToSkip - totalRead);
                 int read = input.Read (buffer, 0, toRead);
 
-                if (read == 0) break; // EOS reached early
+                if (read == 0) throw new EndOfStreamException("Truncated Side-B data.");
                 totalRead += read;
             }
         }

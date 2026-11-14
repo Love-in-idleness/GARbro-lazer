@@ -1,0 +1,89 @@
+name: Microsoft Store packages
+on:
+  workflow_dispatch:
+    inputs:
+      package_version:
+        description: Application version for this Store upload
+        type: string
+        default: 1.1.0
+  workflow_call:
+    inputs:
+      package_version:
+        type: string
+        default: 1.1.0
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    concurrency:
+      group: store-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install Windows POSIX build tools
+        id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          install: make pkgconf
+          path-type: inherit
+      - uses: actions/cache/restore@v4
+        id: media-cache
+        with:
+          path: artifacts/media/win-*
+          key: media-store-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/build-media.py', 'tools/media-codecs.json') }}
+          restore-keys: media-store-${{ runner.os }}-${{ runner.arch }}-
+      - name: Verify registered identity and build self-contained Store bundle
+        run: python tools/package-store.py --version "$env:GARBRO_PACKAGE_VERSION"
+        env:
+          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.1.0' }}
+          MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
+      - name: Check shared self-contained CLI and decoder once on x64
+        shell: pwsh
+        env:
+          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.1.0' }}
+        run: |
+          dotnet fsi --exec tools/RuntimeCompactor/Tests.fsx
+          if ($LASTEXITCODE -ne 0) { throw 'Runtime compactor checks failed.' }
+          $app = 'artifacts/store-stage-win-x64/app'
+          $env:DOTNET_ROOT = Join-Path $env:RUNNER_TEMP 'no-global-dotnet'
+          $env:DOTNET_MULTILEVEL_LOOKUP = '0'
+          $version = & "$app/garbro.exe" --version
+          if ($LASTEXITCODE -ne 0 -or $version -notmatch [regex]::Escape($env:GARBRO_PACKAGE_VERSION)) { throw 'Self-contained CLI did not start.' }
+          $listing = & "$app/garbro.exe" list tests/fixtures/generated/standard.xfl --json | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $listing[0].format -ne 'XFL' -or $listing[0].entries.Count -ne 3) { throw 'Shared CLI did not decode the archive.' }
+          $request = @{operation='resource-list';location=@{rootPath=(Resolve-Path 'tests/fixtures/generated/standard.xfl').Path}} | ConvertTo-Json -Compress
+          $decoded = $request | & "$app/GARbro.Worker.exe" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $decoded.kind -ne 'result' -or $decoded.data.entries.Count -ne 3) { throw 'Shared worker did not decode the archive.' }
+          $media = & "$app/media/ffprobe.exe" -v error -show_streams -of json tests/fixtures/generated/movie.mpg | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or -not ($media.streams | Where-Object codec_type -eq 'video')) { throw 'Shared FFmpeg libraries did not probe video.' }
+          $frame = Join-Path $env:RUNNER_TEMP 'garbro-video-frame.bmp'
+          & "$app/media/ffmpeg.exe" -v error -i tests/fixtures/generated/movie.mpg -map 0:V:0 -frames:v 1 -f image2pipe -c:v bmp $frame
+          if ($LASTEXITCODE -ne 0 -or (Get-Item $frame).Length -lt 100) { throw 'Shared FFmpeg libraries did not decode a video frame.' }
+          $gui = Start-Process "$app/GARbro.Desktop.exe" -ArgumentList (Resolve-Path 'tests/fixtures/generated/standard.xfl').Path -PassThru
+          try {
+            $deadline = (Get-Date).AddSeconds(20)
+            do { Start-Sleep -Milliseconds 200; $gui.Refresh() } while (-not $gui.HasExited -and $gui.MainWindowTitle -notlike '*standard.xfl*' -and (Get-Date) -lt $deadline)
+            if ($gui.HasExited -or $gui.MainWindowTitle -notlike '*standard.xfl*') { throw 'Shared GUI did not open the archive.' }
+          } finally { if (-not $gui.HasExited) { $gui.CloseMainWindow() | Out-Null; if (-not $gui.WaitForExit(5000)) { $gui.Kill($true) } } }
+      - uses: actions/cache/save@v4
+        if: steps.media-cache.outputs.cache-hit != 'true'
+        with:
+          path: artifacts/media/win-*
+          key: media-store-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/build-media.py', 'tools/media-codecs.json') }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: store-upload
+          path: |
+            artifacts/*-store.msixupload
+            artifacts/*-store.msixbundle
+            artifacts/store-submission.json
+            artifacts/store-listing.zip
+            artifacts/store-size-*.json
+            artifacts/runtime-compaction-*.json

@@ -26,8 +26,15 @@
 using GameRes.Compression;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.Herb
 {
@@ -78,7 +85,7 @@ namespace GameRes.Formats.Herb
             file.Position = 0x428;
             using (var input = new ZLibStream (file.AsStream, CompressionMode.Decompress, true))
             {
-                input.Read (pixels, 0, pixels.Length);
+                input.ReadExactlyCompat (pixels, 0, pixels.Length);
             }
             return ImageData.Create (info, format, palette, pixels, stride);
         }

@@ -30,7 +30,14 @@ using System.ComponentModel.Composition;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+
+
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+#else
 using System.Windows.Media;
+#endif
 
 namespace GameRes.Formats.YuRis
 {
@@ -180,6 +187,15 @@ namespace GameRes.Formats.YuRis
 
         byte[] DecodeWebP (byte[] data, out int width, out int height)
         {
+#if NET8_0_OR_GREATER
+            using (var stream = new MemoryStream (data))
+            {
+                var image = RasterCodec.Decode (stream);
+                width = image.PixelWidth;
+                height = image.PixelHeight;
+                return image.ToBgra32();
+            }
+#else
             width = 0;
             height = 0;
             WebPCodec.Load ();
@@ -198,6 +214,7 @@ namespace GameRes.Formats.YuRis
                 handle.Free ();
             }
             return output;
+#endif
         }
 
         byte[] DecodeQoi (byte[] data, out int width, out int height)

@@ -61,7 +61,7 @@ namespace GameRes.Formats.Silky
                     if (name_length != index.Read (name_buffer, 0, name_length))
                         return null;
                     DecryptName (name_buffer, name_length);
-                    var name = Encodings.cp932.GetString (name_buffer, 0, name_length);
+                    var name = Encodings.ResourceEncoding.GetString (name_buffer, 0, name_length);
                     var entry = FormatCatalog.Instance.Create<PackedEntry> (name);
                     entry.Size          = Binary.BigEndian (index.ReadUInt32());
                     entry.UnpackedSize  = Binary.BigEndian (index.ReadUInt32());

@@ -86,7 +86,7 @@ namespace GameRes.Formats.Xuse
             {
                 name[i] = Binary.RotByteL (name[i], 4);
             }
-            return Encodings.cp932.GetString (name);
+            return Encodings.ResourceEncoding.GetString (name);
         }
     }
 }

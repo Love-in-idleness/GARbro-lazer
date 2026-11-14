@@ -55,7 +55,7 @@ namespace GameRes.Formats.Lambda
             var index = new byte[unpacked_size];
             using (var input = file.CreateStream (index_offset, packed_size))
             using (var lax = new LaxStream (input))
-                lax.Read (index, 0, index.Length);
+                lax.ReadExactlyCompat (index, 0, index.Length);
 
             uint data_offset = 8;
             int entry_length = 0x128;

@@ -25,7 +25,14 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+
+#endif
 
 // [000310][Mermaid] Into Your World
 
@@ -98,7 +105,7 @@ namespace GameRes.Formats.Mermaid
                         if (tile_dst + tile_width > pixels.Length)
                             file.Seek (tile_width, SeekOrigin.Current);
                         else
-                            file.Read (pixels, tile_dst, tile_width);
+                            file.AsStream.ReadExactlyCompat (pixels, tile_dst, tile_width);
                         tile_dst += row_size;
                     }
                 }

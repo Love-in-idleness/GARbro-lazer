@@ -239,7 +239,7 @@ namespace GameRes.Formats.Xuse
                     ReadChunk (entry_offset+data_size, name_length);
                     if ('|' == m_chunk_buf[name_length-1])
                         --name_length;
-                    entry.Name = Encodings.cp932.GetString (m_chunk_buf, 0, name_length);
+                    entry.Name = Encodings.ResourceEncoding.GetString (m_chunk_buf, 0, name_length);
                     entry.Type = FormatCatalog.Instance.GetTypeFromName (entry.Name);
                 }
                 entry.Offset = entry_offset;
@@ -274,7 +274,7 @@ namespace GameRes.Formats.Xuse
                     else if (null == filename && Binary.AsciiEqual (m_chunk_buf, "FTAG"))
                     {
                         ReadChunk (chunk_offset+10, chunk_size-2);
-                        filename = Encodings.cp932.GetString (m_chunk_buf, 0, chunk_size-2);
+                        filename = Encodings.ResourceEncoding.GetString (m_chunk_buf, 0, chunk_size-2);
                     }
                     chunk_offset += 10 + (uint)chunk_size;
                 }

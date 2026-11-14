@@ -27,9 +27,19 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 using GameRes.Compression;
 using GameRes.Utility;
 
@@ -99,7 +109,7 @@ namespace GameRes.Formats.Gs
 
                 int stride = (int)meta.Width*((info.BPP+7)/8);
                 var pixels = new byte[stride*meta.Height];
-                input.Read (pixels, 0, pixels.Length);
+                input.ReadExactlyCompat (pixels, 0, pixels.Length);
                 if (32 == meta.BPP && meta.Extra != 0)
                 {
                     for (int i = 3; i < pixels.Length; i += 4)

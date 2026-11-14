@@ -240,7 +240,7 @@ namespace GameRes.Formats.Unity
         {
             if (length > m_buffer.Length)
                 m_buffer = new byte[(length + 0xF) & ~0xF];
-            input.Read (m_buffer, 0, length);
+            input.ReadExactlyCompat (m_buffer, 0, length);
             return Encoding.UTF8.GetString (m_buffer, 0, length);
         }
     }

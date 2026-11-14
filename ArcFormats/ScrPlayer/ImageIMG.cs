@@ -27,7 +27,13 @@ using GameRes.Utility;
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 
 // [990709][Love Gun] Koi no Sweet Tart wa Ikaga
 

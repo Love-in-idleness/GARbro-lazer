@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-android36.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>GARbro.Mobile</RootNamespace>
+    <ApplicationId>org.garbro.garbro</ApplicationId>
+    <ApplicationTitle>GARbro</ApplicationTitle>
+    <ApplicationVersion>30001</ApplicationVersion>
+    <ApplicationDisplayVersion>0.3.0-preview.1</ApplicationDisplayVersion>
+    <SupportedOSPlatformVersion>31</SupportedOSPlatformVersion>
+    <AndroidPackageFormats>apk</AndroidPackageFormats>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">android-arm64</RuntimeIdentifier>
+    <PublishTrimmed>false</PublishTrimmed>
+    <RunAOTCompilation>false</RunAOTCompilation>
+    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+    <AndroidUseAssemblyStore>true</AndroidUseAssemblyStore>
+    <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+    <AndroidEnableMarshalMethods>false</AndroidEnableMarshalMethods>
+    <GarbroAndroidTest Condition="'$(GarbroAndroidTest)' == ''">false</GarbroAndroidTest>
+    <GarbroPython Condition="'$(OS)' == 'Windows_NT'">python</GarbroPython>
+    <GarbroPython Condition="'$(OS)' != 'Windows_NT'">python3</GarbroPython>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(GarbroAndroidTest)' == 'true'">
+    <DefineConstants>$(DefineConstants);GARBRO_ANDROID_TEST</DefineConstants>
+    <AndroidDebuggable>true</AndroidDebuggable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../GARbro.UI/GARbro.UI.csproj" />
+    <ProjectReference Include="../GARbro.Imaging.Portable/GARbro.Imaging.Portable.csproj" />
+    <PackageReference Include="Avalonia.Android" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Android" />
+    <AndroidAsset Include="../GameData/*" Link="GameData/%(Filename)%(Extension)" />
+    <AndroidAsset Include="../../ArcFormats/Resources/*.lst" Link="GameData/%(Filename)%(Extension)" />
+    <AndroidAsset Include="../../tests/fixtures/generated/**" Link="TestFixtures/%(RecursiveDir)%(Filename)%(Extension)" Condition="'$(GarbroAndroidTest)' == 'true'" />
+  </ItemGroup>
+  <Target Name="PrepareGarbroAndroidManifest" BeforeTargets="_GetAndroidPackageName;GetAndroidDependencies">
+    <PropertyGroup><AndroidManifest>$(IntermediateOutputPath)GarbroManifest.xml</AndroidManifest></PropertyGroup>
+    <Exec Command="$(GarbroPython) &quot;$(MSBuildProjectDirectory)/../../tools/prepare-android-manifest.py&quot; --base &quot;$(MSBuildProjectDirectory)/Properties/AndroidManifest.xml&quot; --output &quot;$(AndroidManifest)&quot; --test $(GarbroAndroidTest)" />
+  </Target>
+</Project>

@@ -1,0 +1,66 @@
+{
+  "app-id": "io.github.love_in_idleness.GARbro-lazer",
+  "runtime": "org.freedesktop.Platform",
+  "runtime-version": "26.08",
+  "sdk": "org.freedesktop.Sdk",
+  "sdk-extensions": [
+    "org.freedesktop.Sdk.Extension.dotnet10"
+  ],
+  "command": "garbro-desktop",
+  "finish-args": [
+    "--share=ipc",
+    "--socket=wayland",
+    "--socket=fallback-x11",
+    "--device=dri",
+    "--socket=pulseaudio",
+    "--share=network"
+  ],
+  "build-options": {
+    "append-path": "/usr/lib/sdk/dotnet10/bin",
+    "env": {
+      "DOTNET_ROOT": "/usr/lib/sdk/dotnet10/lib",
+      "DOTNET_CLI_TELEMETRY_OPTOUT": "true",
+      "DOTNET_SKIP_FIRST_TIME_EXPERIENCE": "true"
+    }
+  },
+  "modules": [
+    {
+      "name": "ffmpeg",
+      "buildsystem": "simple",
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/8ae0b34901ba60a802f183ee75a250a9fc3e09a5",
+          "sha256": "3822f5dea04f069a90f8b445d00116d6410d1baf8f15d5f750d0626e5d6994f3",
+          "archive-type": "tar-gzip"
+        }
+      ],
+      "cleanup": [
+        "/include",
+        "/lib/*.a",
+        "/lib/pkgconfig"
+      ],
+      "build-commands": [
+        "./configure --prefix=/app --disable-x86asm --disable-gpl --disable-nonfree --disable-autodetect --disable-network --disable-doc --disable-debug --disable-ffplay --disable-avdevice --disable-everything --enable-protocol=file,pipe --enable-demuxer=mpegps,mpegts,mpegvideo,mov,matroska,avi,asf,ogg,flv,ivf,mp3,aac,ac3,eac3,dts,h264,hevc,m4v,vc1 --enable-parser=mpegvideo,mpeg4video,h264,hevc,vp8,vp9,vc1,mpegaudio,aac,ac3,vorbis,opus --enable-decoder=mpeg1video,mpeg2video,mpeg4,h264,hevc,vp8,vp9,wmv1,wmv2,wmv3,vc1,mjpeg,h263,flv,theora,mp1,mp1float,mp2,mp2float,mp3,mp3float,aac,ac3,eac3,vorbis,opus,flac,pcm_s16le,pcm_s16be,pcm_s24le,pcm_s24be,pcm_s32le,pcm_f32le,pcm_u8,adpcm_ms,adpcm_ima_wav --enable-encoder=bmp,rawvideo,pcm_s16le --enable-muxer=image2pipe,rawvideo,pcm_s16le --enable-filter=scale,fps,format,aresample,anull,null,trim,atrim,setpts,asetpts,buffer,abuffer,buffersink,abuffersink --disable-shared --enable-static",
+        "make -j$FLATPAK_BUILDER_N_JOBS",
+        "make install",
+        "install -Dm644 COPYING.LGPLv2.1 /app/share/licenses/ffmpeg/COPYING.LGPLv2.1",
+        "install -Dm644 LICENSE.md /app/share/licenses/ffmpeg/LICENSE.md"
+      ]
+    },
+    {
+      "name": "garbro",
+      "buildsystem": "simple",
+      "build-commands": [
+        "python3 packaging/flatpak/build.py"
+      ],
+      "sources": [
+        {
+          "type": "dir",
+          "path": "../.."
+        },
+        "nuget-sources.json"
+      ]
+    }
+  ]
+}

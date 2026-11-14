@@ -26,8 +26,15 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.Liddell
 {
@@ -152,7 +159,7 @@ namespace GameRes.Formats.Liddell
                     switch ((ctlBits >> 6) & 3)
                     {
                     case 0:
-                        m_input.Read (output, dst, chunk_size);
+                        m_input.AsStream.ReadExactlyCompat (output, dst, chunk_size);
                         dst += chunk_size;
                         break;
 

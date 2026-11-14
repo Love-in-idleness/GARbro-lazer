@@ -29,9 +29,16 @@ using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Compression;
 using GameRes.Utility;
 
@@ -110,7 +117,11 @@ namespace GameRes.Formats.BlackRainbow
             public Writer (BitmapSource bitmap)
             {
                 if (bitmap.Format != PixelFormats.Bgra32)
+                    #if NET8_0_OR_GREATER
+                    bitmap = bitmap.Convert(PixelFormats.Bgra32);
+                    #else
                     bitmap = new FormatConvertedBitmap (bitmap, PixelFormats.Bgra32, null, 0);
+                    #endif
 
                 m_input = new byte[bitmap.PixelWidth*bitmap.PixelHeight*4];
                 bitmap.CopyPixels (m_input, bitmap.PixelWidth*4, 0);

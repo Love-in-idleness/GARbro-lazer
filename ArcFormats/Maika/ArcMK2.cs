@@ -161,7 +161,7 @@ namespace GameRes.Formats.Maika
             input = new LzssStream (input);
 
             var header = new byte[5];
-            input.Read (header, 0, 5);
+            input.ReadExactlyCompat (header, 0, 5);
             if (Binary.AsciiEqual (header, "BPR02"))
                 return new PackedStream<Bpr02Decompressor> (input);
             if (Binary.AsciiEqual (header, "BPR01"))

@@ -25,9 +25,17 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+using WriteableBitmap = GARbro.Imaging.MutablePixelBuffer;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.Qlie
 {
@@ -80,9 +88,17 @@ namespace GameRes.Formats.Qlie
                     continue;
                 using (var png = new StreamRegion (stream.AsStream, stream.Position, size, true))
                 {
+                    #if NET8_0_OR_GREATER
+                    var decoder = new RasterDecoder(png);
+                    #else
                     var decoder = new PngBitmapDecoder (png,
                         BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                    #endif
+                    #if NET8_0_OR_GREATER
+                    var frame = decoder.Frames[0].Convert(PixelFormats.Pbgra32);
+                    #else
                     var frame = new FormatConvertedBitmap (decoder.Frames[0], PixelFormats.Pbgra32, null, 0);
+                    #endif
                     int stride = frame.PixelWidth * 4;
                     var pixels = new byte[stride * frame.PixelHeight];
                     frame.CopyPixels (pixels, stride, 0);

@@ -45,7 +45,7 @@ namespace GameRes.Formats.RPGMaker
             var header = file.ReadHeader (0x14);
             if (header[4] != 'V')
                 return null;
-            var key = RpgmvDecryptor.LastKey ?? RpgmvDecryptor.FindKeyFor (file.Name);
+            var key = RpgmvDecryptor.FindKeyFor (file.Name) ?? RpgmvDecryptor.LastKey;
             if (null == key)
                 return null;
             for (int i = 0; i < 4; ++i)

@@ -27,8 +27,15 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.WestGate
 {
@@ -123,7 +130,7 @@ namespace GameRes.Formats.WestGate
                 using (var entry = arc.OpenEntry (pal))
                 {
                     var pal_data = new byte[entry.Length];
-                    entry.Read (pal_data, 0, pal_data.Length);
+                    entry.ReadExactlyCompat (pal_data, 0, pal_data.Length);
 
                     using (var mem = new MemoryStream (pal_data))
                     using (var reader = new BinaryReader (mem))

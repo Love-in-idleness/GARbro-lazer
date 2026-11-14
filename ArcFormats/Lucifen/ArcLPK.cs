@@ -205,7 +205,7 @@ namespace GameRes.Formats.Lucifen
             var data = new byte[lent.UnpackedSize];
             using (input)
             {
-                input.Read (data, 0, data.Length);
+                input.ReadExactlyCompat (data, 0, data.Length);
             }
             if (larc.Info.WholeCrypt && !(larc.Info.IsPatchFile && lent.Name.HasExtension ("elg")))
             {
@@ -284,7 +284,7 @@ namespace GameRes.Formats.Lucifen
                 using (var gameinit = script_arc.OpenEntry (entry))
                 {
                     var init_data = new byte[gameinit.Length];
-                    gameinit.Read (init_data, 0, init_data.Length);
+                    gameinit.ReadExactlyCompat (init_data, 0, init_data.Length);
                     if (!ParseGameInit (init_data))
                         throw new UnknownEncryptionScheme();
                 }
@@ -345,7 +345,11 @@ namespace GameRes.Formats.Lucifen
 
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetLPK();
+        #endif
         }
 
         EncryptionScheme QueryEncryptionScheme (string arc_name)
@@ -460,7 +464,7 @@ namespace GameRes.Formats.Lucifen
         {
             if (name_length < 1)
                 throw new InvalidFormatException ("Invalid LPK entry name");
-            string name = Encodings.cp932.GetString (m_name, 0, name_length);
+            string name = Encodings.ResourceEncoding.GetString (m_name, 0, name_length);
             var entry = FormatCatalog.Instance.Create<LuciEntry> (name);
             int entry_pos = m_entries_offset + EntrySize * entry_num;
             if (entry_pos+EntrySize > m_index.Length)

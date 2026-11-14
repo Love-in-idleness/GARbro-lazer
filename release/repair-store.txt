@@ -1,0 +1,1 @@
+v1.0.4: resolve draft releases through the release list; reuse verified Store artifact run 42677808924

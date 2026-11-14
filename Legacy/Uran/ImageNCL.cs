@@ -26,8 +26,15 @@
 using GameRes.Compression;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.Uran
 {
@@ -81,8 +88,12 @@ namespace GameRes.Formats.Uran
                 if (2 == method)
                     input = new ZLibStream (input, CompressionMode.Decompress);
 
+                #if NET8_0_OR_GREATER
+                var decoder = new RasterDecoder(input);
+                #else
                 var decoder = new BmpBitmapDecoder (input,
                     BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                #endif
                 var frame = decoder.Frames[0];
                 frame.Freeze();
                 return new ImageData (frame, info);

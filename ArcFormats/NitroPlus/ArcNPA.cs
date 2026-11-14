@@ -126,7 +126,8 @@ namespace GameRes.Formats.NitroPlus
             int total_count = file.View.ReadInt32 (17);
             int folder_count = file.View.ReadInt32 (21);
             int file_count = file.View.ReadInt32 (25);
-            if (total_count < folder_count + file_count)
+            if (total_count < 0 || total_count >= 0x40000 || folder_count < 0 || file_count < 0
+                || (long)folder_count + file_count > total_count)
                 return null;
             uint dir_size = file.View.ReadUInt32 (37);
             if (dir_size >= file.MaxOffset)
@@ -166,7 +167,7 @@ namespace GameRes.Formats.NitroPlus
                     uint unpacked_size = file.View.ReadUInt32 (info_offset+12);
 
                     var entry = new NpaEntry {
-                        Name        = Encodings.cp932.GetString (raw_name),
+                        Name        = Encodings.ResourceEncoding.GetString (raw_name),
                         Offset      = dir_size+offset+41,
                         Size        = size,
                         UnpackedSize = unpacked_size,
@@ -386,15 +387,27 @@ namespace GameRes.Formats.NitroPlus
             };
         }
 
+#if !NET8_0_OR_GREATER
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetNPA();
+        #endif
         }
+#endif
 
+#if !NET8_0_OR_GREATER
         public override object GetCreationWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.CreateNPAWidget();
+        #endif
         }
+#endif
 
         EncryptionScheme QueryGameEncryption (string arc_name)
         {

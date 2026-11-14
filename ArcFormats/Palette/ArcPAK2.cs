@@ -64,7 +64,7 @@ namespace GameRes.Formats.Palette
                 for (int j = 0; j < name_length; ++j)
                     name_buf[j] ^= 0xFF;
                 index_offset += (uint)name_length;
-                var name = Encodings.cp932.GetString (name_buf, 0, name_length);
+                var name = Encodings.ResourceEncoding.GetString (name_buf, 0, name_length);
                 var entry = Create<Entry> (name);
                 entry.Offset = file.View.ReadUInt32 (index_offset);
                 entry.Size   = file.View.ReadUInt32 (index_offset+4);

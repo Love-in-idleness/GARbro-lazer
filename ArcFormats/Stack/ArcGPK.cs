@@ -77,7 +77,7 @@ namespace GameRes.Formats.Stack
                         break;
                     if (name_length > name_buffer.Length)
                         name_buffer = new byte[name_length];
-                    index.Read (name_buffer, 0, name_length);
+                    index.ReadExactlyCompat (name_buffer, 0, name_length);
                     var name = Encoding.Unicode.GetString (name_buffer, 0, name_length);
                     var entry = Create<GpkEntry> (name);
 

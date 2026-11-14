@@ -30,9 +30,16 @@ using System.Text;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Formats.Strings;
 using GameRes.Utility;
 
@@ -323,7 +330,7 @@ namespace GameRes.Formats.Majiro
                     using (var mjo = arc.OpenEntry (start_mjo))
                     {
                         script = new byte[mjo.Length];
-                        mjo.Read (script, 0, script.Length);
+                        mjo.ReadExactlyCompat (script, 0, script.Length);
                     }
                 }
                 if (Binary.AsciiEqual (script, "MajiroObjX1.000"))
@@ -386,15 +393,21 @@ namespace GameRes.Formats.Majiro
 
         public override ResourceOptions GetOptions (object widget)
         {
+#if !NET8_0_OR_GREATER
             var w = widget as GUI.WidgetRCT;
             if (null != w)
                 Properties.Settings.Default.RCTPassword = w.Password.Text;
+#endif
             return GetDefaultOptions();
         }
 
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetRCT();
+#endif
         }
 
         public override void Write (Stream file, ImageData image)
@@ -434,13 +447,20 @@ namespace GameRes.Formats.Majiro
                 m_input = new uint[pixels];
                 if (bitmap.Format != PixelFormats.Bgr32)
                 {
+#if NET8_0_OR_GREATER
+                    bitmap = bitmap.Convert(PixelFormats.Bgr32);
+#else
                     var converted_bitmap = new FormatConvertedBitmap();
                     converted_bitmap.BeginInit();
                     converted_bitmap.Source = bitmap;
                     converted_bitmap.DestinationFormat = PixelFormats.Bgr32;
                     converted_bitmap.EndInit();
                     bitmap = converted_bitmap;
+#endif
                 }
+#if NET8_0_OR_GREATER
+                bitmap.CopyPixels(m_input, m_width * 4, 0);
+#else
                 unsafe
                 {
                     fixed (uint* buffer = m_input)
@@ -448,6 +468,7 @@ namespace GameRes.Formats.Majiro
                         bitmap.CopyPixels (Int32Rect.Empty, (IntPtr)buffer, pixels*4, m_width*4);
                     }
                 }
+#endif
                 InitShiftTable (m_width);
             }
 
@@ -545,7 +566,9 @@ namespace GameRes.Formats.Majiro
                 for (int i = 0; i < 32; ++i)
                 {
                     int offset = buf_begin + m_shift_table[i];
-                    if (offset < 0)
+                    // Narrow images can turn a two-dimensional shift into a
+                    // forward reference, which the decoder cannot reproduce.
+                    if (offset < 0 || offset >= buf_begin)
                         continue;
                     if (m_input[offset] != m_input[buf_begin])
                         continue;

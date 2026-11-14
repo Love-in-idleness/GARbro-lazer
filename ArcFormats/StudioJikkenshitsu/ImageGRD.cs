@@ -26,8 +26,16 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 using GameRes.Compression;
 using GameRes.Utility;
 
@@ -114,17 +122,17 @@ namespace GameRes.Formats.Jikkenshitsu
             using (input = new LzssStream (input))
             {
                 var header = new byte[0x28];
-                input.Read (header, 0, header.Length);
+                input.ReadExactlyCompat (header, 0, header.Length);
                 if (8 == m_info.BPP)
                     Palette = ImageFormat.ReadPalette (input);
-                input.Read (m_output, 0, m_output.Length);
+                input.ReadExactlyCompat (m_output, 0, m_output.Length);
             }
             if (m_info.AlphaLength > 0 && m_info.BPP == 8)
             {
                 m_input.Position = 0x18 + m_info.PackedLength;
                 var alpha = new byte[m_info.AlphaLength];
                 using (var lzss = new LzssStream (m_input.AsStream, LzssMode.Decompress, true))
-                    lzss.Read (alpha, 0, alpha.Length);
+                    lzss.ReadExactlyCompat (alpha, 0, alpha.Length);
                 return ApplyAlpha (alpha);
             }
             return ImageData.CreateFlipped (m_info, Format, Palette, m_output, Stride);

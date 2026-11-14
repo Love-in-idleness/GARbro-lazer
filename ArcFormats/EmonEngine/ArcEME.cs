@@ -121,14 +121,14 @@ namespace GameRes.Formats.EmonEngine
                 {
                     lzss.Config.FrameSize = entry.LzssFrameSize;
                     lzss.Config.FrameInitPos = entry.LzssInitPos;
-                    lzss.Read (data, 0, part1_size);
+                    lzss.ReadExactlyCompat (data, 0, part1_size);
                 }
                 using (var input = arc.File.CreateStream (entry.Offset+12, packed_size))
                 using (var lzss = new LzssStream (input))
                 {
                     lzss.Config.FrameSize = entry.LzssFrameSize;
                     lzss.Config.FrameInitPos = entry.LzssInitPos;
-                    lzss.Read (data, part1_size, unpacked_size);
+                    lzss.ReadExactlyCompat (data, part1_size, unpacked_size);
                 }
                 return new BinMemoryStream (data, entry.Name);
             }

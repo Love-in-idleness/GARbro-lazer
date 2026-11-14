@@ -25,7 +25,13 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using GameRes.Compression;
 
 namespace GameRes.Formats.Ankh
@@ -55,7 +61,7 @@ namespace GameRes.Formats.Ankh
             using (var lzss = new LzssStream (file.AsStream, LzssMode.Decompress, true))
             {
                 var pixels = new byte[info.Width * info.Height];
-                lzss.Read (pixels, 0, pixels.Length);
+                lzss.ReadExactlyCompat (pixels, 0, pixels.Length);
                 return ImageData.CreateFlipped (info, PixelFormats.Gray8, null, pixels, (int)info.Width);
             }
         }

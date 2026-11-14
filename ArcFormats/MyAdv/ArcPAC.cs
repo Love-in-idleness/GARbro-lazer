@@ -74,7 +74,7 @@ namespace GameRes.Formats.MyAdv
                 zlib.Reset();
                 zlib.SetInput (zlib_buffer, 0, packed_size);
                 zlib.Inflate (name_buffer);
-                var name = Encodings.cp932.GetString (name_buffer, 0, name_len);
+                var name = Encodings.ResourceEncoding.GetString (name_buffer, 0, name_len);
                 var entry = Create<PackedEntry> (name);
                 dir.Add (entry);
             }

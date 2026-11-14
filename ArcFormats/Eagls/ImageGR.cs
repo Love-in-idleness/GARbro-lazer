@@ -25,7 +25,13 @@
 
 using System;
 using System.ComponentModel.Composition;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using System.IO;
 using GameRes.Compression;
 using GameRes.Utility;
@@ -81,11 +87,11 @@ namespace GameRes.Formats.Eagls
                     return Bmp.Read (bmp, info);
                 int stride = (int)info.Width*4;
                 var pixels = new byte[Math.Max (0x36, stride*info.Height)];
-                bmp.Read (pixels, 0, 0x36); // skip header
+                bmp.ReadExactlyCompat (pixels, 0, 0x36); // skip header
                 for (int y = (int)info.Height - 1; y >= 0; --y)
                 {
                     int dst = y * stride;
-                    bmp.Read (pixels, dst, stride);
+                    bmp.ReadExactlyCompat (pixels, dst, stride);
                 }
                 return ImageData.Create (info, PixelFormats.Bgra32, null, pixels);
             }

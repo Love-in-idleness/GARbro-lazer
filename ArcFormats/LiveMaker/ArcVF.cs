@@ -196,7 +196,7 @@ namespace GameRes.Formats.LiveMaker
             {
                 name_buf[i] ^= (byte)key.GetRand32();
             }
-            return Encodings.cp932.GetString (name_buf, 0, name_length);
+            return Encodings.ResourceEncoding.GetString (name_buf, 0, name_length);
         }
 
         uint SkipExeData (ArcView file)
@@ -208,7 +208,7 @@ namespace GameRes.Formats.LiveMaker
         byte[] ReshuffleStream (Stream input)
         {
             var header = new byte[8];
-            input.Read (header, 0, 8);
+            input.ReadExactlyCompat (header, 0, 8);
             int chunk_size = header.ToInt32 (0);
             uint seed = header.ToUInt32 (4) ^ 0xF8EAu;
             int input_length = (int)input.Length - 8;
@@ -220,7 +220,7 @@ namespace GameRes.Formats.LiveMaker
                 int position = i * chunk_size;
                 input.Position = 8 + position;
                 int length = Math.Min (chunk_size, input_length - position);
-                input.Read (output, dst, length);
+                input.ReadExactlyCompat (output, dst, length);
                 dst += length;
             }
             return output;

@@ -71,7 +71,7 @@ namespace GameRes.Formats.Libido
                     j = Array.IndexOf<byte> (name_buf, 0, 0, name_buf_size);
                 if (j <= 0 || -1 != Array.IndexOf<byte> (name_buf, 0xFF, 0, j))
                     return null;
-                var name = Encodings.cp932.GetString (name_buf, 0, j);
+                var name = Encodings.ResourceEncoding.GetString (name_buf, 0, j);
                 var entry = Create<PackedEntry> (name);
                 entry.UnpackedSize = file.View.ReadUInt32 (index_offset+0x14);
                 entry.Size         = file.View.ReadUInt32 (index_offset+0x18);

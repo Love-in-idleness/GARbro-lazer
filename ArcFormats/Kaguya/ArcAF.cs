@@ -97,7 +97,7 @@ namespace GameRes.Formats.Kaguya
         {
             for (int i = 0; i < length; ++i)
                 name[i] ^= 0xFF;
-            return Encodings.cp932.GetString (name, 0, length);
+            return Encodings.ResourceEncoding.GetString (name, 0, length);
         }
 
         void LzUnpack (Stream input, byte[] output)

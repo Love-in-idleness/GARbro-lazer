@@ -25,8 +25,15 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.BlueGale
 {
@@ -61,7 +68,11 @@ namespace GameRes.Formats.BlueGale
             using (var rest = new StreamRegion (file.AsStream, 100, true))
             using (var input = new PrefixStream (header, rest))
             {
+                #if NET8_0_OR_GREATER
+                var decoder = new RasterDecoder(input);
+                #else
                 var decoder = new BmpBitmapDecoder (input, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                #endif
                 var frame = decoder.Frames[0];
                 frame.Freeze();
                 return new ImageData (frame, info);

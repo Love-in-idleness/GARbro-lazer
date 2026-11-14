@@ -28,9 +28,16 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Text;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Compression;
 using GameRes.Utility;
 
@@ -124,7 +131,7 @@ namespace GameRes.Formats.Ikura
             {
                 int opcode = input.ReadByte();
                 if (-1 == opcode)
-                    break;
+                    throw new EndOfStreamException("Truncated DRG pixel data.");
                 int count, src_offset;
                 int remaining = output.Length - out_pos;
                 switch (opcode)
@@ -174,7 +181,7 @@ namespace GameRes.Formats.Ikura
                     }
                 default:
                     count = Math.Min (3*(opcode - 4), remaining);
-                    input.Read (output, out_pos, count);
+                    input.ReadExactlyCompat (output, out_pos, count);
                     break;
                 }
                 out_pos += count;
@@ -216,13 +223,20 @@ namespace GameRes.Formats.Ikura
                 m_input = new uint[pixels];
                 if (bitmap.Format != PixelFormats.Bgr32)
                 {
+#if NET8_0_OR_GREATER
+                    bitmap = bitmap.Convert(PixelFormats.Bgr32);
+#else
                     var converted_bitmap = new FormatConvertedBitmap();
                     converted_bitmap.BeginInit();
                     converted_bitmap.Source = bitmap;
                     converted_bitmap.DestinationFormat = PixelFormats.Bgr32;
                     converted_bitmap.EndInit();
                     bitmap = converted_bitmap;
+#endif
                 }
+#if NET8_0_OR_GREATER
+                bitmap.CopyPixels(m_input, width * 4, 0);
+#else
                 unsafe
                 {
                     fixed (uint* buffer = m_input)
@@ -230,6 +244,7 @@ namespace GameRes.Formats.Ikura
                         bitmap.CopyPixels (Int32Rect.Empty, (IntPtr)buffer, pixels*4, width*4);
                     }
                 }
+#endif
                 WriteHeader (width, height);
             }
 

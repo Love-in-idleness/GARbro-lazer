@@ -25,7 +25,14 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+
+#endif
 
 // [000623][Marimo] Setsunai
 
@@ -73,7 +80,7 @@ namespace GameRes.Formats.Dice
             }
             else
             {
-                file.Read (pixels, 0, pixels.Length);
+                file.AsStream.ReadExactlyCompat (pixels, 0, pixels.Length);
                 for (int i = 3; i < pixels.Length; i += 4)
                 {
                     byte alpha = pixels[i];

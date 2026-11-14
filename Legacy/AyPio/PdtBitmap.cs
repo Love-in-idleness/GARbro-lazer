@@ -27,9 +27,16 @@ using GameRes.Utility;
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 // [971031][AyPio] Satyr 95
 
@@ -89,9 +96,17 @@ namespace GameRes.Formats.AyPio
                 return new ImageData (bitmap, m_info);
             var alpha = UnpackBitmap (offset);
             if (alpha.Format != PixelFormats.Gray8)
+                #if NET8_0_OR_GREATER
+                alpha = alpha.Convert(PixelFormats.Gray8);
+                #else
                 alpha = new FormatConvertedBitmap (alpha, PixelFormats.Gray8, null, 0);
+                #endif
             if (m_info.BPP != 32)
+                #if NET8_0_OR_GREATER
+                bitmap = bitmap.Convert(PixelFormats.Bgr32);
+                #else
                 bitmap = new FormatConvertedBitmap (bitmap, PixelFormats.Bgr32, null, 0);
+                #endif
 
             int stride = m_info.iWidth * 4;
             var pixels = new byte[stride * m_info.iHeight];
@@ -127,14 +142,18 @@ namespace GameRes.Formats.AyPio
                 m_bits = new byte[bits_length+4];
 
             m_input.Position = bits_offset;
-            m_input.Read (m_bits, 0, bits_length);
+            m_input.AsStream.ReadExactlyCompat (m_bits, 0, bits_length);
 
             m_input.Position = data_offset;
             UnpackBits();
 
             using (var bmp_input = new BinMemoryStream (m_output, name))
             {
+                #if NET8_0_OR_GREATER
+                var decoder = new RasterDecoder(bmp_input);
+                #else
                 var decoder = new BmpBitmapDecoder (bmp_input, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                #endif
                 return decoder.Frames[0];
             }
         }

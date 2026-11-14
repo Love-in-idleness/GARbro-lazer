@@ -1,0 +1,240 @@
+--- a/src/Avalonia.Wayland/Server/Persistent/WaylandCursor.cs
++++ b/src/Avalonia.Wayland/Server/Persistent/WaylandCursor.cs
+@@ -33,6 +33,8 @@
+ /// </summary>
+ sealed class WaylandStandardCursor(StandardCursorType cursorType) : WaylandCursor
+ {
++    internal StandardCursorType Type => cursorType;
++
+     public override WaylandCursorImage? Resolve(WaylandGlobals globals)
+         => globals.CursorManager.GetCursor(cursorType) is { } c
+             ? new WaylandCursorImage(c.Surface, c.HotspotX, c.HotspotY)
+--- a/src/Avalonia.Wayland/Server/Transient/WaylandCursorManager.cs
++++ b/src/Avalonia.Wayland/Server/Transient/WaylandCursorManager.cs
+@@ -5,12 +5,15 @@
+ using Avalonia.Wayland.Server.Interop;
+ using NWayland.Interop;
+ using NWayland.Protocols.Wayland;
++using NWayland.Protocols.CursorShapeV1;
++using System.Globalization;
+ 
+ namespace Avalonia.Wayland.Server.Transient;
+ 
+ partial class WaylandCursorManager : IDisposable
+ {
+-    private readonly IntPtr _theme;
++    private IntPtr _theme;
++    private readonly WlShm _shm;
+     private readonly Dictionary<StandardCursorType, CursorEntry?> _cursors = new();
+     private readonly WlDisplay _display;
+     private readonly WlCompositor _compositor;
+@@ -49,18 +52,26 @@
+     {
+         _display = display;
+         _compositor = compositor;
+-        _theme = UnsafeNativeMethods.wl_cursor_theme_load(null, 24, shm.Handle);
+-        if (_theme == IntPtr.Zero)
+-            throw new AvaloniaWaylandException("Failed to load default cursor theme");
+-
+-        foreach (var type in CursorNames.Keys)
+-            LoadCursor(type);
++        _shm = shm;
++        // The compositor path needs no client theme, cursor surface or bitmap.
++        // Older compositors resolve the user's theme only when first needed.
+     }
+ 
+     private unsafe void LoadCursor(StandardCursorType type)
+     {
+         if (!CursorNames.TryGetValue(type, out var names))
+             return;
++
++        if (_theme == IntPtr.Zero)
++        {
++            string? theme = Environment.GetEnvironmentVariable("XCURSOR_THEME");
++            int size = int.TryParse(Environment.GetEnvironmentVariable("XCURSOR_SIZE"),
++                NumberStyles.Integer, CultureInfo.InvariantCulture, out int configured) && configured > 0
++                ? configured : 24; // libwayland-cursor's conventional default
++            _theme = UnsafeNativeMethods.wl_cursor_theme_load(string.IsNullOrEmpty(theme) ? null : theme, size, _shm.Handle);
++            if (_theme == IntPtr.Zero)
++                throw new AvaloniaWaylandException("Failed to load system cursor theme");
++        }
+ 
+         UnsafeNativeMethods.wl_cursor* cursor = null;
+         foreach (var name in names)
+@@ -102,11 +113,42 @@
+         if (type == StandardCursorType.None)
+             return null;
+ 
++        if (!_cursors.ContainsKey(type) && CursorNames.ContainsKey(type))
++            LoadCursor(type);
++
+         if (_cursors.TryGetValue(type, out var entry))
+             return entry ?? (type != StandardCursorType.Arrow ? GetCursor(StandardCursorType.Arrow) : null);
+ 
+         return GetCursor(StandardCursorType.Arrow);
+     }
++
++    // Cursor-shape v1 values only. Newer protocol enum values must not be
++    // sent to a v1 compositor. Unknown types preserve a visible system arrow.
++    internal static WpCursorShapeDeviceV1.ShapeEnum GetShape(StandardCursorType type) => type switch
++    {
++        StandardCursorType.Ibeam => WpCursorShapeDeviceV1.ShapeEnum.Text,
++        StandardCursorType.Wait => WpCursorShapeDeviceV1.ShapeEnum.Wait,
++        StandardCursorType.Cross => WpCursorShapeDeviceV1.ShapeEnum.Crosshair,
++        StandardCursorType.Hand => WpCursorShapeDeviceV1.ShapeEnum.Pointer,
++        StandardCursorType.Help => WpCursorShapeDeviceV1.ShapeEnum.Help,
++        StandardCursorType.AppStarting => WpCursorShapeDeviceV1.ShapeEnum.Progress,
++        StandardCursorType.No => WpCursorShapeDeviceV1.ShapeEnum.NotAllowed,
++        StandardCursorType.SizeAll => WpCursorShapeDeviceV1.ShapeEnum.AllScroll,
++        StandardCursorType.SizeWestEast => WpCursorShapeDeviceV1.ShapeEnum.EwResize,
++        StandardCursorType.SizeNorthSouth => WpCursorShapeDeviceV1.ShapeEnum.NsResize,
++        StandardCursorType.TopSide => WpCursorShapeDeviceV1.ShapeEnum.NResize,
++        StandardCursorType.BottomSide => WpCursorShapeDeviceV1.ShapeEnum.SResize,
++        StandardCursorType.LeftSide => WpCursorShapeDeviceV1.ShapeEnum.WResize,
++        StandardCursorType.RightSide => WpCursorShapeDeviceV1.ShapeEnum.EResize,
++        StandardCursorType.TopLeftCorner => WpCursorShapeDeviceV1.ShapeEnum.NwResize,
++        StandardCursorType.TopRightCorner => WpCursorShapeDeviceV1.ShapeEnum.NeResize,
++        StandardCursorType.BottomLeftCorner => WpCursorShapeDeviceV1.ShapeEnum.SwResize,
++        StandardCursorType.BottomRightCorner => WpCursorShapeDeviceV1.ShapeEnum.SeResize,
++        StandardCursorType.DragMove => WpCursorShapeDeviceV1.ShapeEnum.Move,
++        StandardCursorType.DragCopy => WpCursorShapeDeviceV1.ShapeEnum.Copy,
++        StandardCursorType.DragLink => WpCursorShapeDeviceV1.ShapeEnum.Alias,
++        _ => WpCursorShapeDeviceV1.ShapeEnum.Default
++    };
+ 
+     public void Dispose()
+     {
+@@ -115,6 +157,9 @@
+         _cursors.Clear();
+ 
+         if (_theme != IntPtr.Zero)
++        {
+             UnsafeNativeMethods.wl_cursor_theme_destroy(_theme);
++            _theme = IntPtr.Zero;
++        }
+     }
+ }
+--- a/src/Avalonia.Wayland/Server/Transient/WaylandGlobals.cs
++++ b/src/Avalonia.Wayland/Server/Transient/WaylandGlobals.cs
+@@ -7,6 +7,7 @@
+ using NWayland;
+ using NWayland.Interop;
+ using NWayland.Protocols.FractionalScaleV1;
++using NWayland.Protocols.CursorShapeV1;
+ using NWayland.Protocols.LinuxDmabufV1;
+ using NWayland.Protocols.TextInputUnstableV3;
+ using NWayland.Protocols.Viewporter;
+@@ -29,6 +30,7 @@
+     public WlCompositor WlCompositor { get; }
+     public XdgWmBase XdgWmBase { get; }
+     public WlDataDeviceManager? DataDeviceManager { get; }
++    public WpCursorShapeManagerV1? CursorShapeManager { get; }
+     public ZwpLinuxDmabufV1? LinuxDmabuf { get; }
+     public WpFractionalScaleManagerV1? FractionalScaleManager { get; }
+     public WpViewporter? Viewporter { get; }
+@@ -140,6 +142,7 @@
+         WlShm = BindRequired<WlShm>(1, 1, new ShmListener(this));
+         WlCompositor = BindRequired<WlCompositor>(4, 6, null);
+         XdgWmBase = BindRequired<XdgWmBase>(3, 4, new XdgWmBaseListener());
++        CursorShapeManager = Bind<WpCursorShapeManagerV1>(1, 1, null);
+         CursorManager = new WaylandCursorManager(connection.Display, WlShm, WlCompositor);
+         DataDeviceManager = Bind<WlDataDeviceManager>(3, 3, null);
+         LinuxDmabuf = Bind<ZwpLinuxDmabufV1>(4, 4, null);
+@@ -194,6 +197,8 @@
+     public void Dispose()
+     {
+         InputDispatcher.Dispose();
++        CursorShapeManager?.Destroy();
++        CursorManager.Dispose();
+         Worker.PlatformGraphics.Reset();
+     }
+ }
+--- a/src/Avalonia.Wayland/Server/Transient/WaylandInputDispatcher.cs
++++ b/src/Avalonia.Wayland/Server/Transient/WaylandInputDispatcher.cs
+@@ -8,6 +8,7 @@
+ using Avalonia.Wayland.Server.Persistent;
+ using NWayland;
+ using NWayland.Protocols.Wayland;
++using NWayland.Protocols.CursorShapeV1;
+ 
+ namespace Avalonia.Wayland.Server.Transient;
+ 
+@@ -269,6 +270,8 @@
+         private readonly WaylandInputDispatcher _dispatcher;
+         private readonly Seat _seat;
+         private readonly WlPointer _pointer;
++        private WpCursorShapeDeviceV1? _cursorShapeDevice;
++        private bool _hasPointerEnter;
+ 
+         // Persistent pointer state (survives across frames)
+         private WSurfaceEventSinkProxy? _focusedSink;
+@@ -320,7 +323,10 @@
+         {
+             if (_focusedSurface == null)
+                 return;
+-            var image = (_focusedSurface.CurrentCursor ?? s_defaultCursor).Resolve(_dispatcher._globals);
++            var cursor = _focusedSurface.CurrentCursor ?? s_defaultCursor;
++            if (cursor is WaylandStandardCursor standard && ApplyStandardCursor(standard.Type))
++                return;
++            var image = cursor.Resolve(_dispatcher._globals);
+             if (image is { } c)
+                 _pointer.SetCursor(_lastEnterSerial, c.Surface, c.HotspotX, c.HotspotY);
+             else
+@@ -345,11 +351,31 @@
+         /// </remarks>
+         internal void SetDndCursor(StandardCursorType cursorType)
+         {
++            if (!_hasPointerEnter || ApplyStandardCursor(cursorType))
++                return;
+             var cursorInfo = _dispatcher._globals.CursorManager.GetCursor(cursorType);
+             if (cursorInfo is { } c)
+                 _pointer.SetCursor(_lastEnterSerial, c.Surface, c.HotspotX, c.HotspotY);
+             else
+                 _pointer.SetCursor(_lastEnterSerial, null!, 0, 0);
++        }
++
++        // A shape device belongs to this wl_pointer, never a different seat or
++        // connection. Create it lazily: seats can precede the optional global.
++        private bool ApplyStandardCursor(StandardCursorType type)
++        {
++            if (!_hasPointerEnter)
++                return true;
++            if (type == StandardCursorType.None)
++            {
++                _pointer.SetCursor(_lastEnterSerial, null, 0, 0);
++                return true;
++            }
++            _cursorShapeDevice ??= _dispatcher._globals.CursorShapeManager?.GetPointer(_pointer, null);
++            if (_cursorShapeDevice == null)
++                return false;
++            _cursorShapeDevice.SetShape(_lastEnterSerial, WaylandCursorManager.GetShape(type));
++            return true;
+         }
+ 
+         private void ResetFrameState()
+@@ -366,6 +392,9 @@
+ 
+         public void Dispose()
+         {
++            _hasPointerEnter = false;
++            _cursorShapeDevice?.Destroy();
++            _cursorShapeDevice = null;
+             _pointer.Release();
+         }
+ 
+@@ -382,6 +411,7 @@
+                     handler._focusedSurface = shellSurface;
+                     handler._focusedWlSurface = surface;
+                     handler._lastEnterSerial = serial;
++                    handler._hasPointerEnter = true;
+                     handler.UpdateCursor();
+                     shellSurface?.EventSink.OnPointerEnter(0, serial, pos);
+                 });
+@@ -392,6 +422,7 @@
+                 handler._frameActions.Add(() =>
+                 {
+                     var leaveSink = handler._focusedSink;
++                    handler._hasPointerEnter = false;
+                     handler._focusedSink = null;
+                     handler._focusedSurface = null;
+                     handler._focusedWlSurface = null;

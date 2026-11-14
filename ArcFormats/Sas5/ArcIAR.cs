@@ -206,7 +206,7 @@ namespace GameRes.Formats.Sas5
                         int copy_count = pixel_size * input.ReadUInt16();
 
                         x += skip_count;
-                        input.Read (output, dst+x, copy_count);
+                        input.ReadExactlyCompat (output, dst+x, copy_count);
                         x += copy_count;
                     }
                     dst += overlay_info.Stride;
@@ -317,7 +317,7 @@ namespace GameRes.Formats.Sas5
                         reader.Unpack (m_output);
                 }
                 else
-                    input.Read (m_output, 0, m_output.Length);
+                    input.ReadExactlyCompat (m_output, 0, m_output.Length);
             }
         }
 

@@ -88,7 +88,7 @@ namespace GameRes.Formats.Majiro
                 if (-1 == zero)
                     break;
                 int name_len = zero-names_pos;
-                string name = Encodings.cp932.GetString (names, names_pos, name_len);
+                string name = Encodings.ResourceEncoding.GetString (names, names_pos, name_len);
                 names_size -= name_len+1;
                 names_pos = zero+1;
                 uint offset = offset_next;

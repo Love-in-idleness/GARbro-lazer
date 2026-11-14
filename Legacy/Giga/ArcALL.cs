@@ -72,7 +72,7 @@ namespace GameRes.Formats.Giga
             int bitcount = input.ReadInt32();
             if (0 == bitcount)
             {
-                input.Read (output, 0, output.Length);
+                input.AsStream.ReadExactlyCompat (output, 0, output.Length);
                 return;
             }
             int bytecount = bitcount >> 3;

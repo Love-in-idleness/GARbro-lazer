@@ -26,7 +26,14 @@
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Utility;
 
 namespace GameRes.Formats
@@ -85,7 +92,11 @@ namespace GameRes.Formats
             var body = new StreamRegion (file.AsStream, meta.PngOffset, true);
             using (var png = new PrefixStream (PngFormat.HeaderBytes, body))
             {
+                #if NET8_0_OR_GREATER
+                var decoder = new RasterDecoder(png);
+                #else
                 var decoder = new PngBitmapDecoder (png, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                #endif
                 var frame = decoder.Frames[0];
                 frame.Freeze();
                 return new ImageData (frame, info);
@@ -123,7 +134,7 @@ namespace GameRes.Formats
                 {
                     input.Position = chunk_pos;
                     uint chunk_size = Binary.BigEndian (input.ReadUInt32());
-                    input.Read (chunk_type, 0, 4);
+                    input.ReadExactlyCompat (chunk_type, 0, 4);
                     if (Binary.AsciiEqual (chunk_type, "MEND"))
                         break;
                     if (Binary.AsciiEqual (chunk_type, "IHDR"))
@@ -175,7 +186,11 @@ namespace GameRes.Formats
             get {
                 if (null == m_image)
                 {
+                    #if NET8_0_OR_GREATER
+                    var decoder = new RasterDecoder(Source);
+                    #else
                     var decoder = new PngBitmapDecoder (Source, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                    #endif
                     var frame = decoder.Frames[0];
                     frame.Freeze();
                     m_image = new ImageData (frame, Info);

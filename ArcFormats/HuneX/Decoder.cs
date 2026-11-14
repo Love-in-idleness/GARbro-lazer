@@ -184,7 +184,7 @@ namespace GameRes.Formats.HuneX {
 
         int ReadIntVL(int length = sizeof(int)) {
             var buffer = new byte[Math.Max(sizeof(int), length)];
-            m_input.Read(buffer, 0, length);
+            m_input.ReadExactlyCompat(buffer, 0, length);
             return BitConverter.ToInt32(buffer, 0);
         }
     }
@@ -262,7 +262,7 @@ namespace GameRes.Formats.HuneX {
                         break;
                     case 3: // LITERAL
                         buffer = new byte[len * 2 + 2];
-                        m_input.Read(buffer, 0, buffer.Length);
+                        m_input.ReadExactlyCompat(buffer, 0, buffer.Length);
                         offset = Write2(buffer, offset, 1);
                         ringbuf.Append(buffer);
                         break;

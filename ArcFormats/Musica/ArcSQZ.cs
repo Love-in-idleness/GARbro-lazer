@@ -26,7 +26,13 @@
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using GameRes.Compression;
 
 namespace GameRes.Formats.Musica
@@ -109,7 +115,7 @@ namespace GameRes.Formats.Musica
                     if (null == m_image)
                     {
                         var pixels = new byte[m_info.Width * m_info.Height * 4];
-                        m_input.Read (pixels, 0, pixels.Length);
+                        m_input.ReadExactlyCompat (pixels, 0, pixels.Length);
                         m_image = ImageData.Create (m_info, PixelFormats.Bgra32, null, pixels);
                     }
                     return m_image;

@@ -25,7 +25,14 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Formats.Ankh;
 
 // [000324][Juice] Orgel ~Kesenai Melody~
@@ -73,7 +80,11 @@ namespace GameRes.Formats.Ice
             GrpOpener.UnpackTpw (file, output);
             using (var bmp = new BinMemoryStream (output, file.Name))
             {
+                #if NET8_0_OR_GREATER
+                var decoder = new RasterDecoder(bmp);
+                #else
                 var decoder = new BmpBitmapDecoder (bmp, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                #endif
                 var frame = decoder.Frames[0];
                 frame.Freeze();
                 return new ImageData (frame, info);

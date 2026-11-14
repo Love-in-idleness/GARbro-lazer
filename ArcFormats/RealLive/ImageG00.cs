@@ -28,8 +28,16 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 using GameRes.Utility;
 
 namespace GameRes.Formats.RealLive
@@ -200,7 +208,7 @@ namespace GameRes.Formats.RealLive
                     int tile_stride = tile_width * 4;
                     for (int row = 0; row < tile_height; ++row)
                     {
-                        input.Read (m_output, dst, tile_stride);
+                        input.ReadExactlyCompat (m_output, dst, tile_stride);
                         dst += dst_stride;
                     }
                 }

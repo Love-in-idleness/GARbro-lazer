@@ -296,7 +296,7 @@ namespace GameRes.Formats.Amaterasu
         {
             var grp = s_grp_format.Value;
             if (null == grp) // probably never happens
-                throw new FileFormatException ("GRP image encoder not available");
+                throw new InvalidFormatException ("GRP image encoder not available");
             bool is_grp = grp.Signature == input.Signature;
             input.Position = 0;
             var start = output.Position;
@@ -328,7 +328,11 @@ namespace GameRes.Formats.Amaterasu
 
         public override object GetCreationWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.CreateAMIWidget();
+        #endif
         }
     }
 

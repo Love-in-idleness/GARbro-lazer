@@ -1,0 +1,24 @@
+<Solution>
+  <Folder Name="/modern/">
+    <Project Path="modern/GARbro.Media/GARbro.Media.fsproj" />
+    <Project Path="modern/GARbro.Domain/GARbro.Domain.fsproj" />
+    <Project Path="modern/GARbro.Imaging.Magick/GARbro.Imaging.Magick.csproj" />
+    <Project Path="modern/GARbro.Imaging.Portable/GARbro.Imaging.Portable.csproj" />
+    <Project Path="modern/GARbro.UI/GARbro.UI.csproj" />
+    <Project Path="modern/GARbro.Desktop/GARbro.Desktop.csproj" />
+    <Project Path="modern/GARbro.Cli/GARbro.Cli.csproj" />
+    <Project Path="modern/GARbro.Application/GARbro.Application.csproj" />
+    <Project Path="modern/GARbro.Worker/GARbro.Worker.csproj" />
+    <Project Path="modern/GARbro.Formats/GARbro.Formats.csproj" />
+    <Project Path="modern/GARbro.Legacy/GARbro.Legacy.csproj" />
+    <Project Path="modern/GARbro.Experimental/GARbro.Experimental.csproj" />
+    <Project Path="modern/GARbro.Imaging/GARbro.Imaging.csproj" />
+    <Project Path="modern/GARbro.Core/GARbro.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+  <Project Path="tests/GARbro.Desktop.Tests/GARbro.Desktop.Tests.csproj" />
+  <Project Path="tests/GARbro.Desktop.NativeSmoke/GARbro.Desktop.NativeSmoke.csproj" />
+    <Project Path="tests/GARbro.Core.Tests/GARbro.Core.Tests.csproj" />
+    <Project Path="tests/GARbro.Worker.Probe/GARbro.Worker.Probe.csproj" />
+  </Folder>
+</Solution>

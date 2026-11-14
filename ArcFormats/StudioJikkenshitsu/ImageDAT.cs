@@ -27,8 +27,16 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 using GameRes.Formats.Strings;
 
 // [010719][Studio Jikkenshitsu] Shin Gekka Bijin ~Hitori Shizuka
@@ -130,7 +138,11 @@ namespace GameRes.Formats.Jikkenshitsu
 
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetSJDAT (DefaultScheme.KnownSchemes.Keys);
+        #endif
         }
 
         internal byte[] QueryKey (string filename)

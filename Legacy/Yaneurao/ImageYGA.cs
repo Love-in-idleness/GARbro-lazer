@@ -25,7 +25,14 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+
 using GameRes.Compression;
 
 namespace GameRes.Formats.Yaneurao
@@ -72,10 +79,10 @@ namespace GameRes.Formats.Yaneurao
             if (meta.IsCompressed)
             {
                 using (var input = new LzssStream (file.AsStream, LzssMode.Decompress, true))
-                    input.Read (pixels, 0, meta.UnpackedSize);
+                    input.ReadExactlyCompat (pixels, 0, meta.UnpackedSize);
             }
             else
-                file.Read (pixels, 0, meta.UnpackedSize);
+                file.AsStream.ReadExactlyCompat (pixels, 0, meta.UnpackedSize);
             return ImageData.Create (info, PixelFormats.Bgra32, null, pixels);
         }
 

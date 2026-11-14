@@ -271,7 +271,7 @@ namespace GameRes.Formats.NeXAS
                 using (input)
                 {
                     var data = new byte[entry.Size];
-                    input.Read (data, 0, data.Length);
+                    input.ReadExactlyCompat (data, 0, data.Length);
                     for (int i = 0; i < Math.Min (3, data.Length); i++)
                         data[i] = (byte)~data[i];
                     return new BinMemoryStream (data, entry.Name);
@@ -289,7 +289,7 @@ namespace GameRes.Formats.NeXAS
                 using (input)
                 {
                     var packed = new byte[entry.Size];
-                    input.Read (packed, 0, packed.Length);
+                    input.ReadExactlyCompat (packed, 0, packed.Length);
                     var unpacked = HuffmanDecode (packed, (int)pent.UnpackedSize);
                     return new BinMemoryStream (unpacked, 0, (int)pent.UnpackedSize, entry.Name);
                 }

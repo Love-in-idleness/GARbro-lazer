@@ -25,7 +25,13 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using GameRes.Compression;
 
 namespace GameRes.Formats.Elf
@@ -55,7 +61,7 @@ namespace GameRes.Formats.Elf
             var pixels = new byte[stride * (int)info.Height];
             file.Position = 0x14;
             using (var input = new LzssStream (file.AsStream, LzssMode.Decompress, true))
-                input.Read (pixels, 0, pixels.Length);
+                input.ReadExactlyCompat (pixels, 0, pixels.Length);
             for (int i = 4; i < stride; i += 4)
             {
                 pixels[i  ] += pixels[i-4];

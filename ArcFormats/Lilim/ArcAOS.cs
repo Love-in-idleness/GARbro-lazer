@@ -79,7 +79,7 @@ namespace GameRes.Formats.Lilim
                         break;
                     if (-1 == name_length)
                         name_length = name_buf.Length;
-                    var name = Encodings.cp932.GetString (name_buf, 0, name_length);
+                    var name = Encodings.ResourceEncoding.GetString (name_buf, 0, name_length);
                     if (last_name == name || string.IsNullOrWhiteSpace (name))
                         return null;
                     last_name = name;

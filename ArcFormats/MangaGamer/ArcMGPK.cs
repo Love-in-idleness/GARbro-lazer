@@ -109,7 +109,7 @@ namespace GameRes.Formats.Mg
             using (input)
             {
                 byte[] data = new byte[entry.Size];
-                input.Read (data, 0, data.Length);
+                input.ReadExactlyCompat (data, 0, data.Length);
                 DecryptData (data, mgarc.Key);
                 if (entry.Name.HasExtension ("txt"))
                     return DecompressStream (data);
@@ -188,7 +188,11 @@ namespace GameRes.Formats.Mg
 
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetMGPK();
+        #endif
         }
 
         public static byte[] GetKey (string title)

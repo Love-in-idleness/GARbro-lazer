@@ -56,11 +56,11 @@ namespace GameRes.Formats.Cadath
 
             using (var mem = new MemoryStream (data, 4, bits1_length-4))
             using (var input = new ZLibStream (mem, CompressionMode.Decompress))
-                input.Read (bits1, 0, bits1.Length);
+                input.ReadExactlyCompat (bits1, 0, bits1.Length);
 
             using (var mem = new MemoryStream (data, bits1_length+4, bits2_length-4))
             using (var input = new ZLibStream (mem, CompressionMode.Decompress))
-                input.Read (bits2, 0, bits2.Length);
+                input.ReadExactlyCompat (bits2, 0, bits2.Length);
 
             short init = header.ToInt16 (0x11);
             var decoded = new short[sample_count];

@@ -28,9 +28,17 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+using WriteableBitmap = GARbro.Imaging.MutablePixelBuffer;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.Artemis
 {
@@ -132,6 +140,10 @@ namespace GameRes.Formats.Artemis
             var tile = ReadBitmapFromFile (filename);
             int src_x = x >= 0 ? 0 : -x;
             int src_y = y >= 0 ? 0 : -y;
+#if NET8_0_OR_GREATER
+            x = Math.Max(0, x);
+            y = Math.Max(0, y);
+#endif
             var width  = Math.Min (tile.PixelWidth - src_x,  output.PixelWidth  - x);
             var height = Math.Min (tile.PixelHeight - src_y, output.PixelHeight - y);
             var source = new Int32Rect (src_x, src_y, width, height);
@@ -203,7 +215,11 @@ namespace GameRes.Formats.Artemis
                     throw new InvalidFormatException ("Invalid IPT tile format.");
                 var bitmap = image.Bitmap;
                 if (bitmap.Format.BitsPerPixel != 32)
+                    #if NET8_0_OR_GREATER
+                    bitmap = bitmap.Convert(PixelFormats.Bgr32);
+                    #else
                     bitmap = new FormatConvertedBitmap (bitmap, PixelFormats.Bgr32, null, 0);
+                    #endif
                 return bitmap;
             }
         }

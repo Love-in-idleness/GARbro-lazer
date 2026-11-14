@@ -261,10 +261,10 @@ namespace GameRes.Formats.Entis
             }
 
             var buffer = new byte[input.Length];
-            input.Read(buffer, 0, (int)input.Length);
+            input.ReadExactlyCompat(buffer, 0, (int)input.Length);
 
-            var buffer_span  = MemoryMarshal.Cast<byte, uint> (buffer);
-            var xor_key_span = MemoryMarshal.Cast<byte, uint> (xor_key_map);
+            var buffer_span  = MemoryMarshal.Cast<byte, uint> (buffer.AsSpan());
+            var xor_key_span = MemoryMarshal.Cast<byte, uint> (xor_key_map.AsSpan());
 
             for (int i = 0; i < buffer_span.Length; i += xor_key_span.Length)
             {
@@ -290,7 +290,11 @@ namespace GameRes.Formats.Entis
 
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetNOA();
+        #endif
         }
 
         internal static class EncType

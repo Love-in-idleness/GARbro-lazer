@@ -25,7 +25,14 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+
+#endif
 
 // [020705][BOM] Ikihaji@
 // [021025][Crystal Vision] Confession ~Hajimete no Kokuhaku~
@@ -110,7 +117,7 @@ namespace GameRes.Formats.Bom
             uint size = m_input.ReadUInt32();
             if ((size & 0x80000000) != 0)
             {
-                m_input.Read (m_output, 0, m_output.Length);
+                m_input.AsStream.ReadExactlyCompat (m_output, 0, m_output.Length);
             }
             else
             {

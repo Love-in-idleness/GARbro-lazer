@@ -117,7 +117,7 @@ namespace GameRes.Formats.Artemis
             for (int i = 0; i < count; ++i)
             {
                 int name_length = index.ToInt32 (index_offset);
-                var name = Encodings.cp932.GetString (index, index_offset+4, name_length);
+                var name = Encodings.ResourceEncoding.GetString (index, index_offset+4, name_length);
                 index_offset += name_length + 0x10;
                 var entry = Create<Entry> (name);
                 entry.Offset = index.ToUInt32 (index_offset);

@@ -25,8 +25,15 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 // [010810][Powered] Fight! Makoto
 
@@ -74,11 +81,19 @@ namespace GameRes.Formats.Powerd
                     return base_img;
                 bmp.Position = 0;
                 var alpha_img = Bmp.Read (bmp, bmp_info);
+                #if NET8_0_OR_GREATER
+                var alpha_bmp = alpha_img.Bitmap.Convert(PixelFormats.Gray8);
+                #else
                 var alpha_bmp = new FormatConvertedBitmap (alpha_img.Bitmap, PixelFormats.Gray8, null, 0);
+                #endif
                 var alpha = new byte[alpha_bmp.PixelWidth * alpha_bmp.PixelHeight];
                 alpha_bmp.CopyPixels (alpha, alpha_bmp.PixelWidth, 0);
 
+                #if NET8_0_OR_GREATER
+                var base_bmp = base_img.Bitmap.Convert(PixelFormats.Bgr32);
+                #else
                 var base_bmp = new FormatConvertedBitmap (base_img.Bitmap, PixelFormats.Bgr32, null, 0);
+                #endif
                 int stride = base_bmp.PixelWidth * 4;
                 var pixels = new byte[stride * base_bmp.PixelHeight];
                 base_bmp.CopyPixels (pixels, stride, 0);

@@ -28,7 +28,13 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using GameRes.Compression;
 using GameRes.Utility;
 
@@ -59,7 +65,7 @@ namespace GameRes.Formats.Crowd
             {
                 int max_header_length = KnownKeys.Keys.Max (x => x.Length);
                 var header = new byte[max_header_length + 0x35];
-                lz.Read (header, 0, header.Length);
+                lz.ReadExactlyCompat (header, 0, header.Length);
                 var id = Binary.GetCString (header, 0, max_header_length);
                 byte[] key;
                 if (!KnownKeys.TryGetValue (id, out key))
@@ -86,7 +92,7 @@ namespace GameRes.Formats.Crowd
             {
                 var meta = (CrzMetaData)info;
                 var header = new byte[meta.HeaderSize];
-                lz.Read (header, 0, header.Length);
+                lz.ReadExactlyCompat (header, 0, header.Length);
                 int stride = info.iWidth * 2;
                 var pixels = new byte[stride * info.iHeight];
                 if (pixels.Length != lz.Read (pixels, 0, pixels.Length))

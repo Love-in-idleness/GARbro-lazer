@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><IsPackable>false</IsPackable></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../GARbro.Imaging.Magick/GARbro.Imaging.Magick.csproj" /><ProjectReference Include="../GARbro.Application/GARbro.Application.csproj" /></ItemGroup>
+</Project>

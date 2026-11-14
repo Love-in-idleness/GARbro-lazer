@@ -74,7 +74,7 @@ namespace GameRes.Formats.Apricot
                     entry.Size = index.ReadUInt32();
                     entry.UnpackedSize = index.ReadUInt32();
                     entry.IsPacked = entry.Size != entry.UnpackedSize;
-                    index.Read (buffer, 0, 500);
+                    index.ReadExactlyCompat (buffer, 0, 500);
                     int name_length = index.Read (buffer, 0, entry_length - 528);
                     if (!is_deleted && entry.CheckPlacement (max_offset))
                     {

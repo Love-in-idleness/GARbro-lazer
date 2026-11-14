@@ -93,7 +93,7 @@ namespace GameRes.Formats.LightVN
             var zent = (ZipEntry)entry;
             var data = new byte[zent.UnpackedSize];
             using (var input = zarc.Native.GetInputStream (zent.NativeEntry))
-                input.Read (data, 0, data.Length);
+                input.ReadExactlyCompat (data, 0, data.Length);
             McdatArchive.Decrypt (data, McdatOpener.DefaultKey, 100);
             return new BinMemoryStream (data, zent.Name);
         }

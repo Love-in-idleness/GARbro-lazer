@@ -1,0 +1,108 @@
+name: Android
+on:
+  workflow_call:
+    inputs:
+      package_version:
+        type: string
+        default: 0.3.0-preview.1
+      publish:
+        type: boolean
+        default: false
+    secrets:
+      ANDROID_KEYSTORE_BASE64:
+        required: false
+      ANDROID_KEYSTORE_PASSWORD:
+        required: false
+  workflow_dispatch:
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - api: 31
+            target: default
+            arch: x86_64
+            rid: android-x64
+            process: X64
+          - api: 36
+            target: google_apis
+            arch: x86_64
+            rid: android-x64
+            process: X64
+          - api: 31
+            target: default
+            arch: arm64-v8a
+            rid: android-arm64
+            process: Arm64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - run: dotnet workload install android --skip-manifest-update
+      - name: Allow hardware acceleration for x64 emulators
+        if: matrix.process == 'X64'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - run: python3 tools/package-android.py --test --rid ${{ matrix.rid }} --version ${{ inputs.package_version || '0.3.0-preview.1' }}
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          profile: Nexus 5
+          disable-animations: true
+          emulator-boot-timeout: 1200
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 2048 -cores 2 ${{ matrix.process == 'Arm64' && '-accel off' || '' }}
+          script: python3 tools/smoke-android.py artifacts/garbro-${{ inputs.package_version || '0.3.0-preview.1' }}-${{ matrix.rid }}-test.apk --architecture ${{ matrix.process }} --timeout 1800
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-tests-${{ matrix.api }}-${{ matrix.process }}
+          path: artifacts/android-smoke/
+  package:
+    needs: test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: dotnet workload install android --skip-manifest-update
+      - name: Install persistent publication key
+        if: inputs.publish
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE" && test -n "$KEYSTORE_PASSWORD"
+          umask 077
+          printf '%s' "$KEYSTORE" | base64 --decode > "$RUNNER_TEMP/garbro-android.p12"
+      - name: Build ARM64 APK
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/garbro-android.p12
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: python3 tools/package-android.py --rid android-arm64 --version ${{ inputs.package_version || '0.3.0-preview.1' }} ${{ inputs.publish && '--sign' || '' }}
+      - name: Discard temporary key copy
+        if: always()
+        run: rm -f "$RUNNER_TEMP/garbro-android.p12"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: preview-android-arm64
+          path: artifacts/garbro-*-android-arm64.apk

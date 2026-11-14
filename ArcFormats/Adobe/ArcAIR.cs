@@ -67,7 +67,7 @@ namespace GameRes.Formats.Adobe
                     length >>= 1;
                     if (0 == length)
                         break;
-                    index.Read (name_buffer, 0, length);
+                    index.ReadExactlyCompat (name_buffer, 0, length);
                     var name = Encoding.UTF8.GetString (name_buffer, 0, length);
                     if (0x09 != index.ReadUInt8() ||
                         0x05 != index.ReadUInt8() ||

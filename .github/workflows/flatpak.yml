@@ -1,0 +1,71 @@
+name: Flatpak
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      package_version:
+        type: string
+        default: 1.1.0
+permissions:
+  contents: read
+concurrency:
+  group: flatpak-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    env:
+      GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.1.0' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Install build and validation tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y flatpak flatpak-builder appstream desktop-file-utils xvfb x11-utils fonts-katex xdg-desktop-portal xdg-desktop-portal-gtk libglib2.0-bin xdg-utils
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y flathub org.freedesktop.Sdk//26.08 org.freedesktop.Sdk.Extension.dotnet10//26.08 org.flatpak.Builder
+      - name: Generate immutable sources with the actual SDK
+        run: dbus-run-session -- python3 tools/prepare-flathub.py --in-sdk --revision "$(git rev-parse HEAD)"
+      - name: Validate application metadata
+        run: |
+          python3 tools/check-flatpak.py
+          appstreamcli validate --no-net packaging/flatpak/*.metainfo.xml
+          flatpak run --filesystem="$PWD" --command=flatpak-builder-lint org.flatpak.Builder manifest artifacts/flathub/io.github.love_in_idleness.GARbro-lazer.json
+      - name: Build without network access in the build sandbox
+        run: |
+          dbus-run-session -- flatpak run --filesystem="$PWD" org.flatpak.Builder --user --force-clean --compose-url-policy=full --mirror-screenshots-url=https://dl.flathub.org/media/ --repo=artifacts/flatpak-repo --install-deps-from=flathub build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-lazer.json
+          flatpak build-bundle artifacts/flatpak-repo artifacts/garbro-${{ inputs.package_version || '1.1.0' }}-linux-${{ matrix.arch == 'aarch64' && 'arm64' || 'x64' }}.flatpak io.github.love_in_idleness.GARbro-lazer
+      - name: Verify self-contained CLI and worker in the sandbox
+        run: |
+          dbus-run-session -- flatpak-builder --run build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-lazer.json garbro --help
+          dbus-run-session -- flatpak-builder --run build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-lazer.json sh -ec 'test -e /app/lib/garbro/app/libcoreclr.so; test -x /app/lib/garbro/app/GARbro.Worker; test -x /app/lib/garbro/app/garbro; test ! -e /app/lib/garbro/cli'
+          dbus-run-session -- flatpak-builder --run build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-lazer.json env SDL_AUDIODRIVER=dummy python3 -c 'import ctypes; sdl=ctypes.CDLL("libSDL2-2.0.so.0"); assert sdl.SDL_Init(0x10)==0, "System SDL audio initialization failed"; sdl.SDL_Quit()'
+      - name: Verify video tools in the sandbox
+        run: |
+          dbus-run-session -- flatpak-builder --run build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-lazer.json ffmpeg -version
+          dbus-run-session -- flatpak-builder --run build-flatpak artifacts/flathub/io.github.love_in_idleness.GARbro-lazer.json ffprobe -version
+      - name: Validate the built repository with Flathub tooling
+        run: |
+          python3 tools/inspect-flatpak-media.py build-flatpak
+          flatpak run --filesystem="$PWD" --command=flatpak-builder-lint org.flatpak.Builder repo artifacts/flatpak-repo
+      - name: Package the immutable Flathub submission
+        if: matrix.arch == 'x86_64'
+        run: python3 tools/package-flathub.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flatpak-${{ matrix.arch }}
+          path: |
+            artifacts/*.flatpak
+            artifacts/flathub-submission.zip

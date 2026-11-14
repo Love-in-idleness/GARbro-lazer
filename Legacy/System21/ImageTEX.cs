@@ -58,7 +58,7 @@ namespace GameRes.Formats.System21
             using (var lz = OpenLzStream (file))
             {
                 var skip = new byte[4];
-                lz.Read (skip, 0, 4);
+                lz.ReadExactlyCompat (skip, 0, 4);
                 using (var input = new SeekableStream (lz))
                 using (var dds = new BinaryStream (input, file.Name))
                     return DdsFormat.Value.Read (dds, info);

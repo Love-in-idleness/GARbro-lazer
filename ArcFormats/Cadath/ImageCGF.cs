@@ -26,7 +26,13 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using GameRes.Compression;
 using GameRes.Utility;
 
@@ -147,7 +153,7 @@ namespace GameRes.Formats.Cadath
         {
             using (var zinput = new MemoryStream (input, 4, length - 4))
             using (var z = new ZLibStream (zinput, CompressionMode.Decompress))
-                z.Read (output, 0, output.Length);
+                z.ReadExactlyCompat (output, 0, output.Length);
         }
 
         void UnpackRle (byte[] input, int length, byte[] output)

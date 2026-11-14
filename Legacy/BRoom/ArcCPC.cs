@@ -76,7 +76,7 @@ namespace GameRes.Formats.BRoom
                     if (0 == name_buffer[j])
                         break;
                 }
-                var name = Encodings.cp932.GetString (name_buffer, 0, j);
+                var name = Encodings.ResourceEncoding.GetString (name_buffer, 0, j);
                 if (string.IsNullOrWhiteSpace (name))
                     return null;
                 var entry = Create<Entry> (name);

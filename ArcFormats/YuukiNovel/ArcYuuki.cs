@@ -87,7 +87,7 @@ namespace GameRes.Formats.YuukiNovel
                 using (var stream = scheme.CreateStream (input))
                 {
                     var sign = new byte[20];
-                    stream.Read (sign, 0, sign.Length);
+                    stream.ReadExactlyCompat (sign, 0, sign.Length);
                     input.Position = 0;
                     if (sign.AsciiEqual (1, "YuukiNovel WorkFile"))
                         return scheme.CreateStream (input);

@@ -27,7 +27,14 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+
 using GameRes.Compression;
 
 namespace GameRes.Formats.Ebisu
@@ -107,12 +114,12 @@ namespace GameRes.Formats.Ebisu
                 using (var lzss = new LzssStream (m_input.AsStream, LzssMode.Decompress, true))
                 {
                     lzss.Config.FrameInitPos = 0xFF0;
-                    lzss.Read (pixels, 0, pixels.Length);
+                    lzss.ReadExactlyCompat (pixels, 0, pixels.Length);
                 }
             }
             else
             {
-                m_input.Read (pixels, 0, pixels.Length);
+                m_input.AsStream.ReadExactlyCompat (pixels, 0, pixels.Length);
             }
             return ImageData.Create (Info, PixelFormats.Bgra32, null, pixels);
         }

@@ -30,9 +30,17 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
+#if !NET8_0_OR_GREATER
 using System.Runtime.Remoting.Messaging;
+#endif
 using System.Text;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Navigation;
+#endif
 using static GameRes.Formats.DxLib.Dx8Opener;
 
 
@@ -121,6 +129,9 @@ namespace GameRes.Formats.DxLib
 
         public override ResourceOptions GetOptions(object widget)
         {
+#if NET8_0_OR_GREATER
+            return GetDefaultOptions();
+#else
             if (widget is GUI.WidgetDXA)
             {
                 var w = (GUI.WidgetDXA)widget;
@@ -139,11 +150,16 @@ namespace GameRes.Formats.DxLib
                 };
             }
             return GetDefaultOptions();
+        #endif
         }
 
         public override object GetAccessWidget()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetDXA(DefaultScheme.KnownKeys);
+        #endif
         }
 
         public override ArcFile TryOpen (ArcView file)
@@ -212,7 +228,7 @@ namespace GameRes.Formats.DxLib
             input = new EncryptedStream(input, dec_offset, key);
 
             byte[] tmpBuffer = new byte[dx_ent.Size]; 
-            input.Read(tmpBuffer, 0, tmpBuffer.Length);
+            input.ReadExactlyCompat(tmpBuffer, 0, tmpBuffer.Length);
             if (dx_ent.HuffmanCompressed)
             {
                 byte[] buffer = new byte[dx_ent.HuffmanSize];

@@ -29,6 +29,10 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using GameRes.Strings;
 
+#if NET8_0_OR_GREATER
+using FileFormatException = System.IO.IOException;
+#endif
+
 namespace GameRes
 {
     /// <summary>
@@ -52,7 +56,7 @@ namespace GameRes
         /// </summary>
         public bool CheckPlacement (long max_offset)
         {
-            return Offset < max_offset && Size <= max_offset && Offset <= max_offset - Size;
+            return Offset >= 0 && max_offset >= 0 && Size <= max_offset && Offset <= max_offset - Size;
         }
 
         /// <summary>
@@ -161,6 +165,12 @@ namespace GameRes
 
             return GetOptions<OptType> (args.Options);
         }
+    }
+
+    /// <summary>A recognized resource needs parameters before decoding can continue.</summary>
+    public class ResourceParametersRequiredException : Exception
+    {
+        public ResourceParametersRequiredException (string message) : base (message) { }
     }
 
     public class ResourceOptions

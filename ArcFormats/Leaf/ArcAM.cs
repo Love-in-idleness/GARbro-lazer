@@ -63,7 +63,7 @@ namespace GameRes.Formats.Leaf
                 int name_end = Array.IndexOf<byte> (index, 0, index_offset);
                 if (-1 == name_end || name_end == index_offset)
                     return null;
-                var name = Encodings.cp932.GetString (index, index_offset, name_end-index_offset);
+                var name = Encodings.ResourceEncoding.GetString (index, index_offset, name_end-index_offset);
                 index_offset = name_end+1;
                 var entry = FormatCatalog.Instance.Create<Entry> (name);
                 entry.Offset = base_offset + LittleEndian.ToUInt32 (index, index_offset);

@@ -165,7 +165,7 @@ namespace GameRes.Formats.CsWare
                 name_buffer[offset+count] = Binary.RotByteL (name_buffer[offset+count], 4);
                 checksum += name_buffer[offset+count];
             }
-            return Encodings.cp932.GetString (name_buffer, offset, count);
+            return Encodings.ResourceEncoding.GetString (name_buffer, offset, count);
         }
 
         byte[] ShuffleBlocks (byte[] input, uint key)

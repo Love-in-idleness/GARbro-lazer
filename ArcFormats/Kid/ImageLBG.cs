@@ -1,8 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media.Imaging;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media;
+#endif
 using System.IO;
 
 namespace GameRes.Formats.Kid

@@ -1,4 +1,4 @@
-﻿//! \file       ImageNekoPNG.cs
+//! \file       ImageNekoPNG.cs
 //! \date       Sun Nov 19 15:40:46 2023
 //! \brief      NekoNyan PNG image format.
 //
@@ -29,9 +29,17 @@ using System.ComponentModel.Composition;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+using WriteableBitmap = GARbro.Imaging.MutablePixelBuffer;
+#else
 using System.Windows.Media.Imaging;
 using System.Windows.Media;
 using System.Windows;
+
+#endif
 
 namespace GameRes.Formats.Artemis
 {
@@ -52,6 +60,23 @@ namespace GameRes.Formats.Artemis
         {
             var metadata = (NekoPNGMetaData)info;
             var bitmap = new WriteableBitmap ((int)info.Width, (int)info.Height, ImageData.DefaultDpiX, ImageData.DefaultDpiY, PixelFormats.Bgra32, null);
+#if NET8_0_OR_GREATER
+            int row = 0;
+            for (int i = 0; i < 8; i++)
+            {
+                file.Position = metadata.Offset[i];
+                var data = file.ReadBytes(metadata.Length[i]);
+                for (int j = 0; j < 16; j++) data[j] -= (byte)(0x77 * j);
+                using (var input = new MemoryStream(data, false))
+                {
+                    var slice = RasterCodec.Decode(input);
+                    bitmap.WritePixels(new Int32Rect(0, row, slice.PixelWidth, slice.PixelHeight),
+                        slice.Pixels.ToArray(), slice.Stride, 0);
+                    row = checked(row + slice.PixelHeight);
+                }
+            }
+            if (row != bitmap.PixelHeight) throw new InvalidFormatException("Incomplete NekoNyan image.");
+#else
             bitmap.Lock ();
             try
             {
@@ -78,6 +103,7 @@ namespace GameRes.Formats.Artemis
             {
                 bitmap.Unlock();
             }
+#endif
             bitmap.Freeze();
             return new ImageData (bitmap, info);
         }
@@ -94,7 +120,9 @@ namespace GameRes.Formats.Artemis
                 offset[i] = file.ReadInt32();
             for (var i = 0; i < 8; i++)
                 length[i] = file.ReadInt32();
+#if !NET8_0_OR_GREATER
             WebPCodec.Load();
+#endif
             var image_width = 0;
             var image_height = 0;
             for (var i = 0; i < 8; i++)
@@ -103,7 +131,7 @@ namespace GameRes.Formats.Artemis
                     return null;
                 if (length[i] < 32)
                     return null;
-                if (offset[i] + length[i] > file.Length)
+                if ((long)offset[i] + length[i] > file.Length)
                     return null;
                 file.Position = offset[i];
                 var webp_header = file.ReadBytes (32);
@@ -111,8 +139,14 @@ namespace GameRes.Formats.Artemis
                     webp_header[j] -= (byte)(0x77 * j);
                 var slice_width = 0;
                 var slice_height = 0;
+#if NET8_0_OR_GREATER
+                using (var rest = new StreamRegion(file.AsStream, (long)offset[i] + 32, length[i] - 32, true))
+                using (var clear = new PrefixStream(webp_header, rest))
+                    (slice_width, slice_height) = RasterCodec.Identify(clear);
+#else
                 if (1 != WebPCodec.WebPGetInfo (webp_header, (UIntPtr)webp_header.Length, ref slice_width, ref slice_height))
                     throw new InvalidFormatException ("WebP image decoder failed.");
+#endif
                 image_width = Math.Max (image_width, slice_width);
                 image_height += slice_height;
             }

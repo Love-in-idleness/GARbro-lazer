@@ -26,7 +26,13 @@
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using GameRes.Compression;
 
 // [051111][Software House Parsley] Sonic Princess Platinum Edition
@@ -105,7 +111,7 @@ namespace GameRes.Formats.Parsley
                     int stride = (Info.iWidth + 3) & ~3;
                     var palette = ImageFormat.ReadPalette (input, 0x100);
                     var pixels = new byte[stride * Info.iHeight];
-                    input.Read (pixels, 0, pixels.Length);
+                    input.ReadExactlyCompat (pixels, 0, pixels.Length);
                     return ImageData.CreateFlipped (Info, PixelFormats.Indexed8, palette, pixels, stride);
                 }
             }

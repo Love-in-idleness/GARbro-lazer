@@ -25,7 +25,14 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+
 using GameRes.Utility;
 
 namespace GameRes.Formats.Mutation
@@ -73,7 +80,7 @@ namespace GameRes.Formats.Mutation
                 }
                 else
                 {
-                    file.Read (pixels, dst, 3);
+                    file.AsStream.ReadExactlyCompat (pixels, dst, 3);
                     dst += 3;
                 }
             }

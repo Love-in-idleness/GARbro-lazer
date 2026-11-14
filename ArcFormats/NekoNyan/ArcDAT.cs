@@ -107,7 +107,7 @@ namespace GameRes.Formats.NekoNyan
             }
 
             byte[] data = new byte[stream.Length];
-            stream.Read(data, 0, data.Length);
+            stream.ReadExactlyCompat(data, 0, data.Length);
 
             nnarc.Crypto.DecryptData(data, e.Key);
 
@@ -209,7 +209,7 @@ namespace GameRes.Formats.NekoNyan
             uint rawFileEntryKey = 0u;
             uint rawFileNamesKey = 0u;
             {
-                Span<int> rawPkgInfoPack4 = MemoryMarshal.Cast<byte, int>(rawPkgInfo);
+                Span<int> rawPkgInfoPack4 = MemoryMarshal.Cast<byte, int>(rawPkgInfo.AsSpan());
                 for (int i = 4; i < 255; ++i)
                 {
                     fileCount += rawPkgInfoPack4[i];
@@ -309,7 +309,7 @@ namespace GameRes.Formats.NekoNyan
             uint rawFileEntryKey = 0u;
             uint rawFileNamesKey = 0u;
             {
-                Span<int> rawPkgInfoPack4 = MemoryMarshal.Cast<byte, int>(rawPkgInfo);
+                Span<int> rawPkgInfoPack4 = MemoryMarshal.Cast<byte, int>(rawPkgInfo.AsSpan());
                 for (int i = 3; i < 255; ++i)
                 {
                     fileCount += rawPkgInfoPack4[i];

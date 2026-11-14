@@ -71,6 +71,7 @@ namespace GameRes.Formats
         public AiffInput (Stream file) : base (file)
         {
             m_reader = new AiffFileReader (file);
+            m_bitrate = checked (m_reader.WaveFormat.AverageBytesPerSecond * 8);
             var format = new GameRes.WaveFormat {
                 FormatTag                = (ushort)m_reader.WaveFormat.Encoding,
                 Channels                 = (ushort)m_reader.WaveFormat.Channels,

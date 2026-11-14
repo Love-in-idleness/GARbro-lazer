@@ -557,7 +557,7 @@ namespace GameRes.Formats.Rugp
             var buffer = new byte[cLen];
             if (cLen != Read (buffer, 0, cLen))
                 return null;
-            var name = Encodings.cp932.GetString (buffer, 2, cLen-2);
+            var name = Encodings.ResourceEncoding.GetString (buffer, 2, cLen-2);
             return GetRtcFromMessageName (name);
         }
 
@@ -567,7 +567,7 @@ namespace GameRes.Formats.Rugp
             int cLen = ReadUInt16();
             if (cLen >= 0x40 || cLen != Read (m_name_buf, 0, cLen))
                 throw new InvalidFormatException();
-            var name = Encodings.cp932.GetString (m_name_buf, 0, cLen);
+            var name = Encodings.ResourceEncoding.GetString (m_name_buf, 0, cLen);
             if (!s_basicTypeList.ContainsKey (name))
                 throw new InvalidFormatException (string.Format ("[RIO] Unknown basic type '{0}'", name));
             return s_basicTypeList[name];

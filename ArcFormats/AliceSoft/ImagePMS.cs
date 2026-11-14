@@ -25,9 +25,17 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+using WriteableBitmap = GARbro.Imaging.MutablePixelBuffer;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Utility;
 
 namespace GameRes.Formats.AliceSoft
@@ -127,7 +135,11 @@ namespace GameRes.Formats.AliceSoft
 
             m_input.Position = m_info.AlphaOffset;
             var alpha = Unpack8bpp();
+            #if NET8_0_OR_GREATER
+            source = source.Convert(PixelFormats.Bgra32);
+            #else
             source = new FormatConvertedBitmap (source, PixelFormats.Bgra32, null, 0);
+            #endif
             var output = new WriteableBitmap (source);
             output.Lock();
             unsafe

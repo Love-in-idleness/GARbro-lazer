@@ -26,7 +26,13 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using GameRes.Utility;
 
 namespace GameRes.Formats.Cri
@@ -133,7 +139,7 @@ namespace GameRes.Formats.Cri
             var output = new byte[output_stride*m_height];
             int total = m_info.AlignedWidth * m_info.AlignedHeight;
             var texture = new byte[total*4];
-            m_input.Read (texture, 0, texture.Length);
+            m_input.ReadExactlyCompat (texture, 0, texture.Length);
             int src = 0;
             for (int i = 0; i < total; ++i)
             {
@@ -157,7 +163,7 @@ namespace GameRes.Formats.Cri
             int total = m_info.AlignedWidth * m_info.AlignedHeight;
             var texture = new byte[total*2];
             var packed = new byte[total*2];
-            m_input.Read (texture, 0, texture.Length);
+            m_input.ReadExactlyCompat (texture, 0, texture.Length);
             int stride = m_info.AlignedWidth;
             int src = 0;
             for (int i = 0; i < total; ++i)
@@ -180,7 +186,7 @@ namespace GameRes.Formats.Cri
             int total = tex_width * (m_info.AlignedHeight >> 2);
             var texture = new byte[m_info.AlignedWidth * m_info.AlignedHeight];
             var packed = new byte[m_info.AlignedWidth * m_info.AlignedHeight];
-            m_input.Read (texture, 0, texture.Length);
+            m_input.ReadExactlyCompat (texture, 0, texture.Length);
             int src = 0;
             for (int i = 0; i < total; ++i)
             {

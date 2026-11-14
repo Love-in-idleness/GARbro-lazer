@@ -26,7 +26,13 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using GameRes.Utility;
 
 namespace GameRes.Formats.UMeSoft
@@ -122,7 +128,7 @@ namespace GameRes.Formats.UMeSoft
             {
                 m_input.Position = 0x10;
                 if (!m_info.IsPacked)
-                    m_input.Read (m_output, 0, m_output.Length);
+                    m_input.ReadExactlyCompat (m_output, 0, m_output.Length);
                 else
                     UnpackColorData (m_output, (m_info.BPP + 7) / 8, m_pixel_size);
 

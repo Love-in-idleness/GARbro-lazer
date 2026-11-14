@@ -26,8 +26,16 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 using GameRes.Utility;
 
 namespace GameRes.Formats.Cyberworks
@@ -145,21 +153,29 @@ namespace GameRes.Formats.Cyberworks
                     else if ('b' == type || 'c' == type)
                     {
                         var size_buf = new byte[4];
-                        input.Read (size_buf, 0 , 4);
+                        input.ReadExactlyCompat (size_buf, 0 , 4);
                         int png_size = BigEndian.ToInt32 (size_buf, 0);
 
                         BitmapSource frame;
                         using (var membuf = new MemoryStream (png_size+4))
                         {
                             input.CopyTo (membuf);
-                            var decoder = new PngBitmapDecoder (new StreamRegion (membuf, membuf.Length-png_size), BitmapCreateOptions.None,
+                            #if NET8_0_OR_GREATER
+frame = RasterCodec.Decode(new StreamRegion (membuf, membuf.Length-png_size));
+#else
+var decoder = new PngBitmapDecoder (new StreamRegion (membuf, membuf.Length-png_size), BitmapCreateOptions.None,
                                                                 BitmapCacheOption.OnLoad);
                             frame = decoder.Frames[0];
+#endif
                         }
                         Info.Width = (uint)frame.PixelWidth;
                         Info.Height = (uint)frame.PixelHeight;
                         if (frame.Format.BitsPerPixel != 32)
+                            #if NET8_0_OR_GREATER
+                            frame = frame.Convert(PixelFormats.Bgra32);
+                            #else
                             frame = new FormatConvertedBitmap (frame, PixelFormats.Bgra32, null, 0);
+                            #endif
                         int stride = frame.PixelWidth * 4;
                         var pixels = new byte[stride * frame.PixelHeight];
                         frame.CopyPixels (pixels, stride, 0);

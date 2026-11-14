@@ -25,7 +25,14 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+
 using GameRes.Compression;
 
 namespace GameRes.Formats.AnotherRoom
@@ -56,7 +63,7 @@ namespace GameRes.Formats.AnotherRoom
             var pixels = new byte[stride * (int)info.Height];
             using (var input = new LzssStream (file.AsStream, LzssMode.Decompress, true))
             {
-                input.Read (pixels, 0, pixels.Length);
+                input.ReadExactlyCompat (pixels, 0, pixels.Length);
             }
             return ImageData.CreateFlipped (info, PixelFormats.Bgr555, null, pixels, stride);
         }

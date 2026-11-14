@@ -66,7 +66,7 @@ namespace GameRes.Formats.Mixwill
                 if (0 == n)
                     return null;
                 index_offset += 0x100;
-                var name = Encodings.cp932.GetString (name_buf, 0, n);
+                var name = Encodings.ResourceEncoding.GetString (name_buf, 0, n);
                 var entry = FormatCatalog.Instance.Create<Entry> (name);
                 entry.Size   = file.View.ReadUInt32 (index_offset);
                 entry.Offset = file.View.ReadUInt32 (index_offset+4);

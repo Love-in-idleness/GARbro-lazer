@@ -26,8 +26,15 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Utility;
 
 // [991218][Types] Ichou no Mau Koro 2
@@ -113,7 +120,7 @@ namespace GameRes.Formats.Types
             if (m_input.Input.ReadByte() == 1) // alpha data
             {
                 var header = new byte[13];
-                m_input.Input.Read (header, 0, 13);
+                m_input.Input.ReadExactlyCompat (header, 0, 13);
                 if (header.AsciiEqual (4, "TPGF"))
                 {
                     uint width  = BigEndian.ToUInt16 (header, 8);
@@ -301,7 +308,7 @@ namespace GameRes.Formats.Types
             int mask = (1 << ctl) - 1;
             var cur_pos = m_input.Position;
             int byte_count = 0;
-            m_input.Read (m_bit_buffer, 0, (count * ctl + 7) / 8 + 1);
+            m_input.ReadExactlyCompat (m_bit_buffer, 0, (count * ctl + 7) / 8 + 1);
             for (int i = 0; i < count; ++i)
             {
                 int v = 0;

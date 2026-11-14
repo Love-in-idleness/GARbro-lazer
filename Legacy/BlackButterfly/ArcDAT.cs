@@ -133,7 +133,7 @@ namespace GameRes.Formats.BlackButterfly
                 else
                 {
                     count = (ctl & 0x1F) + 1;
-                    input.Read (output, dst, count);
+                    input.AsStream.ReadExactlyCompat (output, dst, count);
                     dst += count;
                 }
             }

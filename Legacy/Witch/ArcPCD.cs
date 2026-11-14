@@ -1,4 +1,4 @@
-﻿//! \file       ArcPCD.cs
+//! \file       ArcPCD.cs
 //! \date       2018 Aug 18
 //! \brief      Witch image archive.
 //
@@ -26,7 +26,14 @@
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+
 using GameRes.Compression;
 using GameRes.Utility;
 using ICSharpCode.SharpZipLib.BZip2;

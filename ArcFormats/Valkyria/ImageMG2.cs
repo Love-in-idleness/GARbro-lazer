@@ -26,8 +26,15 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.Valkyria
 {
@@ -151,21 +158,33 @@ namespace GameRes.Formats.Valkyria
                     return frame;
             }
             if (frame.Format.BitsPerPixel != 32)
+                #if NET8_0_OR_GREATER
+                frame = frame.Convert(PixelFormats.Bgr32);
+                #else
                 frame = new FormatConvertedBitmap (frame, PixelFormats.Bgr32, null, 0);
+                #endif
             int stride = frame.PixelWidth * 4;
             var pixels = new byte[stride * (int)meta.Height];
             frame.CopyPixels (pixels, stride, 0);
 
             using (var input = meta.Scheme.CreateStream (file, 0x10+meta.ImageLength, meta.AlphaLength, meta.ImageLength))
             {
+#if NET8_0_OR_GREATER
+                var decoder = new RasterDecoder(input);
+#else
                 var decoder = BitmapDecoder.Create (input, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+#endif
                 BitmapSource alpha_frame = decoder.Frames[0];
                 if (alpha_frame.PixelWidth != frame.PixelWidth || alpha_frame.PixelHeight != frame.PixelHeight)
                     return BitmapSource.Create ((int)meta.Width, (int)meta.Height,
                                                 ImageData.DefaultDpiX, ImageData.DefaultDpiY,
                                                 PixelFormats.Bgr32, null, pixels, stride);
 
+                #if NET8_0_OR_GREATER
+                alpha_frame = alpha_frame.Convert(PixelFormats.Gray8);
+                #else
                 alpha_frame = new FormatConvertedBitmap (alpha_frame, PixelFormats.Gray8, null, 0);
+                #endif
                 var alpha = new byte[alpha_frame.PixelWidth * alpha_frame.PixelHeight];
                 alpha_frame.CopyPixels (alpha, alpha_frame.PixelWidth, 0);
 
@@ -239,7 +258,13 @@ namespace GameRes.Formats.Valkyria
 
             // It'll be very hard to decrypt the data on-the-fly, so we just decrypt it during initialization.
             m_data = new byte[length];
-            base.Read (m_data, 0, length);
+            for (int filled = 0; filled < length; )
+            {
+                // Use the region implementation here; the override reads m_data.
+                int read = base.Read(m_data, filled, length - filled);
+                if (read == 0) throw new EndOfStreamException("Truncated MG2 encrypted data.");
+                filled += read;
+            }
             DatOpener.DecryptIndex (m_data, enc, (uint)key);
             Position = 0;
         }
@@ -355,7 +380,11 @@ namespace GameRes.Formats.Valkyria
 
         public ImageData CreateImage (BitmapSource frame, ImageMetaData info)
         {
+#if NET8_0_OR_GREATER
+            frame = frame.FlipVertical();
+#else
             frame = new TransformedBitmap (frame, new ScaleTransform { ScaleY = -1 });
+#endif
             frame.Freeze();
             return new ImageData (frame, info);
         }

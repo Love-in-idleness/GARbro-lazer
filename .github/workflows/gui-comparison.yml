@@ -1,0 +1,52 @@
+name: GUI performance comparison
+on:
+  push:
+    branches: [migration/net10]
+    paths: ['tools/performance/**', '.github/workflows/gui-comparison.yml']
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: Source revision for 1.0.2 and the original WPF GUI
+        required: true
+        default: migration/net10
+        type: string
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: instrumentation
+      - uses: actions/checkout@v4
+        with:
+          ref: v1.0.1
+          path: versions/v101
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_ref || github.sha }}
+          path: versions/v102
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - uses: microsoft/setup-msbuild@v2
+      - name: Build the original WPF application
+        working-directory: versions/v102
+        run: |
+          nuget restore GARbro.sln
+          msbuild GARbro.sln /p:Configuration=Release '/p:Platform=Any CPU'
+      - name: Measure the three real GUI implementations on this machine
+        run: python instrumentation/tools/performance/compare.py --v101 versions/v101 --v102 versions/v102 --output artifacts/comparison
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gui-performance-comparison
+          path: |
+            artifacts/comparison/*.json
+            artifacts/comparison/*.md
+            artifacts/comparison/*.error.txt

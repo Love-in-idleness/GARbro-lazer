@@ -138,7 +138,7 @@ namespace GameRes.Formats.Debonosu
                     }
                     name_buffer[size++] = (byte)b;
                 }
-                return Encodings.cp932.GetString (name_buffer, 0, size);
+                return Encodings.ResourceEncoding.GetString (name_buffer, 0, size);
             }
 
             bool _disposed = false;

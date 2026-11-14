@@ -25,7 +25,14 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+
+#endif
 
 // [030314][Mermaid] Ayakashizoushi ~Oumagatoki no Yume~
 
@@ -88,7 +95,7 @@ namespace GameRes.Formats.Mermaid
                     break;
                 if (count <= 0x32)
                 {
-                    input.Read (output, dst, count);
+                    input.AsStream.ReadExactlyCompat (output, dst, count);
                     dst += count;
                 }
                 else

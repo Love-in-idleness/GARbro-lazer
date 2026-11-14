@@ -219,23 +219,41 @@ namespace GameRes.Formats.NScripter
             };
         }
 
+#if !NET8_0_OR_GREATER
         public override ResourceOptions GetOptions (object widget)
         {
+#if NET8_0_OR_GREATER
+            return GetDefaultOptions();
+#else
             var w = widget as GUI.WidgetNSA;
             if (null != w)
                 Properties.Settings.Default.NSAPassword = w.Password.Text;
             return GetDefaultOptions();
+        #endif
         }
+#endif
 
+#if !NET8_0_OR_GREATER
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetNSA (KnownKeys);
+        #endif
         }
+#endif
 
+#if !NET8_0_OR_GREATER
         public override object GetCreationWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.CreateONSWidget();
+        #endif
         }
+#endif
 
         public override void Create (Stream output, IEnumerable<Entry> list, ResourceOptions options,
                                      EntryCallback callback)

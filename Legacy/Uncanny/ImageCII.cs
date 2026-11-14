@@ -26,8 +26,15 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 // [000825][Uncanny!] Camera Eyes
 
@@ -125,7 +132,7 @@ namespace GameRes.Formats.Uncanny
                 if (m_info.IsCompressed)
                     UnpackRle();
                 else
-                    m_input.Read (m_output, 0, m_output.Length);
+                    m_input.AsStream.ReadExactlyCompat (m_output, 0, m_output.Length);
             }
             else
                 Unpack24bpp();
@@ -149,7 +156,7 @@ namespace GameRes.Formats.Uncanny
                 else
                 {
                     count++;
-                    m_input.Read (m_output, dst, count);
+                    m_input.AsStream.ReadExactlyCompat (m_output, dst, count);
                     dst += count;
                 }
             }

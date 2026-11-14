@@ -28,9 +28,19 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Text;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 using GameRes.Utility;
 
 namespace GameRes.Formats.Riddle
@@ -95,9 +105,13 @@ namespace GameRes.Formats.Riddle
             }
             using (var bmp = new MemoryStream (reader.Data))
             {
-                var decoder = new BmpBitmapDecoder (bmp,
+                #if NET8_0_OR_GREATER
+BitmapSource frame = RasterCodec.Decode(bmp);
+#else
+var decoder = new BmpBitmapDecoder (bmp,
                     BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
                 BitmapSource frame = decoder.Frames[0];
+#endif
                 frame.Freeze();
                 return new ImageData (frame, info);
             }

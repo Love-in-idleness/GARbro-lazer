@@ -114,7 +114,7 @@ namespace GameRes.Formats.Unity
             using (input)
             {
                 var data = new byte[entry.Size];
-                input.Read (data, 0, data.Length);
+                input.ReadExactlyCompat (data, 0, data.Length);
                 DecryptAsset (data);
                 return new BinMemoryStream (data);
             }

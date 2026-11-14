@@ -105,8 +105,7 @@ namespace GameRes.Formats.FVP
                 uint offset = 0;
                 for (;;)
                 {
-                    if (pixels.Length != z.Read (pixels, 0, pixels.Length))
-                        throw new EndOfStreamException();
+                    z.ReadExactlyCompat (pixels, 0, pixels.Length);
                     if (offset >= entry.Offset)
                         break;
                     offset += frame_size;

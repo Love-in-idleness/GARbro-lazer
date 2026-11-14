@@ -152,18 +152,30 @@ namespace GameRes.Formats.NScripter
             return new NsaOptions { Password = Properties.Settings.Default.NSAPassword };
         }
 
+#if !NET8_0_OR_GREATER
         public override ResourceOptions GetOptions (object widget)
         {
+#if NET8_0_OR_GREATER
+            return GetDefaultOptions();
+#else
             var w = widget as GUI.WidgetNSA;
             if (null != w)
                 Properties.Settings.Default.NSAPassword = w.Password.Text;
             return GetDefaultOptions();
+        #endif
         }
+#endif
 
+#if !NET8_0_OR_GREATER
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetNSA (KnownKeys);
+        #endif
         }
+#endif
     }
 
     internal class Ns2Stream : ViewStreamBase

@@ -185,7 +185,7 @@ namespace GameRes.Formats.Tactics
                     int name_len = LittleEndian.ToInt32 (m_index, index_offset + 0xC);
                     if (name_len <= 0 || name_len > 0x100)
                         return false;
-                    entry.Name = Encodings.cp932.GetString (m_index, index_offset+entry_size, name_len);
+                    entry.Name = Encodings.ResourceEncoding.GetString (m_index, index_offset+entry_size, name_len);
                     entry.Type = FormatCatalog.Instance.GetTypeFromName (entry.Name);
                     m_dir.Value.Add (entry);
                     index_offset += entry_size + name_len;
@@ -228,7 +228,7 @@ namespace GameRes.Formats.Tactics
                     entry.IsPacked = entry.UnpackedSize != 0;
                     if (!entry.CheckPlacement (m_file.MaxOffset))
                         return false;
-                    entry.Name = Encodings.cp932.GetString (m_index, index_offset, name_end-index_offset);
+                    entry.Name = Encodings.ResourceEncoding.GetString (m_index, index_offset, name_end-index_offset);
                     entry.Type = FormatCatalog.Instance.GetTypeFromName (entry.Name);
                     m_dir.Value.Add (entry);
                     index_offset = name_end+1;
@@ -391,7 +391,11 @@ namespace GameRes.Formats.Tactics
 
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetTactics();
+        #endif
         }
 
         public static Dictionary<string, ArcScheme> KnownSchemes = new Dictionary<string, ArcScheme>();

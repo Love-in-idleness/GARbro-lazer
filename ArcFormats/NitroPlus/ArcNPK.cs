@@ -215,15 +215,27 @@ namespace GameRes.Formats.NitroPlus
             return new Npk2Options { Key = GetKey (Properties.Settings.Default.NPKScheme) };
         }
 
+#if !NET8_0_OR_GREATER
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetNPK (KnownKeys.Keys);
+        #endif
         }
+#endif
 
+#if !NET8_0_OR_GREATER
         public override object GetCreationWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetNPK (KnownKeys.Keys);
+        #endif
         }
+#endif
 
         byte[] QueryEncryption (string arc_name)
         {
@@ -327,7 +339,7 @@ namespace GameRes.Formats.NitroPlus
 
         byte[] GenerateAesIV ()
         {
-            using (var rng = new RNGCryptoServiceProvider())
+            using (var rng = RandomNumberGenerator.Create())
             {
                 var iv = new byte[0x10];
                 rng.GetBytes (iv);

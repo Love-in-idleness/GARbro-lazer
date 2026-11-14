@@ -25,8 +25,15 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Utility;
 
 // [990807][Force] Hajimete no Otsukai ~first adventure of little witch~
@@ -99,7 +106,7 @@ namespace GameRes.Formats.Force
             int dst = 0;
             while (dst < output.Length && input.PeekByte() != -1)
             {
-                input.Read (output, dst, 3);
+                input.AsStream.ReadExactlyCompat (output, dst, 3);
                 int count = input.ReadByte();
                 if (count > 0)
                 {

@@ -25,8 +25,15 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.AlphaSystem
 {
@@ -73,7 +80,7 @@ namespace GameRes.Formats.AlphaSystem
             }
             int stride = info.iWidth * info.BPP / 8;
             var pixels = new byte[stride * info.iHeight];
-            file.Read (pixels, 0, pixels.Length);
+            file.AsStream.ReadExactlyCompat (pixels, 0, pixels.Length);
             return ImageData.Create (info, format, palette, pixels);
         }
 

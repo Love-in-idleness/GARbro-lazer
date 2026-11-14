@@ -28,9 +28,16 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Compression;
 
 namespace GameRes.Formats.Macromedia
@@ -430,7 +437,7 @@ namespace GameRes.Formats.Macromedia
                     palette = ImageFormat.ReadPalette (input, m_colors, pal_format);
                 }
                 var pixels = new byte[(int)Info.Width * (int)Info.Height * (Info.BPP / 8)];
-                input.Read (pixels, 0, pixels.Length);
+                input.ReadExactlyCompat (pixels, 0, pixels.Length);
                 if (32 == Info.BPP)
                 {
                     for (int i = 0; i < pixels.Length; i += 4)
@@ -472,7 +479,11 @@ namespace GameRes.Formats.Macromedia
                 throw new InvalidFormatException();
             using (var jpeg = new BinMemoryStream (m_input, jpeg_pos, m_input.Length-jpeg_pos))
             {
+                #if NET8_0_OR_GREATER
+                var decoder = new RasterDecoder(jpeg);
+                #else
                 var decoder = new JpegBitmapDecoder (jpeg, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                #endif
                 var frame = decoder.Frames[0];
                 Info = new ImageMetaData {
                     Width = (uint)frame.PixelWidth,
@@ -532,7 +543,11 @@ namespace GameRes.Formats.Macromedia
             BitmapSource image;
             using (var jpeg = new BinMemoryStream (m_input, 6, m_jpeg_length))
             {
+                #if NET8_0_OR_GREATER
+                var decoder = new RasterDecoder(jpeg);
+                #else
                 var decoder = new JpegBitmapDecoder (jpeg, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                #endif
                 image = decoder.Frames[0];
             }
             Info = new ImageMetaData {
@@ -544,10 +559,14 @@ namespace GameRes.Formats.Macromedia
             using (var input = new BinMemoryStream (m_input, 6 + m_jpeg_length, m_input.Length - (6+m_jpeg_length)))
             using (var alpha_data = new ZLibStream (input, CompressionMode.Decompress))
             {
-                alpha_data.Read (alpha, 0, alpha.Length);
+                alpha_data.ReadExactlyCompat (alpha, 0, alpha.Length);
             }
             if (image.Format.BitsPerPixel != 32)
+                #if NET8_0_OR_GREATER
+                image = image.Convert(PixelFormats.Bgr32);
+                #else
                 image = new FormatConvertedBitmap (image, PixelFormats.Bgr32, null, 0);
+                #endif
             int stride = image.PixelWidth * 4;
             var pixels = new byte[stride * image.PixelHeight];
             image.CopyPixels (pixels, stride, 0);

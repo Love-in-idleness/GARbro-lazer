@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><AssemblyName>ArcFormats.Portable</AssemblyName><RootNamespace>GameRes.Formats</RootNamespace></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../ArcFormats/Properties/Settings.Designer.cs" Link="Properties/Settings.Designer.cs" />
+    <PackageReference Include="BCnEncoder.Net" />
+    <PackageReference Include="BouncyCastle.Cryptography" />
+    <PackageReference Include="CommunityToolkit.HighPerformance" />
+    <PackageReference Include="NLayer" />
+    <PackageReference Include="System.Formats.Nrbf" />
+    <Compile Include="../../Net20/Gx4Lib/PackageFile.cs" Link="Gx4Lib/PackageFile.cs" />
+    <PackageReference Include="NAudio.Wasapi" />
+    <ProjectReference Include="../GARbro.Core/GARbro.Core.csproj" />
+    <PackageReference Include="SharpZipLib" />
+    <PackageReference Include="Snappier" />
+    <PackageReference Include="ZstdSharp.Port" />
+    <PackageReference Include="NVorbis" />
+    <PackageReference Include="K4os.Compression.LZ4" />
+    <Compile Include="../../ArcFormats/Strings/arcStrings.Designer.cs" Link="Strings/arcStrings.Designer.cs" />
+    <EmbeddedResource Include="../../ArcFormats/Strings/*.resx" LinkBase="Strings" />
+    <Content Include="../GameData/Formats.json.gz" Link="GameData/Formats.json.gz" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../GameData/schemes.json" Link="GameData/schemes.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../ArcFormats/Resources/*.lst" Link="GameData/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Import Project="DecoderSources.props" />
+</Project>

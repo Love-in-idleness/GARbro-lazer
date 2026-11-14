@@ -25,8 +25,15 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 // [970525][Uran] High School Terra Story
 
@@ -134,7 +141,7 @@ namespace GameRes.Formats.Uran
                 int x = m_input.ReadInt16();
                 int row_length = m_input.ReadUInt16();
                 if (row_length != 0)
-                    m_input.Read (pixels, dst + x, row_length);
+                    m_input.AsStream.ReadExactlyCompat (pixels, dst + x, row_length);
                 row_pos += m_info.RowSize;
                 dst -= stride;
             }

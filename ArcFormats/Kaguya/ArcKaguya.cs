@@ -187,7 +187,7 @@ namespace GameRes.Formats.Kaguya
         {
             for (int i = 0; i < name_len; ++i)
                 name_buf[i] ^= 0xff;
-            return Encodings.cp932.GetString (name_buf, 0, name_len);
+            return Encodings.ResourceEncoding.GetString (name_buf, 0, name_len);
         }
     }
 

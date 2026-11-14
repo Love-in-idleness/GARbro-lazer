@@ -62,9 +62,13 @@ namespace GameRes
             var wf = m_reader.WaveFormat;
             if (ConversionRequired.Contains (wf.Encoding))
             {
+#if NET8_0_OR_GREATER
+                throw new System.PlatformNotSupportedException ("This WAV compression needs a portable PCM decoder; raw extraction remains available.");
+#else
                 var wav = WaveFormatConversionStream.CreatePcmStream (m_reader);
                 wf = wav.WaveFormat;
                 m_reader = wav;
+#endif
             }
             var format = new GameRes.WaveFormat();
             format.FormatTag                = (ushort)wf.Encoding;

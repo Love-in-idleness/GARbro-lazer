@@ -28,7 +28,11 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+#else
 using System.Windows.Media;
+#endif
 using GameRes.Gx4Lib;
 using GameRes.Utility;
 
@@ -77,6 +81,8 @@ namespace GameRes.Formats.Unity.Gx4Lib
                     Offset = h.readStartBytePos + data_offset,
                     Size = (uint)h.ByteLength
                 } as Entry).ToList();
+                if (dir.Any(e => !e.CheckPlacement(file.MaxOffset)))
+                    return null;
                 return new ArcFile (file, this, dir);
             }
         }

@@ -26,7 +26,13 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using GameRes.Utility;
 
 namespace GameRes.Formats.Pvns
@@ -105,7 +111,7 @@ namespace GameRes.Formats.Pvns
             else
                 throw new InvalidFormatException();
             m_input = new byte[input.Length];
-            input.Read (m_input, 0, m_input.Length);
+            input.ReadExactlyCompat (m_input, 0, m_input.Length);
             m_output = new byte[info.Width * info.Height * m_channels];
             m_lzss_frame = new byte[0x1000];
         }

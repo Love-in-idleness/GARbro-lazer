@@ -59,7 +59,7 @@ namespace GameRes.Formats.Irrlicht
                     name_buffer[l] ^= 0xFF;
                 if (0 == l)
                     return null;
-                var name = Encodings.cp932.GetString (name_buffer, 0, l);
+                var name = Encodings.ResourceEncoding.GetString (name_buffer, 0, l);
                 var entry = FormatCatalog.Instance.Create<Entry> (name);
                 entry.Offset = file.View.ReadUInt32 (index_offset+0x104);
                 entry.Size   = file.View.ReadUInt32 (index_offset+0x108);

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>WinExe</OutputType><AssemblyName>GARbro.Desktop</AssemblyName></PropertyGroup>
+  <PropertyGroup><ApplicationIcon>../GARbro.UI/Assets/app-icon.ico</ApplicationIcon></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../GARbro.UI/GARbro.UI.csproj" />
+    <ProjectReference Include="../GARbro.Worker/GARbro.Worker.csproj" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Wayland" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="Silk.NET.SDL" />
+    <PackageReference Include="Ultz.Native.SDL" />
+  </ItemGroup>
+</Project>

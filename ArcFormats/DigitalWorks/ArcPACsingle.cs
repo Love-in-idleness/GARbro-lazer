@@ -78,7 +78,7 @@ namespace GameRes.Formats.DigitalWorks
             if (embedded_lzs)
             {
                 var header = new byte[8];
-                lzs.Read (header, 0, 8);
+                lzs.ReadExactlyCompat (header, 0, 8);
                 pent.UnpackedSize = header.ToUInt32 (4);
                 lzs = new LzssStream (lzs);
             }

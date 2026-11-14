@@ -36,12 +36,22 @@ using System.Threading;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using System.Reflection;
 
 namespace GameRes
 {
-    public sealed class FormatCatalog
+    public sealed partial class FormatCatalog
     {
-        private static readonly FormatCatalog m_instance = new FormatCatalog();
+        private static readonly Lazy<FormatCatalog> m_instance = new Lazy<FormatCatalog>(() => new FormatCatalog());
+        private static Assembly[] configuredAssemblies;
+        private static string configuredDataDirectory;
+
+        public static void ConfigureProviders (IEnumerable<Assembly> assemblies, string dataDirectory)
+        {
+            if (m_instance.IsValueCreated) throw new InvalidOperationException ("Configure providers before opening resources.");
+            configuredAssemblies = assemblies.Distinct().ToArray();
+            configuredDataDirectory = Path.GetFullPath (dataDirectory);
+        }
 
         #pragma warning disable 649
         private IEnumerable<ArchiveFormat>  m_arc_formats;
@@ -59,7 +69,9 @@ namespace GameRes
         private Dictionary<string, string> m_game_map = new Dictionary<string, string>();
 
         /// <summary> The only instance of this class.</summary>
-        public static FormatCatalog       Instance      { get { return m_instance; } }
+        public static FormatCatalog       Instance      { get { return m_instance.Value; } }
+
+        public IEnumerable<string> RegisteredExtensions { get { return m_extension_map.Keys; } }
 
         public IEnumerable<ArchiveFormat> ArcFormats    { get { return m_arc_formats; } }
         public IEnumerable<ImageFormat>   ImageFormats  { get { return m_image_formats; } }
@@ -87,15 +99,20 @@ namespace GameRes
 
         private FormatCatalog ()
         {
-            AssemblyLocation = Path.GetDirectoryName (System.Reflection.Assembly.GetExecutingAssembly().Location);
-            m_gamedata_dir = new Lazy<string> (() => Path.Combine (AssemblyLocation, "GameData"));
+            var location = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            AssemblyLocation = string.IsNullOrEmpty (location) ? AppDomain.CurrentDomain.BaseDirectory : Path.GetDirectoryName (location);
+            m_gamedata_dir = new Lazy<string> (() => configuredDataDirectory ?? Path.Combine (AssemblyLocation, "GameData"));
 
             //An aggregate catalog that combines multiple catalogs
             var catalog = new AggregateCatalog();
             //Adds all the parts found in the same assembly as the Program class
             catalog.Catalogs.Add (new AssemblyCatalog (typeof(FormatCatalog).Assembly));
             //Adds parts matching pattern found in the directory of the assembly
-            catalog.Catalogs.Add (new DirectoryCatalog (AssemblyLocation, "Arc*.dll"));
+            if (configuredAssemblies == null)
+                catalog.Catalogs.Add (new DirectoryCatalog (AssemblyLocation, "Arc*.dll"));
+            else
+                foreach (var assembly in configuredAssemblies.Where(a => a != typeof(FormatCatalog).Assembly))
+                    catalog.Catalogs.Add (new AssemblyCatalog (assembly));
 
             //Create the CompositionContainer with the parts in the catalog
             using (var container = new CompositionContainer (catalog))
@@ -333,6 +350,10 @@ namespace GameRes
 
         public void DeserializeScheme (Stream input)
         {
+#if NET8_0_OR_GREATER
+            throw new NotSupportedException ("Legacy binary schemes require the Windows export tool; use portable JSON schemes.");
+#else
+
             int version = GetSerializedSchemeVersion (input);
             if (version <= CurrentSchemeVersion)
                 return;
@@ -351,6 +372,8 @@ namespace GameRes
                 if (db.GameMap != null)
                     m_game_map = db.GameMap;
             }
+
+#endif
         }
 
         public void SerializeScheme (Stream output, HashSet<string> excluded = null)
@@ -373,6 +396,10 @@ namespace GameRes
 
         public void SerializeScheme (Stream output, SchemeDataBase db)
         {
+#if NET8_0_OR_GREATER
+            throw new NotSupportedException ("Use SerializeSchemeJson on modern .NET.");
+#else
+
             using (var writer = new BinaryWriter (output, System.Text.Encoding.UTF8, true))
             {
                 writer.Write (SchemeID.ToCharArray());
@@ -381,6 +408,8 @@ namespace GameRes
             var bin = new BinaryFormatter();
             using (var zs = new ZLibStream (output, CompressionMode.Compress, true))
                 bin.Serialize (zs, db);
+
+#endif
         }
 
         public int GetSerializedSchemeVersion (Stream input)
@@ -407,6 +436,31 @@ namespace GameRes
 
                 return contract;
             }
+        }
+
+        class PortableFieldContractResolver : DefaultContractResolver
+        {
+            protected override List<MemberInfo> GetSerializableMembers (Type objectType)
+            {
+                return GetPortableSchemeFields (objectType);
+            }
+
+            protected override IList<JsonProperty> CreateProperties (Type objectType, MemberSerialization memberSerialization)
+            {
+                // Field selection must happen before the object contract is created.
+                // Computed properties can have irreversible setters (e.g. hashed DXA keys).
+                return base.CreateProperties (objectType, MemberSerialization.Fields);
+            }
+        }
+
+        static List<MemberInfo> GetPortableSchemeFields (Type objectType)
+        {
+            var fields = new List<MemberInfo>();
+            for (var type = objectType; type != null && type != typeof(object); type = type.BaseType)
+                foreach (var field in type.GetFields (BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                    if (!field.IsDefined (typeof(NonSerializedAttribute), false))
+                        fields.Add (field);
+            return fields;
         }
 
         class ByteArrayToHexStringConverter : JsonConverter<byte[]>
@@ -464,15 +518,45 @@ namespace GameRes
             sw.Flush ();
         }
 
+        /// <summary>Export schemes with portable, explicit type metadata and standard byte arrays.</summary>
+        public void SerializePortableSchemeJson (Stream output)
+        {
+            var db = new SchemeDataBase {
+                Version = CurrentSchemeVersion,
+                SchemeMap = new Dictionary<string, ResourceScheme>(),
+                GameMap = m_game_map,
+            };
+            foreach (var format in Formats)
+                if (format.Scheme != null)
+                    db.SchemeMap[format.Tag] = format.Scheme;
+            var settings = new JsonSerializerSettings {
+                ContractResolver = new PortableFieldContractResolver(),
+                TypeNameHandling = TypeNameHandling.Auto,
+                Formatting = Formatting.Indented,
+            };
+            var document = Newtonsoft.Json.Linq.JObject.FromObject (db, JsonSerializer.Create (settings));
+            document["PortableSchemaVersion"] = 2;
+            using (var writer = new StreamWriter (output, new UTF8Encoding (false), 4096, true))
+                writer.Write (document.ToString (Formatting.Indented));
+        }
+
         /// <summary>
         /// Read text file <paramref name="filename"/> from data directory, performing <paramref name="process_line"/> action on each non-empty line.
         /// </summary>
         public void ReadFileList (string filename, Action<string> process_line)
         {
             var lst_file = Path.Combine (DataDirectory, filename);
-            if (!File.Exists (lst_file))
+            Stream stream;
+            if (File.Exists (lst_file))
+                stream = File.OpenRead (lst_file);
+#if NET8_0_OR_GREATER
+            else if (File.Exists (lst_file + ".gz"))
+                stream = new System.IO.Compression.GZipStream (File.OpenRead (lst_file + ".gz"), System.IO.Compression.CompressionMode.Decompress);
+#endif
+            else
                 return;
-            using (var input = new StreamReader (lst_file))
+            using (stream)
+            using (var input = new StreamReader (stream))
             {
                 string line;
                 while ((line = input.ReadLine()) != null)

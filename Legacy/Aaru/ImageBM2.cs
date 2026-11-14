@@ -26,8 +26,15 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.Aaru
 {
@@ -118,7 +125,7 @@ namespace GameRes.Formats.Aaru
             var buffer = new byte[4];
             while (dst < m_output.Length)
             {
-                m_input.Read (buffer, 0, 4);
+                m_input.AsStream.ReadExactlyCompat (buffer, 0, 4);
                 m_output[dst++] = buffer[1];
                 m_output[dst++] = buffer[2];
                 m_output[dst++] = buffer[3];

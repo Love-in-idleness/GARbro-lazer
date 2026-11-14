@@ -30,8 +30,16 @@ using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 
 namespace GameRes.Formats.Macromedia
 {
@@ -390,7 +398,7 @@ namespace GameRes.Formats.Macromedia
                 return input;
             var data = new byte[entry.UnpackedSize];
             using (var zstream = new ZLibStream (input, CompressionMode.Decompress))
-                zstream.Read (data, 0, data.Length);
+                zstream.ReadExactlyCompat (data, 0, data.Length);
             return new BinMemoryStream (data, entry.Name);
         }
 

@@ -29,9 +29,17 @@ using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Text;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+using WriteableBitmap = GARbro.Imaging.MutablePixelBuffer;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Utility;
 
 namespace GameRes.Formats.Palette
@@ -164,12 +172,23 @@ namespace GameRes.Formats.Palette
             using (var base_png = OpenEntry (arc, arc.Dir.First()))
             using (var overlay_png = OpenEntry (arc, entry.Source))
             {
+                #if NET8_0_OR_GREATER
+                var decoder = new RasterDecoder(base_png);
+                #else
                 var decoder = new PngBitmapDecoder (base_png, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                #endif
                 var base_frame = decoder.Frames[0];
+                #if NET8_0_OR_GREATER
+                decoder = new RasterDecoder(overlay_png);
+                #else
                 decoder = new PngBitmapDecoder (overlay_png, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                #endif
                 var overlay_frame = decoder.Frames[0];
                 int overlay_x = entry.Source.OffsetX;
                 int overlay_y = entry.Source.OffsetY;
+#if NET8_0_OR_GREATER
+                return new BitmapSourceDecoder(PixelCompositor.Over(base_frame, overlay_frame, overlay_x, overlay_y));
+#else
                 var visual = new DrawingVisual();
                 using (var context = visual.RenderOpen())
                 {
@@ -180,6 +199,7 @@ namespace GameRes.Formats.Palette
                                                   base_frame.DpiX, base_frame.DpiY, PixelFormats.Pbgra32);
                 bmp.Render (visual);
                 return new BitmapSourceDecoder (bmp);
+#endif
             }
         }
     }

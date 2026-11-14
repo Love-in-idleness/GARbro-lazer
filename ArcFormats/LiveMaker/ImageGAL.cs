@@ -28,8 +28,16 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 using GameRes.Compression;
 using GameRes.Formats.Strings;
 using GameRes.Utility;
@@ -173,7 +181,11 @@ namespace GameRes.Formats.LiveMaker
 
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetGAL (KnownKeys);
+        #endif
         }
 
         internal uint QueryKey ()
@@ -323,7 +335,7 @@ namespace GameRes.Formats.LiveMaker
             int blocks_h = (frame.Height + m_info.BlockHeight - 1) / m_info.BlockHeight;
             int blocks_count = blocks_w * blocks_h;
             var data = new byte[blocks_count * 8];
-            packed.Read (data, 0, data.Length);
+            packed.ReadExactlyCompat (data, 0, data.Length);
             var refs = new int[blocks_count * 2];
             Buffer.BlockCopy (data, 0, refs, 0, data.Length);
             if (m_info.Shuffled)
@@ -345,7 +357,7 @@ namespace GameRes.Formats.LiveMaker
                     {
                         for (int j = 0; j < height; ++j)
                         {
-                            packed.Read (pixels, dst, chunk_size);
+                            packed.ReadExactlyCompat (pixels, dst, chunk_size);
                             dst += stride;
                         }
                     }
@@ -389,12 +401,12 @@ namespace GameRes.Formats.LiveMaker
             {
                 foreach (var dst in RandomSequence (frame.Height, m_key))
                 {
-                    packed.Read (pixels, dst*stride, stride);
+                    packed.ReadExactlyCompat (pixels, dst*stride, stride);
                 }
             }
             else
             {
-                packed.Read (pixels, 0, pixels.Length);
+                packed.ReadExactlyCompat (pixels, 0, pixels.Length);
             }
             return pixels;
         }
@@ -407,8 +419,12 @@ namespace GameRes.Formats.LiveMaker
 
         byte[] ReadJpeg (Frame frame, Stream packed)
         {
+#if NET8_0_OR_GREATER
+            var bitmap = RasterCodec.Decode(packed);
+#else
             var decoder = new JpegBitmapDecoder (packed, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
             var bitmap = decoder.Frames[0];
+#endif
             frame.BPP = bitmap.Format.BitsPerPixel;
             int stride = bitmap.PixelWidth * bitmap.Format.BitsPerPixel / 8;
             var pixels = new byte[bitmap.PixelHeight * stride];

@@ -28,7 +28,13 @@ using System;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using System.Collections.Generic;
 
 namespace GameRes.Formats.Purple
@@ -384,7 +390,7 @@ namespace GameRes.Formats.Purple
                 if (0 == name_bytes[i])
                     break;
             }
-            m_output = LoadBaseImage (Encodings.cp932.GetString (name_bytes, 0, i) + ".pb3");
+            m_output = LoadBaseImage (Encodings.ResourceEncoding.GetString (name_bytes, 0, i) + ".pb3");
             BlendInput();
         }
 

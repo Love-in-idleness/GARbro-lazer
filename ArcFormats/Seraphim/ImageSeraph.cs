@@ -26,8 +26,16 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 using GameRes.Utility;
 
 namespace GameRes.Formats.Seraphim
@@ -339,7 +347,7 @@ namespace GameRes.Formats.Seraphim
                     int x = m_pixel_size;
                     if (0 != (ctl & 8))
                         x *= 2;
-                    m_input.Read (m_output, dst, x);
+                    m_input.ReadExactlyCompat (m_output, dst, x);
                     Binary.CopyOverlapped (m_output, dst, dst+x, count*x);
                     ++count;
                     count *= x;
@@ -428,25 +436,25 @@ namespace GameRes.Formats.Seraphim
                     switch ((next >> 3) & 3)
                     {
                     case 0:
-                        m_input.Read (output, dst, 2);
+                        m_input.ReadExactlyCompat (output, dst, 2);
                         Binary.CopyOverlapped (output, dst, dst+2, count*2);
                         ++count;
                         count *= 2;
                         break;
                     case 1:
-                        m_input.Read (output, dst, 4);
+                        m_input.ReadExactlyCompat (output, dst, 4);
                         Binary.CopyOverlapped (output, dst, dst+4, count*4);
                         ++count;
                         count *= 4;
                         break;
                     case 2:
-                        m_input.Read (output, dst, 8);
+                        m_input.ReadExactlyCompat (output, dst, 8);
                         Binary.CopyOverlapped (output, dst, dst+8, count*8);
                         ++count;
                         count *= 8;
                         break;
                     case 3:
-                        m_input.Read (output, dst, 16);
+                        m_input.ReadExactlyCompat (output, dst, 16);
                         Binary.CopyOverlapped (output, dst, dst+16, count*16);
                         ++count;
                         count *= 16;

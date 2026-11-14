@@ -26,8 +26,15 @@
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.Will
 {
@@ -111,7 +118,11 @@ namespace GameRes.Formats.Will
             var bitmap = image.Bitmap;
             if (bitmap.Format.BitsPerPixel != 32)
             {
+                #if NET8_0_OR_GREATER
+                bitmap = bitmap.Convert(PixelFormats.Bgra32);
+                #else
                 bitmap = new FormatConvertedBitmap (bitmap, PixelFormats.Bgra32, null, 0);
+                #endif
             }
             int stride = bitmap.PixelWidth * 4;
             var pixels = new byte[stride * bitmap.PixelHeight];

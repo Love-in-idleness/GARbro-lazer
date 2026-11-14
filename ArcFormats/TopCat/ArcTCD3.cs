@@ -400,7 +400,7 @@ namespace GameRes.Formats.TopCat
             if (-1 == name_end)
                 name_end = names.Length;
             name_length = name_end - offset;
-            string name = Encodings.cp932.GetString (names, offset, name_length);
+            string name = Encodings.ResourceEncoding.GetString (names, offset, name_length);
             offset += name_length + 1;
             return name;
         }

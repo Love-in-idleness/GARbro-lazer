@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><IsTestProject>true</IsTestProject><IsPackable>false</IsPackable></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../modern/GARbro.Imaging.Magick/GARbro.Imaging.Magick.csproj" />
+    <ProjectReference Include="../../modern/GARbro.Imaging.Portable/GARbro.Imaging.Portable.csproj" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
+    <ProjectReference Include="../../modern/GARbro.Application/GARbro.Application.csproj" />
+    <ProjectReference Include="../../modern/GARbro.Worker/GARbro.Worker.csproj" />
+    <ProjectReference Include="../GARbro.Worker.Probe/GARbro.Worker.Probe.csproj" />
+    <None Include="../fixtures/generated/**" LinkBase="Fixtures" CopyToOutputDirectory="PreserveNewest" />
+    <ProjectReference Include="../../modern/GARbro.Core/GARbro.Core.csproj" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+    <PackageReference Include="System.ComponentModel.Composition" />
+  </ItemGroup>
+</Project>

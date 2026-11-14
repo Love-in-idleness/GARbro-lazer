@@ -100,7 +100,7 @@ namespace GameRes.Formats.NitroPlus
                         name_buf = new byte[name_length];
                     if (name_length != header.Read (name_buf, 0, name_length))
                         return null;
-                    var name = Encodings.cp932.GetString (name_buf, 0, name_length);
+                    var name = Encodings.ResourceEncoding.GetString (name_buf, 0, name_length);
                     var entry = FormatCatalog.Instance.Create<PackedEntry> (name);
 
                     entry.Offset        = base_offset + header.ReadUInt32();
@@ -161,7 +161,7 @@ namespace GameRes.Formats.NitroPlus
                     if (name_len != header.Read (name_buf, 0, name_len))
                         return null;
                     uint key = GetKey (name_buf, name_len);
-                    var name = Encodings.cp932.GetString (name_buf, 0, name_len);
+                    var name = Encodings.ResourceEncoding.GetString (name_buf, 0, name_len);
                     var entry = FormatCatalog.Instance.Create<PakEntry> (name);
                     entry.Offset        = (header.ReadUInt32() ^ key) + base_offset;
                     entry.UnpackedSize  = (header.ReadUInt32() ^ key);

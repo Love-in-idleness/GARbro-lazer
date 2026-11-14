@@ -73,7 +73,7 @@ namespace GameRes.Formats.TopCat
                 }
                 else
                 {
-                    var name = Encodings.cp932.GetString (names, name_start, i - name_start);
+                    var name = Encodings.ResourceEncoding.GetString (names, name_start, i - name_start);
                     name_start = i+1;
                     var entry = FormatCatalog.Instance.Create<Entry> (name);
                     entry.Offset = offsets[entry_num];

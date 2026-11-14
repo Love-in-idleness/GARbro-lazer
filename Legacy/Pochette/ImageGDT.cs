@@ -26,9 +26,16 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.Pochette
 {
@@ -86,8 +93,12 @@ namespace GameRes.Formats.Pochette
         {
             using (var bmp = new StreamRegion (file.AsStream, info.BitmapOffset, true))
             {
+                #if NET8_0_OR_GREATER
+                var decoder = new RasterDecoder(bmp);
+                #else
                 var decoder = new BmpBitmapDecoder (bmp,
                     BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                #endif
                 return decoder.Frames[0];
             }
         }
@@ -108,11 +119,22 @@ namespace GameRes.Formats.Pochette
                     return overlay;
                 var base_image = ReadBitmapSource (base_file, base_info);
                 if (base_image.Format.BitsPerPixel < 24)
+                    #if NET8_0_OR_GREATER
+                    base_image = base_image.Convert(PixelFormats.Bgr32);
+                    #else
                     base_image = new FormatConvertedBitmap (base_image, PixelFormats.Bgr32, null, 0);
+                    #endif
+                #if NET8_0_OR_GREATER
+                return base_image.WithRegion(overlay, Int32Rect.Empty, meta.OffsetX, meta.OffsetY);
+                #else
                 var canvas = new WriteableBitmap (base_image);
                 int canvas_bpp = canvas.Format.BitsPerPixel;
                 if (canvas_bpp != overlay.Format.BitsPerPixel)
+                    #if NET8_0_OR_GREATER
+                    overlay = overlay.Convert(canvas.Format);
+                    #else
                     overlay = new FormatConvertedBitmap (overlay, canvas.Format, null, 0);
+                    #endif
                 canvas.Lock();
                 unsafe
                 {
@@ -128,6 +150,7 @@ namespace GameRes.Formats.Pochette
                 canvas.AddDirtyRect (rect);
                 canvas.Unlock();
                 return canvas;
+                #endif
             }
         }
 

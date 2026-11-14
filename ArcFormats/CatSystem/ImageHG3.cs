@@ -26,8 +26,16 @@
 using System;
 using System.IO;
 using System.ComponentModel.Composition;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media.Imaging;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media;
+#endif
 using GameRes.Compression;
 using GameRes.Utility;
 using System.Collections.Generic;
@@ -296,8 +304,12 @@ namespace GameRes.Formats.CatSystem
             BitmapSource frame;
             using (var jpeg = new StreamRegion (Source, Source.Position, jpeg_size, true))
             {
+#if NET8_0_OR_GREATER
+                frame = RasterCodec.Decode(jpeg);
+#else
                 var decoder = new JpegBitmapDecoder (jpeg, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
                 frame = decoder.Frames[0];
+#endif
             }
             if (frame.Format.BitsPerPixel < 24)
                 throw new NotSupportedException ("Not supported HG-3 JPEG color depth");
@@ -345,7 +357,7 @@ namespace GameRes.Formats.CatSystem
             using (var alpha = new ZLibStream (alpha_in, CompressionMode.Decompress))
             {
                 var alpha_data = new byte[alpha_size];
-                alpha.Read (alpha_data, 0, alpha_size);
+                alpha.ReadExactlyCompat (alpha_data, 0, alpha_size);
                 return alpha_data;
             }
         }

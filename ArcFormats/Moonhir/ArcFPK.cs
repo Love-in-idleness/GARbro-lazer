@@ -126,7 +126,7 @@ namespace GameRes.Formats.MoonhirGames
                     throw new UnknownEncryptionScheme();
                 input = arc.File.CreateStream (entry.Offset, entry.Size);
                 header = new byte[0x10];
-                input.Read (header, 0, 0x10);
+                input.ReadExactlyCompat (header, 0, 0x10);
                 input.Position = 0;
             }
             else
@@ -213,7 +213,7 @@ namespace GameRes.Formats.MoonhirGames
                     if (-1 == count)
                         return output;
                     count = Math.Min (count + 2, output.Length - dst);
-                    input.Read (output, dst, count);
+                    input.ReadExactlyCompat (output, dst, count);
                     dst += count;
                     break;
                 case 2:
@@ -238,7 +238,7 @@ namespace GameRes.Formats.MoonhirGames
                         if (-1 == count)
                             return output;
                         count = Math.Min (count + 0x102, output.Length - dst);
-                        input.Read (output, dst, count);
+                        input.ReadExactlyCompat (output, dst, count);
                         dst += count;
                         break;
                     case 1:

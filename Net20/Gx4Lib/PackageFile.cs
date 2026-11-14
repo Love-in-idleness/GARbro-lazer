@@ -34,8 +34,12 @@ namespace GameRes.Gx4Lib
     {
         public PFHeaders Deserialize (Stream input)
         {
+#if NET8_0_OR_GREATER
+            return GameRes.Formats.PortableSerializedIndexes.ReadGx4(input);
+#else
             var bin = new BinaryFormatter { Binder = new Gx4TypeBinder() };
             return bin.Deserialize (input) as PFHeaders;
+#endif
         }
     }
 

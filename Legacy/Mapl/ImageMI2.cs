@@ -27,7 +27,14 @@ using GameRes.Utility;
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+
+#endif
 
 // [980130][Pias] Rashin
 
@@ -158,7 +165,7 @@ namespace GameRes.Formats.Mapl
                     switch (ctl)
                     {
                     case 0:
-                        m_input.Read (m_block, 0, m_block.Length);
+                        m_input.AsStream.ReadExactlyCompat (m_block, 0, m_block.Length);
                         break;
                     case 1:
                         {
@@ -229,7 +236,7 @@ namespace GameRes.Formats.Mapl
         void Op2 ()
         {
             byte b = m_input.ReadUInt8();
-            m_input.Read (m_buffer, 0, 8);
+            m_input.AsStream.ReadExactlyCompat (m_buffer, 0, 8);
             int pos = 0;
             for (int i = 0; i < 8; ++i)
             {
@@ -271,7 +278,7 @@ namespace GameRes.Formats.Mapl
             byte b2 = m_input.ReadUInt8();
             byte b3 = m_input.ReadUInt8();
             int dst = 0;
-            m_input.Read (m_buffer, 0, 16);
+            m_input.AsStream.ReadExactlyCompat (m_buffer, 0, 16);
             for (int i = 0; i < 16; ++i)
             {
                 byte bits = m_buffer[i];
@@ -296,7 +303,7 @@ namespace GameRes.Formats.Mapl
             byte b1 = m_input.ReadUInt8();
             byte b2 = m_input.ReadUInt8();
             byte b3 = m_input.ReadUInt8();
-            m_input.Read (m_buffer, 0, 16);
+            m_input.AsStream.ReadExactlyCompat (m_buffer, 0, 16);
             int dst = 0;
             for (int i = 0; i < 16; ++i)
             {
@@ -322,8 +329,8 @@ namespace GameRes.Formats.Mapl
         void Op6()
         {
             int count = m_input.ReadUInt8();
-            m_input.Read (m_buffer2, 0, count);
-            m_input.Read (m_buffer, 0, 24);
+            m_input.AsStream.ReadExactlyCompat (m_buffer2, 0, count);
+            m_input.AsStream.ReadExactlyCompat (m_buffer, 0, 24);
             for (int i = 0; i < m_buffer6.Length; ++i)
                 m_buffer6[i] = 0;
             int buf_pos = 0;
@@ -363,8 +370,8 @@ namespace GameRes.Formats.Mapl
         void Op7()
         {
             int count = m_input.ReadUInt8();
-            m_input.Read (m_buffer2, 0, count);
-            m_input.Read (m_buffer, 0, 32);
+            m_input.AsStream.ReadExactlyCompat (m_buffer2, 0, count);
+            m_input.AsStream.ReadExactlyCompat (m_buffer, 0, 32);
             int dst = 0;
             for (int i = 0; i < 32; ++i)
             {
@@ -384,7 +391,7 @@ namespace GameRes.Formats.Mapl
         void Op8()
         {
             byte b0 = m_input.ReadUInt8();
-            m_input.Read (m_buffer, 0, 8);
+            m_input.AsStream.ReadExactlyCompat (m_buffer, 0, 8);
             int src = 0;
             int dst = 0;
             for (int i = 0; i < 8; ++i)

@@ -25,7 +25,14 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+
+#endif
 
 namespace GameRes.Formats.PenguinWorks {
     [Export(typeof(ImageFormat))]
@@ -50,7 +57,7 @@ namespace GameRes.Formats.PenguinWorks {
             file.Position = 8;
             int stride = info.iWidth * 3;
             var pixels = new byte[stride * info.iHeight];
-            file.Read(pixels, 0, pixels.Length);
+            file.AsStream.ReadExactlyCompat(pixels, 0, pixels.Length);
             return ImageData.CreateFlipped(info, PixelFormats.Bgr24, null, pixels, stride);
         }
 

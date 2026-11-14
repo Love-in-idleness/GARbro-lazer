@@ -25,8 +25,16 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+#if !NET8_0_OR_GREATER
 using System.Windows.Media.Imaging;
+#endif
 
 // [020412][Ciel] Maid Hunter Zero One ~Nora Maid~
 
@@ -131,7 +139,7 @@ namespace GameRes.Formats.Jikkenshitsu
                 using (var dec = new InputCryptoStream (enc, new SjTransform (m_info.Key)))
                 {
                     var data = new byte[m_input.Length];
-                    dec.Read (data, 0x20, packed_size);
+                    dec.ReadExactlyCompat (data, 0x20, packed_size);
                     // memory stream is not disposed, not a big deal
                     m_input = new BinMemoryStream (data, m_input.Name);
                 }

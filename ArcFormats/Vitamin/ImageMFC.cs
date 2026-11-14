@@ -25,8 +25,15 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Utility;
 
 namespace GameRes.Formats.Vitamin
@@ -91,7 +98,11 @@ namespace GameRes.Formats.Vitamin
                 {
                     var bitmap = BitmapSource.Create ((int)info.Width, (int)info.Height, ImageData.DefaultDpiX, ImageData.DefaultDpiY,
                                                   reader.Format, reader.Palette, reader.Data, reader.Stride);
+                    #if NET8_0_OR_GREATER
+                    bitmap = bitmap.Convert(PixelFormats.Bgra32);
+                    #else
                     bitmap = new FormatConvertedBitmap (bitmap, PixelFormats.Bgra32, null, 0);
+                    #endif
                     int stride = (int)info.Width * 4;
                     pixels = new byte[stride * (int)info.Height];
                     bitmap.CopyPixels (pixels, stride, 0);
@@ -138,7 +149,7 @@ namespace GameRes.Formats.Vitamin
                 }
                 else
                 {
-                    input.Read (output, dst, b);
+                    input.ReadExactlyCompat (output, dst, b);
                     input_size -= b;
                     dst += b;
                 }

@@ -25,7 +25,14 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+
+#endif
 
 // [030620][Gipsy] Angel Gather
 
@@ -65,7 +72,7 @@ namespace GameRes.Formats.Rina
             if (meta.IsCompressed)
                 UnpackRgb (file, pixels);
             else
-                file.Read (pixels, 0, pixels.Length);
+                file.AsStream.ReadExactlyCompat (pixels, 0, pixels.Length);
             if (file.PeekByte() == -1)
                 return ImageData.CreateFlipped (info, PixelFormats.Bgr24, null, pixels, stride);
 
@@ -73,7 +80,7 @@ namespace GameRes.Formats.Rina
             if (meta.IsCompressed)
                 UnpackAlpha (file, alpha);
             else
-                file.Read (alpha, 0, alpha.Length);
+                file.AsStream.ReadExactlyCompat (alpha, 0, alpha.Length);
 
             stride = info.iWidth * 4;
             var output = new byte[stride * info.iHeight];

@@ -1,0 +1,13 @@
+<Project ToolsVersion="Current" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" />
+  <PropertyGroup><TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion><OutputType>Exe</OutputType><AssemblyName>GARbro.WpfBenchmark</AssemblyName><PlatformTarget>x64</PlatformTarget><LangVersion>latest</LangVersion><OutputPath>$(GarbroLegacyDirectory)\</OutputPath><IntermediateOutputPath>obj\wpf\</IntermediateOutputPath></PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" /><Reference Include="System.Core" /><Reference Include="System.Xaml" /><Reference Include="WindowsBase" /><Reference Include="PresentationCore" /><Reference Include="PresentationFramework" />
+    <Reference Include="GARbro.GUI"><HintPath>$(GarbroLegacyDirectory)\GARbro.GUI.exe</HintPath><Private>False</Private></Reference>
+    <Reference Include="GameRes"><HintPath>$(GarbroLegacyDirectory)\GameRes.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(GarbroLegacyDirectory)\Newtonsoft.Json.dll</HintPath><Private>False</Private></Reference>
+    <Compile Include="WpfBench.cs" />
+    <EmbeddedResource Include="$(GarbroLegacyDirectory)\benchmark-ui.g.resources"><LogicalName>GARbro.WpfBenchmark.g.resources</LogicalName></EmbeddedResource>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

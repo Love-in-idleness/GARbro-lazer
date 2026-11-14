@@ -25,7 +25,14 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+
 using GameRes.Compression;
 
 // [011130][Malt] Emblem
@@ -63,7 +70,7 @@ namespace GameRes.Formats.FazeX
                 int dst;
                 for (int c = 0; c < 3; ++c)
                 {
-                    input.Read (plane, 0, plane_size);
+                    input.ReadExactlyCompat (plane, 0, plane_size);
                     dst = c;
                     for (int src = 0; src < plane_size; ++src)
                     {
@@ -72,7 +79,7 @@ namespace GameRes.Formats.FazeX
                     }
                 }
                 // alpha channel is inverted
-                input.Read (plane, 0, plane_size);
+                input.ReadExactlyCompat (plane, 0, plane_size);
                 dst = 3;
                 for (int src = 0; src < plane_size; ++src)
                 {

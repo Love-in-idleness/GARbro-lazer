@@ -65,7 +65,7 @@ namespace GameRes.Formats.Types
                     };
                     if (!entry.CheckPlacement (file.MaxOffset))
                         return null;
-                    input.Read (header, 0, header.Length);
+                    input.ReadExactlyCompat (header, 0, header.Length);
                     if (header.AsciiEqual (0, "RIFF"))
                         entry.Type = "audio";
                     else if (header.AsciiEqual (4, "TPGF"))

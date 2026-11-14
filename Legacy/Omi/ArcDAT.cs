@@ -106,10 +106,10 @@ namespace GameRes.Formats.Omi
             int dst = 0;
             while (dst < output.Length)
             {
-                input.Read (output, dst, 2);
+                input.AsStream.ReadExactlyCompat (output, dst, 2);
                 if (output.ToUInt16 (dst) == rle_marker)
                 {
-                    input.Read (output, dst, 2);
+                    input.AsStream.ReadExactlyCompat (output, dst, 2);
                     dst += 2;
                     int count = input.ReadUInt16() - 1;
                     if (count > 0)

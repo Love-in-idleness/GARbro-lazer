@@ -68,7 +68,7 @@ namespace GameRes.Formats.Mermaid
             {
                 if (0 == ctl)
                 {
-                    input.Read (buffer, 0, 16);
+                    input.AsStream.ReadExactlyCompat (buffer, 0, 16);
                     output.Write (buffer, 0, 16);
                 }
                 else if (1 == ctl)
@@ -94,7 +94,7 @@ namespace GameRes.Formats.Mermaid
                     int count = input.ReadUInt8();
                     if (count > buffer.Length)
                         buffer = new byte[count];
-                    input.Read (buffer, 0, count);
+                    input.AsStream.ReadExactlyCompat (buffer, 0, count);
                     output.Write (buffer, 0, count);
                 }
                 else if (input.PeekByte() != -1)

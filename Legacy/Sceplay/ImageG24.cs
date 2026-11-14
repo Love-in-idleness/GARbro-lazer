@@ -25,7 +25,14 @@
 
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
+
 using GameRes.Compression;
 
 namespace GameRes.Formats.Sceplayer
@@ -160,7 +167,7 @@ namespace GameRes.Formats.Sceplayer
         void UnpackLzss (byte[] output)
         {
             using (var input = new LzssStream (m_input.AsStream, LzssMode.Decompress, true))
-                input.Read (output, 0, output.Length);
+                input.ReadExactlyCompat (output, 0, output.Length);
         }
 
         void UnpackRle (byte[] output)

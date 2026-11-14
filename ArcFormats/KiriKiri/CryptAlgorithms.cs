@@ -101,7 +101,7 @@ namespace GameRes.Formats.KiriKiri
                 return input;
 
             var header = new byte[5];
-            input.Read (header, 0, 5);
+            input.ReadExactlyCompat (header, 0, 5);
             uint signature = header.ToUInt32 (0);
             GuessEntryTypeBySignature (entry, signature);
             if (0x46464952 == signature) // 'RIFF'
@@ -110,7 +110,7 @@ namespace GameRes.Formats.KiriKiri
                 {
                     var header_ext = new byte[12];
                     Array.Copy (header, header_ext, header.Length);
-                    input.Read (header_ext, header.Length, header_ext.Length-header.Length);
+                    input.ReadExactlyCompat (header_ext, header.Length, header_ext.Length-header.Length);
                     header = header_ext;
                     if (header.AsciiEqual (8, "WAVE"))
                         entry.Type = "audio";
@@ -143,7 +143,7 @@ namespace GameRes.Formats.KiriKiri
             if (header.Length != 5)
                 throw new ArgumentException ("Invalid header length for DecompressMdf", "header");
             var mdf_header = new byte[4] { header[4], 0, 0, 0 };
-            input.Read (mdf_header, 1, 3);
+            input.ReadExactlyCompat (mdf_header, 1, 3);
             entry.UnpackedSize = mdf_header.ToUInt32 (0);
             entry.IsPacked = true;
             return new ZLibStream (input, CompressionMode.Decompress);
@@ -157,9 +157,9 @@ namespace GameRes.Formats.KiriKiri
             info.SetBlockSize (input.ReadByte());
             if (info.HasContentLength)
             {
-                input.Read (header, 0, 4);
+                input.ReadExactlyCompat (header, 0, 4);
                 long length = header.ToUInt32 (0);
-                input.Read (header, 0, 4);
+                input.ReadExactlyCompat (header, 0, 4);
                 length |= (long)header.ToUInt32 (0) << 32;
                 info.OriginalLength = length;
                 entry.UnpackedSize = (uint)length;
@@ -167,7 +167,7 @@ namespace GameRes.Formats.KiriKiri
             }
             if (info.HasDictionary)
             {
-                input.Read (header, 0, 4);
+                input.ReadExactlyCompat (header, 0, 4);
                 info.DictionaryId = header.ToInt32 (0);
             }
             input.ReadByte(); // skip descriptor checksum

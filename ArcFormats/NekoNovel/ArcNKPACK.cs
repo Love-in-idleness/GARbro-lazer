@@ -78,7 +78,7 @@ namespace GameRes.Formats.NekoNovel
         private unsafe static string ReadString(Stream stream)
         {
             uint length = 0u;
-            stream.Read(new Span<byte>(&length, 4));
+            stream.ReadExactlyCompat(new Span<byte>(&length, 4));
 
             if (length == 0u)
             {
@@ -86,7 +86,7 @@ namespace GameRes.Formats.NekoNovel
             }
 
             byte[] data = new byte[length];
-            stream.Read(data, 0, data.Length);
+            stream.ReadExactlyCompat(data, 0, data.Length);
 
             return Encoding.UTF8.GetString(data);
         }

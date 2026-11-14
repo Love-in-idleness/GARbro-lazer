@@ -1,3 +1,4 @@
+using System;
 //! \file       CroixCrypt.cs
 //! \date       2017 Dec 27
 //! \brief      Croix encryption algorithm for KiriKiri.

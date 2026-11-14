@@ -27,7 +27,13 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using GameRes.Compression;
 
 namespace GameRes.Formats.Parsley
@@ -109,7 +115,7 @@ namespace GameRes.Formats.Parsley
             {
                 int stride = Info.iWidth * 4;
                 var pixels = new byte[stride * Info.iHeight];
-                lz.Read (pixels, 0, pixels.Length);
+                lz.ReadExactlyCompat (pixels, 0, pixels.Length);
                 return ImageData.CreateFlipped (Info, PixelFormats.Bgra32, null, pixels, stride);
             }
         }

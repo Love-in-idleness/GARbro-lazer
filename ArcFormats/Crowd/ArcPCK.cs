@@ -75,7 +75,7 @@ namespace GameRes.Formats.Crowd
                 }
                 if (0 == n || max_len == n)
                     return null;
-                entry.Name = Encodings.cp932.GetString (name_buf, 0, (int)n);
+                entry.Name = Encodings.ResourceEncoding.GetString (name_buf, 0, (int)n);
                 entry.Type = FormatCatalog.Instance.GetTypeFromName (entry.Name);
                 index_offset += n+1;
             }

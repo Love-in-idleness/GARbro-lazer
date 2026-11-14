@@ -26,8 +26,15 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
-using System.Windows.Media;
+
 using GameRes.Utility;
+
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+#else
+using System.Windows.Media;
+#endif
 
 namespace GameRes.Formats.Liar
 {

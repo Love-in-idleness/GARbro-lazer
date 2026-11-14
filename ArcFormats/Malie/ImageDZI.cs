@@ -30,9 +30,17 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+using WriteableBitmap = GARbro.Imaging.MutablePixelBuffer;
+#else
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
+#endif
 
 namespace GameRes.Formats.Malie
 {
@@ -140,10 +148,14 @@ namespace GameRes.Formats.Malie
                 {
                     var image = Read (input);
                     if (null == image)
-                        throw new FileFormatException ("Unknown DZI tile format");
+                        throw new InvalidFormatException ("Unknown DZI tile format");
                     var converted = image.Bitmap;
                     if (converted.Format != format)
+                        #if NET8_0_OR_GREATER
+                        converted = converted.Convert(format);
+                        #else
                         converted = new FormatConvertedBitmap (converted, format, null, 0);
+                        #endif
                     int stride = converted.PixelWidth * 4;
                     int tile_size = stride * converted.PixelHeight;
                     if (null == pixels || pixels.Length < tile_size)
@@ -163,7 +175,11 @@ namespace GameRes.Formats.Malie
             if (actual_width < bitmap.PixelWidth || actual_height < bitmap.PixelHeight)
             {
                 var rect = new Int32Rect (0, 0, actual_width, actual_height);
+#if NET8_0_OR_GREATER
+                result = bitmap.Crop(rect);
+#else
                 result = new CroppedBitmap (bitmap, rect);
+#endif
             }
             result.Freeze();
             return new ImageData (result, meta);

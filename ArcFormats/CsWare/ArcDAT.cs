@@ -26,7 +26,13 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
+#endif
 using GameRes.Compression;
 
 namespace GameRes.Formats.CsWare
@@ -115,7 +121,7 @@ namespace GameRes.Formats.CsWare
             if (meta.IsCompressed)
             {
                 using (var unpacked = new ZLibStream (m_input.AsStream, CompressionMode.Decompress, true))
-                    unpacked.Read (pixels, 0, pixels.Length);
+                    unpacked.ReadExactlyCompat (pixels, 0, pixels.Length);
             }
             else
             {

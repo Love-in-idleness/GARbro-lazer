@@ -1,0 +1,91 @@
+#!/usr/bin/env python3
+"""Unpack and exercise a generated preview package on its target platform."""
+import argparse
+import gzip
+import hashlib
+import json
+import lzma
+import os
+import subprocess
+import sys
+import tarfile
+import tempfile
+import zipfile
+from pathlib import Path
+
+ROOT=Path(__file__).resolve().parents[1]
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--rid',required=True)
+parser.add_argument('--quick',action='store_true',help='Check package contents, one archive open and CLI startup only')
+parser.add_argument('--output',type=Path,default=ROOT/'artifacts')
+parser.add_argument('--dotnet',default='dotnet')
+parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','1.1.0'))
+args=parser.parse_args()
+name='garbro-'+args.version+'-'+args.rid
+archive=args.output/(name+('.zip'if args.rid.startswith('win-')else'.tar.gz'))
+with tempfile.TemporaryDirectory(prefix='garbro-package-')as folder:
+    root=Path(folder)
+    if archive.suffix=='.zip':
+        with zipfile.ZipFile(archive)as source:
+            for item in source.namelist():
+                if not (root/item).resolve().is_relative_to(root.resolve()):
+                    raise ValueError('Archive contains an escaping path')
+            source.extractall(root)
+    else:
+        with tarfile.open(archive)as source:
+            source.extractall(root,filter='data')
+    package=root/name
+    for relative in ('LICENSE','dependencies.json','licenses','compatibility.md',
+                     'compatibility/baseline-source.json','compatibility/baseline-runtime.json',
+                     'compatibility/portable-status.json','migration-status.md'):
+        assert (package/relative).exists(),relative
+    desktop=package/('GARbro.app/Contents/Resources/app'if args.rid.startswith('osx-')else'app')
+    cli=desktop/'garbro.dll'
+    assert not (package/'cli').exists() and not (package/'desktop').exists(),'Application dependencies must be shared'
+    assert not list(package.rglob('*.pdb')),'Debug symbols must not be installed'
+    if args.rid.startswith('osx-'):assert (package/'GARbro.app/Contents/MacOS/GARbro.Desktop').exists()
+    assert (desktop/'GARbro.Desktop.dll').exists()
+    sdl='SDL2.dll'if args.rid.startswith('win-')else'libSDL2-2.0.dylib'if args.rid.startswith('osx-')else'libSDL2-2.0.so'
+    if args.rid.startswith('linux-'):assert not (desktop/sdl).exists(),'Linux uses the distribution SDL2 library'
+    else:assert (desktop/sdl).exists(),'Bundled audio library missing: '+sdl
+    for relative in ('GARbro.Worker.dll','GARbro.Worker.runtimeconfig.json','GARbro.Worker.deps.json'):
+        assert (desktop/relative).exists(),relative
+    if args.rid.startswith('win-'):assert (desktop/'GARbro.Worker.exe').exists(),'MSIX requires the packaged worker apphost'
+    worker=subprocess.run([args.dotnet,str(desktop/'GARbro.Worker.dll')],
+        input=json.dumps({'operation':'open','path':str(ROOT/'tests/fixtures/generated/standard.xfl')}),
+        text=True,capture_output=True,check=True,timeout=45)
+    opened=json.loads(worker.stdout)
+    assert opened['kind']=='result' and opened['data']['tag']=='XFL' and len(opened['data']['entries'])==3
+    if not args.quick:
+        preview=subprocess.run([args.dotnet,str(desktop/'GARbro.Worker.dll')],
+            input=json.dumps({'operation':'resource-preview','location':{'rootPath':str(ROOT/'tests/fixtures/generated')},'entry':'movie.mpg'}),
+            text=True,capture_output=True,check=True,timeout=45)
+        result=json.loads(preview.stdout)
+        assert result['kind']=='result' and result['data']['kind']=='video',result
+    if not args.rid.startswith('linux-'):
+        helpers=desktop/'media'
+        assert (helpers/('ffmpeg.exe' if args.rid.startswith('win-')else'ffmpeg')).exists()
+        recipe=json.loads((helpers/'media-codecs.json').read_text())
+        source=json.loads((helpers/'source-archive.json').read_text())
+        assert source['file']=='ffmpeg-source.tar.xz' and source['originalSha256']==recipe['sha256']
+        assert hashlib.sha256((helpers/source['file']).read_bytes()).hexdigest()==source['sha256']
+        with lzma.open(helpers/source['file']) as stream:assert hashlib.file_digest(stream,'sha256').hexdigest()==source['tarSha256']
+        assert (helpers/'COPYING.LGPLv2.1').exists()
+    database=cli.parent/'GameData/Formats.json.gz'
+    assert len(list(package.rglob('Formats.json.gz')))==1,'Only one format database is needed'
+    schemes=json.loads(gzip.decompress(database.read_bytes()))
+    metadata=json.loads(database.with_name('schemes.json').read_text())
+    assert list((desktop/'GameData').glob('*.lst.gz')) and not list((desktop/'GameData').glob('*.lst'))
+    assert schemes['Version']==metadata['version']==148 and schemes['PortableSchemaVersion']==2
+    assert sorted(schemes['SchemeMap'])==metadata['applied']
+    assert hashlib.sha256(gzip.decompress(database.read_bytes())).hexdigest()==metadata['json_sha256']
+    assert json.loads((package/'dependencies.json').read_text())
+    for notice in ('GPPG.md','GPLEX.md','Concentus.Oggfile.txt','SQLite3MC.txt','SQLite3MC-NuGet.txt','SQLitePCLRaw.txt','NWayland.txt'):
+        assert (package/'licenses/source-notices'/notice).exists(),notice
+    if args.quick:
+        version=subprocess.check_output([args.dotnet,str(cli),'--version'],text=True,timeout=15)
+        assert args.version in version,version
+    else:
+        subprocess.run([sys.executable,str(ROOT/'tools/smoke-cli.py'),
+                        '--dotnet',args.dotnet,'--cli',str(cli)],check=True,cwd=root)
+print('Unpacked package smoke checks passed:',args.rid)

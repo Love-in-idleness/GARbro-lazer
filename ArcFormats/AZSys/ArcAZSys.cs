@@ -167,7 +167,11 @@ namespace GameRes.Formats.AZSys
 
         public override object GetAccessWidget ()
         {
+#if NET8_0_OR_GREATER
+            return null;
+#else
             return new GUI.WidgetAZ();
+        #endif
         }
 
         uint GetAsbKey (string scheme)

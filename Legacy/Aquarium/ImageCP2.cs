@@ -26,8 +26,15 @@
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Utility;
 
 namespace GameRes.Formats.Aquarium
@@ -103,7 +110,7 @@ namespace GameRes.Formats.Aquarium
             if (m_info.IsCompressed)
                 DecompressLz (m_input, m_output);
             else
-                m_input.Read (m_output, 0, m_output.Length);
+                m_input.AsStream.ReadExactlyCompat (m_output, 0, m_output.Length);
 
             if (m_info.HasAlpha)
             {
@@ -112,7 +119,7 @@ namespace GameRes.Formats.Aquarium
                 if (m_info.IsCompressed)
                     DecompressLz (m_input, alpha);
                 else
-                    m_input.Read (alpha, 0, alpha.Length);
+                    m_input.AsStream.ReadExactlyCompat (alpha, 0, alpha.Length);
                 return ApplyAlpha (alpha, stride);
             }
             return ImageData.CreateFlipped (m_info, Format, Palette, m_output, Stride);

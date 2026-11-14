@@ -50,7 +50,7 @@ namespace GameRes.Formats
                 if (null == stream)
                     return null;
                 var res = new byte[stream.Length];
-                stream.Read (res, 0, res.Length);
+                stream.ReadExactlyCompat (res, 0, res.Length);
                 return res;
             }
         }

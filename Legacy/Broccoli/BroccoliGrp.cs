@@ -2,8 +2,15 @@ using System;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq; // Added for list operations if necessary
+#if NET8_0_OR_GREATER
+using GARbro.Imaging;
+using BitmapSource = GARbro.Imaging.PixelBuffer;
+using Int32Rect = GARbro.Imaging.PixelRect;
+#else
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+#endif
+
 using GameRes.Utility;
 
 namespace GameRes.Formats.Broccoli
@@ -81,7 +88,7 @@ namespace GameRes.Formats.Broccoli
                 if (info.BPP == 8)
                 {
                     var gray = new byte[info.Width * info.Height];
-                    stream.Read(gray, 0, gray.Length);
+                    stream.ReadExactlyCompat(gray, 0, gray.Length);
                     return ImageData.Create(info, PixelFormats.Gray8, null, gray);
                 }
 
@@ -91,7 +98,7 @@ namespace GameRes.Formats.Broccoli
                 // Use your Python script to combine with the mask later.
                 
                 var pixels = new byte[info.Width * info.Height * 4];
-                stream.Read(pixels, 0, pixels.Length);
+                stream.ReadExactlyCompat(pixels, 0, pixels.Length);
 
                 // The format is usually Bgr32 (the 4th byte is garbage/padding, not real alpha)
                 return ImageData.Create(info, PixelFormats.Bgr32, null, pixels);

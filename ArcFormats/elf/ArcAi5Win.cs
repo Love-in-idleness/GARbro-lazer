@@ -162,7 +162,7 @@ namespace GameRes.Formats.Elf
                     return null;
             }
             if (n != 0)
-                return Encodings.cp932.GetString (m_name_buf, 0, n);
+                return Encodings.ResourceEncoding.GetString (m_name_buf, 0, n);
             else
                 return null;
         }

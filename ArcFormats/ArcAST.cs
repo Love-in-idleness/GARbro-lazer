@@ -89,7 +89,7 @@ namespace GameRes.Formats.AST
                         packed_size = next_offset - offset;
                     else
                         return null;
-                    string name = Encodings.cp932.GetString (name_buf, 0, name_length);
+                    string name = Encodings.ResourceEncoding.GetString (name_buf, 0, name_length);
                     var entry = new PackedEntry
                     {
                         Name = name,
