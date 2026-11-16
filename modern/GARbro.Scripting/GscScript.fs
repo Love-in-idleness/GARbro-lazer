@@ -221,6 +221,7 @@ type GscScript private () =
                 let result = StringBuilder($";@gsc-byte-format {byteFormat}\n;@gsc-schema {name}\n")
                 if header=36 then result.AppendLine($";@gsc-trailer-header {table} {names}").AppendLine(";@gsc-trailer " + Convert.ToHexString(trailer)) |> ignore
                 for pos,op,kinds,values in instructions do
+                    if result.Length > (64 <<< 20) then invalid "Output limit exceeded."
                     if targets.Contains(pos) then result.AppendLine(":" + GscLayout.label pos) |> ignore
                     let command = if op &&& 0xf000 <> 0 then $"vm 0x{op:x4}" elif op=3 then "jz" elif op=4 then "jnz" elif op=5 then "goto" else Map.tryFind op GscLayout.names |> Option.defaultValue ($"opcode {op}")
                     result.Append('*').Append(command) |> ignore

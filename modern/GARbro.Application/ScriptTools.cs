@@ -124,9 +124,7 @@ internal static class ScriptTools
                         new Xp3Entry { Name = originalName, UnpackedSize = (uint)source.Length }, source) : source)
                         ScriptTextEncoding.WriteUtf8(text, destination, encoding, cancellation);
                     return;
-                case "BSD":
-                    if (!IsBgi(source)) throw new InvalidDataException("Unsupported BGI script signature.");
-                    break;
+
             }
         }
         ConvertWithHelper(input, destination, format, maxBytes, cancellation);

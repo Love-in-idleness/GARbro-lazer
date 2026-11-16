@@ -208,7 +208,7 @@ type BgiScript private () =
                     let fmt = payload op args
                     let args = if bp && op.Op=5 && args.Length=2 then [|args[1]|] else args
                     for i in 0..args.Length-1 do
-                        let arg = args[i]
+                        let arg = match defines.TryGetValue(args[i]) with true,value -> value | _ -> args[i]
                         let value =
                             if arg.StartsWith("\"") then int64 (intern arg)-(if bp then int64 ipos else 0L)
                             elif bp && (op.Op=5 || op.Op=6 || symbols.ContainsKey(arg)) then BgiLayout.resolve symbols arg-int64 ipos
@@ -223,7 +223,7 @@ type BgiScript private () =
     static member Export(data: byte[], encoding: Encoding, cancellation: CancellationToken) =
         use input = new MemoryStream(data,false)
         use reader = new BinaryReader(input)
-        if data.Length<36 || Encoding.ASCII.GetString(data,0,26)<>"BurikoCompiledScriptVer1.00" then invalid "Unsupported BGI script signature."
+        if data.Length<36 || Encoding.ASCII.GetString(data,0,27)<>"BurikoCompiledScriptVer1.00" then invalid "Unsupported BGI script signature."
         input.Position <- 28L
         let start = 28+int (reader.ReadUInt32())
         if start<36 || start>data.Length then invalid "Invalid BGI header."

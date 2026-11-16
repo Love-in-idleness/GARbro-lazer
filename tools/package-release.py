@@ -125,7 +125,7 @@ def main():
                 if header in magic:subprocess.run(['codesign','--force','--sign','-',str(file)],check=True)
         subprocess.run(['codesign','--force','--deep','--sign','-',str(stage/'GARbro.app')],check=True)
     licenses(stage)
-    (stage/'README.txt').write_text(f'GARbro {args.version} ({args.rid})\nRequires the .NET 10 runtime.\n'
+    (stage/'README.txt').write_text(f'GARbro {args.version} ({args.rid})\nRequires the .NET 11 runtime.\n'
         'This archive is unsigned. See compatibility.md for verified formats and known limits.\n'
         'GUI and CLI share app/: run app/garbro for commands or app/GARbro.Desktop for the GUI.\n'
         'On Windows use the corresponding .exe files; on macOS open GARbro.app and find the CLI in GARbro.app/Contents/Resources/app.\n')

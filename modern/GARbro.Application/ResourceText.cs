@@ -29,6 +29,12 @@ public sealed class ResourceText
     public string ErrorMessage(string message)
     {
         if (string.IsNullOrEmpty(message)) return message;
+        if(message.StartsWith("Script line ",StringComparison.Ordinal))
+        {
+            int colon=message.IndexOf(": ",StringComparison.Ordinal);
+            if(colon>12 && int.TryParse(message.AsSpan(12,colon-12),out int line))
+                return Format("ScriptLineError",line,ErrorMessage(message[(colon+2)..]));
+        }
         foreach (string key in errorKeys)
             if (message.StartsWith(key[6..], StringComparison.Ordinal)) return this[key] + message[(key.Length - 6)..];
         int separator=message.IndexOf(": ",StringComparison.Ordinal);
