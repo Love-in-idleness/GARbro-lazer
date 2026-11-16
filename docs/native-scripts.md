@@ -27,3 +27,17 @@ The final four-column output selector passed [UI validation 43887536229](https:/
 ![Chinese script output selector](screenshots/scripts-zh-CN.png)
 
 The .NET 11 Store build and shared-payload startup checks passed in [43885255368](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/43885255368). The side-load MSIX install/upgrade/file-activation/uninstall checks passed in [43885714267](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/43885714267). These are development artifacts; no release assets were changed.
+
+
+Android 12/API 31 x64 emulator validation passed in [job 133374380837](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/43888883127/job/133374380837): shared browser, IPC extraction, text/PNG previews, manual PCM audio, cancellation, SAF access/conflicts/revocation, native ASB roundtrip and all 22 archive writers. The workflow was then cancelled only to avoid building superseded packages; its successful test job and diagnostic artifact remain available. This exposed and fixed double pipe closure, odd PCM buffer sizes and Android-owned directory aliases; child symlink checks remain enabled.
+
+Final [UI validation 43891230042](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/43891230042) passed three checks, including a 400 px browser that keeps filenames readable by hiding the type column. The same responsive code is used on Windows, Linux and Android.
+
+![Narrow shared browser](screenshots/browser-narrow.png)
+
+Final APKs use source commit `6ae73a4dbcf544e1d61e5205aa7729a16ecef5aa`, built in [43891237292](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/43891237292) without repeating the completed emulator check:
+
+- [ARM64 development APK and SHA-256](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/43891237292/artifacts/14237087450)
+- [x64 development APK and SHA-256](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/43891237292/artifacts/14235799835)
+
+Both package jobs passed the ABI/package checks, `zipalign -P 16` and `apksigner verify`. They use temporary development signatures; a persistent publication key is still required for update-compatible public Android releases. No new GitHub Release was published. The emulator ran x64; ARM64 was built and checked, not executed on a real device. Full Flatpak offline builds and macOS tests were not run for this change. The known independent Wayland rebuild hash mismatch remains as documented in the previous release; the shipped compatibility package is unchanged.
