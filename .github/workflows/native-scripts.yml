@@ -1,5 +1,8 @@
 name: Native scripts and .NET 11
 on:
+  push:
+    branches: [migration/net10]
+    paths: [".github/workflows/native-scripts.yml"]
   workflow_dispatch:
 permissions:
   contents: read
