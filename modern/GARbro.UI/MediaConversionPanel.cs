@@ -30,7 +30,7 @@ public sealed class MediaConversionPanel : StackPanel
         {
             var field=new Grid {RowDefinitions=new("Auto,Auto"),RowSpacing=6};field.RowDefinitions[0].SharedSizeGroup="FormatLabels";field.RowDefinitions[1].SharedSizeGroup="FormatControls";field.Children.Add(Dialogs.Label(text,label));
             Grid.SetColumn(field,columns.Children.Count);columns.Children.Add(field);
-            var selector=new ComboBox {Name=name,ItemsSource=choices,SelectedIndex=initial,HorizontalAlignment=HorizontalAlignment.Stretch,
+            var selector=new ComboBox {Name=name,ItemsSource=choices,SelectedIndex=initial,HorizontalAlignment=HorizontalAlignment.Stretch,VerticalAlignment=VerticalAlignment.Stretch,
                 ItemTemplate=new FuncDataTemplate<UiChoice>((choice,_)=>new TextBlock {Text=choice?.Label,TextWrapping=TextWrapping.Wrap,MaxWidth=490})};
             selector.SelectionChanged+=(_,_)=>Changed?.Invoke();Grid.SetRow(selector,1);field.Children.Add(selector);return selector;
         }

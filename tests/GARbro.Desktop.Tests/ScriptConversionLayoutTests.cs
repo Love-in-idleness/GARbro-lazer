@@ -36,11 +36,11 @@ public sealed class ScriptConversionLayoutTests
                 target.SelectedItem=target.Items.OfType<UiChoice>().Single(c=>c.Value=="GSC");
                 await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);await Task.Delay(60);
                 var selectors=controls.OfType<ComboBox>().Where(c=>c.Name is "ImageOutputFormat" or "AudioOutputFormat" or "VideoOutputFormat" or "ScriptOutputFormat").ToArray();
-                var rows=selectors.Select(c=>c.TranslatePoint(new Point(),host).Value.Y).ToArray();Assert.True(rows.Max()-rows.Min()<1);
-                var action=controls.OfType<Button>().Single(c=>c.Content as string==text["Start"]);var at=action.TranslatePoint(new Point(),host).Value;
-                Assert.True(at.Y>=0 && at.Y+action.Bounds.Height<=host.ClientSize.Height+1);
                 using var frame=host.CaptureRenderedFrame();Assert.NotNull(frame);
                 if(snapshots!=null)frame.Save(Path.Combine(snapshots,$"scripts-{language}.png"),new PngBitmapEncoderOptions());
+                var rows=selectors.Select(c=>c.TranslatePoint(new Point(),host).Value.Y).ToArray();Assert.True(rows.Max()-rows.Min()<1,string.Join(", ",selectors.Select((c,i)=>c.Name+"="+rows[i])));
+                var action=controls.OfType<Button>().Single(c=>c.Content as string==text["Start"]);var at=action.TranslatePoint(new Point(),host).Value;
+                Assert.True(at.Y>=0 && at.Y+action.Bounds.Height<=host.ClientSize.Height+1);
                 host.Close();await pending;
             }
         }
