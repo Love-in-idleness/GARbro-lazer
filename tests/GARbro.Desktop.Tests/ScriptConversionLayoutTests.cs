@@ -16,6 +16,27 @@ using Xunit;
 public sealed class ScriptConversionLayoutTests
 {
     [AvaloniaFact]
+    public async Task NarrowBrowserKeepsFileNamesReadable()
+    {
+        string root=Path.Combine(Path.GetTempPath(),"garbro-narrow-"+Guid.NewGuid());Directory.CreateDirectory(root);
+        string input=Path.Combine(root,"input");Directory.CreateDirectory(input);File.WriteAllText(Path.Combine(input,"中文 日本語 filename.txt"),"text");
+        var store=new SettingsStore(Path.Combine(root,"settings.json"));store.Save(new AppSettings {Language="en-US",ToolbarVisible=false});
+        var window=new MainWindow(store) {MinWidth=360,Width=400,Height=800};window.Show();
+        try
+        {
+            await window.LoadArchiveAsync(input);
+            await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);await Task.Delay(100);
+            var row=Assert.Single(window.GetVisualDescendants().OfType<Grid>().Where(c=>c.Name=="BrowserEntryRow"));
+            Assert.False(row.Children[1].IsVisible);Assert.True(row.Children[0].Bounds.Width>140);
+            var filename=Assert.Single(row.GetVisualDescendants().OfType<TextBlock>().Where(c=>c.Name=="EntryFilename"));
+            Assert.True(filename.Bounds.Width>100);
+            string snapshots=Environment.GetEnvironmentVariable("GARBRO_SCRIPT_SCREENSHOTS");
+            if(snapshots!=null){Directory.CreateDirectory(snapshots);using var frame=window.DesktopHost.CaptureRenderedFrame();frame.Save(Path.Combine(snapshots,"browser-narrow.png"),new PngBitmapEncoderOptions());}
+        }
+        finally {window.Close();Directory.Delete(root,true);}
+    }
+
+    [AvaloniaFact]
     public async Task ScriptTargetsShareTheFormatRowAndOfferNoConversionInFourLanguages()
     {
         string snapshots=Environment.GetEnvironmentVariable("GARBRO_SCRIPT_SCREENSHOTS");

@@ -135,18 +135,20 @@ public sealed partial class MainWindow : AppWindow
             string sort = item.Item1.ToLowerInvariant(); label.Click += (_, _) => SetSort(sort);
             Grid.SetColumn(label, item.Item2); headings.Children.Add(label);
         }
+        headings.SizeChanged+=(_,_)=>FitFileColumns(headings,headings.Children[1]);
         list.Children.Add(headings);
         files.ItemTemplate = new FuncDataTemplate<BrowserEntry>((entry, _) =>
         {
             if (entry == null) return new Control();
-            var row = new Grid { ColumnDefinitions = new("*,140,90"), Margin = new Thickness(8, 6) };
-            var name = new Grid { ColumnDefinitions = new("Auto,*"), ColumnSpacing = 10 };
+            var row = new Grid { Name="BrowserEntryRow",ColumnDefinitions = new("*,140,90"), Margin = new Thickness(8, 6) };
+            var name = new Grid { ColumnDefinitions = new("Auto,*"), ColumnSpacing = 10,ClipToBounds=true };
             name.Children.Add(MaterialIcons.Create(entry.IsDirectory ? "Folders" : entry.Type switch { "image" => "Images", "audio" => "Audio", "video" => "Video", "script" => "Text", "archive" => "Process", _ => "Other" }, 20));
-            var filename = new TextBlock { Text = entry.DisplayName, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center }; Grid.SetColumn(filename, 1); name.Children.Add(filename); row.Children.Add(name);
+            var filename = new TextBlock { Name="EntryFilename",Text = entry.DisplayName, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center }; Grid.SetColumn(filename, 1); name.Children.Add(filename); row.Children.Add(name);
             var kind = new TextBlock { Text = entry.IsDirectory ? Text["Folder"] : ResourceType(entry), Opacity = .65, FontSize = 12 };
             Grid.SetColumn(kind, 1); row.Children.Add(kind);
             var size = new TextBlock { Text = entry.IsDirectory ? "" : FormatSize(entry.Size), HorizontalAlignment = HorizontalAlignment.Right, FontSize = 12 };
-            Grid.SetColumn(size, 2); row.Children.Add(size); return row;
+            Grid.SetColumn(size, 2); row.Children.Add(size);
+            row.SizeChanged+=(_,_)=>FitFileColumns(row,kind);return row;
         });
         files.DoubleTapped += async (_, _) => await Guard(OpenSelected);
         files.SelectionChanged += async (_, _) => { if(updatingRows)return; currentTab.Selection=files.SelectedItems.Cast<BrowserEntry>().Select(e=>e.Name).ToArray(); currentTab.Focused=(files.SelectedItem as BrowserEntry)?.Name; UpdateTabHeaders(); UpdateCommands(); await PreviewSelection(); };
@@ -254,6 +256,14 @@ public sealed partial class MainWindow : AppWindow
             Grid.SetColumn(browser.Children[i], narrow ? 0 : i);
         }
         if (width >= 600 && width < 1000 && compactPanel == "FolderPanel") browser.ColumnDefinitions = new("180,*,0");
+    }
+    static void FitFileColumns(Grid row,Control type)
+    {
+        bool compact=row.Bounds.Width<480;
+        type.IsVisible=!compact;
+        double typeWidth=compact?0:140,sizeWidth=compact?76:90;
+        if(row.ColumnDefinitions[1].Width.Value!=typeWidth)row.ColumnDefinitions[1].Width=new(typeWidth);
+        if(row.ColumnDefinitions[2].Width.Value!=sizeWidth)row.ColumnDefinitions[2].Width=new(sizeWidth);
     }
     Button IconButton(string key)
     {
