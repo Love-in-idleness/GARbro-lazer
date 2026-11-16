@@ -20,3 +20,10 @@ Android remains a separate project, so desktop builds do not install mobile work
 Store builds pin runtime/ILLink 11.0.0. The Wayland compatibility package remains pinned to its original SDK 10.0.403 and net10.0 assembly identity, consumed unchanged by .NET 11. Flatpak uses a checksummed, build-only official SDK 11.0.100 archive because no dotnet11 SDK extension is published yet; the SDK is removed during cleanup. Offline NuGet generation resolves with the same SDK in the Freedesktop sandbox.
 
 Focused [CI 43884214985](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/43884214985) passed 36 codec/encoding/worker/packing checks, the four-language conversion layout check and the Linux desktop build. Real Avalonia/Skia renders were inspected in Russian and Chinese; the artifact contains all four languages. Follow-up checks cover the C-string encoding guard. Local test dependency copying stopped when disk space ran out; validation moved to CI. No macOS tests are scheduled.
+
+
+The final four-column output selector passed [UI validation 43887536229](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/43887536229), including the no-conversion option and four languages. Script export/recompile is selected in the same row as image/audio/video formats; narrow layouts wrap automatically.
+
+![Chinese script output selector](screenshots/scripts-zh-CN.png)
+
+The .NET 11 Store build and shared-payload startup checks passed in [43885255368](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/43885255368). The side-load MSIX install/upgrade/file-activation/uninstall checks passed in [43885714267](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/43885714267). These are development artifacts; no release assets were changed.

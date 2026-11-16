@@ -30,8 +30,9 @@ remain authoritative and must accompany binary distribution.
 | Ultz.Native.SDL 2.32.10 / SDL2 | zlib | Windows/macOS native audio; Linux uses system SDL2. Source notice in licenses/SDL2.txt |
 | Material Symbols Outlined | Apache-2.0 | Unified interface icons; source notice in licenses/Material-Symbols.txt |
 | MaterialColorUtilities | MIT | HCT Material color roles |
-| FSharp.Core | MIT | Pure color and diagnostic transformations |
-| SkiaSharp / Hjg.Pngcs / LibTiff.NET | MIT / Apache-2.0 / BSD-3-Clause | Portable raster backend retained for deferred Android work |
+| FSharp.Core | MIT | Pure transformations and native script codecs |
+| Bgi_asdisEN | MIT, Daniel Wu (2025) | BGI/BPD opcode layouts and assembler port |
+| SkiaSharp / Hjg.Pngcs / LibTiff.NET | MIT / Apache-2.0 / BSD-3-Clause | Portable raster backend for Android |
 | Microsoft .NET packages | MIT | MEF, configuration and bounded NRBF record parsing |
 | GPPG / GPLEX runtime sources | BSD-3-Clause | Existing Artemis IPT parser and scanner |
 | xUnit and test tooling | See respective package licenses | Tests only |
@@ -66,3 +67,30 @@ SQLitePCLRaw's Apache-2.0 license is retained there as well (upstream license
 blob `d645695673349e3947e8e5ae42332d0ac3164cd7`).
 
 Media tools on Windows/macOS are FFmpeg 8.0.3 (LGPL-2.1-or-later only, no GPL/nonfree components). They run as separate processes. Corresponding source, licenses and the exact build recipe are included once in the shared `app/media` directory. Linux uses distribution FFmpeg; Flatpak builds the same pinned LGPL source inside the sandbox. See [FFmpeg notice](licenses/FFmpeg.md).
+
+
+## Bgi_asdisEN
+
+The managed BGI/BPD codecs are adapted from Bgi_asdisEN commit `44574e627093899efa9fb4b9b82d78e03fdfe447`. This notice is also embedded in GARbro.Scripting for CLI and Android distributions.
+
+MIT License
+
+Copyright (c) 2025 Daniel Wu
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
