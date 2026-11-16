@@ -129,7 +129,7 @@ garbro create "assets" -o "data.zip" --image-format webp --audio-format wav --di
 garbro create "assets" -o "data.xp3" --format XP3 --scheme none
 ```
 
-`create --help` lists writer parameters, encoding, overwrite and resource limits. A single input folder contributes its contents; multiple inputs retain paths relative to their common parent. Only existing writable archive formats are offered. Converted media may require matching game-engine support; script references are not updated. Script recompilation belongs to format conversion and is not added in this development version.
+`create --help` lists writer parameters, encoding, overwrite and resource limits. A single input folder contributes its contents; multiple inputs retain paths relative to their common parent. Only existing writable archive formats are offered. Converted media may require matching game-engine support; script references are not updated. To recompile scripts, convert the edited files first, then pack the resulting files.
 
 ## Script recompilation (1.1.1)
 
@@ -152,4 +152,4 @@ Use a separate output folder. Source files stay unchanged; failed compilation pr
 
 Android 12 or later is required. Choose the ARM64 APK for most phones and tablets, or x64 for an x86 emulator. Install through Android's package installer; use the system file/folder picker to grant access. GARbro uses the same tabbed interface and background decoder service. Video/audio preview uses Android's system player. FFmpeg-based media conversion and optional desktop script tools are unavailable on Android. CI APKs are development builds, not an F-Droid/IzzyOnDroid release; temporary-key builds cannot update an installation signed with a different key.
 
-The current development source requires .NET 11 on desktop. Published 1.1.0 desktop packages still require .NET 10; Store/Flatpak packages include their runtime.
+Desktop version 1.1.1 requires .NET 11. Store and Flatpak include their runtime; other desktop packages require the matching .NET 11 Runtime to be installed.

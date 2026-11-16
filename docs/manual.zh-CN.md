@@ -108,7 +108,7 @@ garbro create "assets" -o "data.zip" --image-format webp --audio-format wav --di
 garbro create "assets" -o "data.xp3" --format XP3 --scheme none
 ```
 
-`create --help` 列出归档参数、编码、覆盖策略和资源限制。单目录以其内容为根，多输入保留相对于共同父目录的路径。只提供已有可写归档格式。游戏能否读取转换后的媒体取决于引擎支持，不会自动修改脚本中的资源引用。脚本回编译属于格式转换，本开发版不新增回编译。
+`create --help` 列出归档参数、编码、覆盖策略和资源限制。单目录以其内容为根，多输入保留相对于共同父目录的路径。只提供已有可写归档格式。游戏能否读取转换后的媒体取决于引擎支持，不会自动修改脚本中的资源引用。脚本回编属于格式转换：请先转换编辑好的脚本，再将结果封包。
 
 ## 脚本回编（1.1.1）
 
@@ -131,4 +131,4 @@ garbro convert edited.txt -o data.dsm --to DSM
 
 需要 Android 12 或更高版本。大多数手机和平板选择 ARM64 APK，x86 模拟器选择 x64。通过系统安装器安装后，用系统文件／目录选择器授权访问资源。沿用相同的标签页界面和后台解码服务；音视频预览使用 Android 系统播放器。Android 暂不支持依赖 FFmpeg 的媒体转换和可选桌面脚本工具。CI APK 是开发包，尚未进入 F-Droid／IzzyOnDroid；临时签名与其他签名不兼容，不能直接覆盖安装。
 
-当前桌面开发源码需要 .NET 11；已发布的 1.1.0 桌面包仍需要 .NET 10。商店与 Flatpak 包自带运行时。
+桌面版 1.1.1 使用 .NET 11。商店与 Flatpak 包自带运行时；其他桌面包需要先安装对应架构的 .NET 11 Runtime。
