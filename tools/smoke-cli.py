@@ -13,7 +13,7 @@ parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--dotnet',default='dotnet')
 parser.add_argument('--cli',type=Path,help='Use a published or unpacked CLI instead of build output')
 args=parser.parse_args()
-CLI=args.cli.resolve()if args.cli else ROOT/'modern/GARbro.Cli/bin/Release/net10.0/garbro.dll'
+CLI=args.cli.resolve()if args.cli else ROOT/'modern/GARbro.Cli/bin/Release/net11.0/garbro.dll'
 FIX=ROOT/'tests/fixtures/generated'
 def run(*arguments,code=0,cwd=ROOT):
  result=subprocess.run([args.dotnet,str(CLI),'--json',*map(str,arguments)],capture_output=True,text=True,cwd=cwd)

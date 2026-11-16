@@ -1,6 +1,6 @@
 # GARbro user guide
 
-Install the .NET 10 Runtime before starting a portable or side-loaded GARbro package.
+Install the .NET 11 Runtime before starting a portable or side-loaded GARbro package.
 The Microsoft Store and Flatpak packages carry their runtime. Linux DEB installations also
 need the native libraries listed in linux-desktop.md. Windows MSIX preview
 packages use a test certificate; trust the certificate supplied with that release
@@ -130,3 +130,26 @@ garbro create "assets" -o "data.xp3" --format XP3 --scheme none
 ```
 
 `create --help` lists writer parameters, encoding, overwrite and resource limits. A single input folder contributes its contents; multiple inputs retain paths relative to their common parent. Only existing writable archive formats are offered. Converted media may require matching game-engine support; script references are not updated. Script recompilation belongs to format conversion and is not added in this development version.
+
+## Script recompilation (1.1.1 development)
+
+Select the edited files and choose **Convert → Convert scripts → Recompile**. Choose GSC for TSC, BGI for BSD, BGI-BP for BPD, or ASB for its structured JSON export. Plain text can become NSCRIPT (`nscript.dat`) or DSM (`data.dsm`). Each target uses its original intermediate format; dialogue-only ASB JSON is not accepted.
+
+These six compilers are built into GARbro and work on desktop and Android without Python or another compiler. Source text must use UTF-8 or a Unicode BOM. The text encoding option selects the compiled strings: Auto uses CP932 for GSC/BGI/NScripter and UTF-8 for ASB; DSM always uses UTF-8. Characters that cannot be encoded produce an error. BGI sources referencing an external `#string_table` must first be merged into a self-contained BSD. Unknown GSC layouts export as checked raw envelopes; their payload is preserved, not translated.
+
+```sh
+garbro convert edited.tsc -o scene.gsc --encoding shift-jis
+garbro convert edited.bsd -o scene --to BGI
+garbro convert edited.bpd -o scene._bp --to BGI-BP
+garbro convert edited.json -o scene.asb
+garbro convert edited.txt -o nscript.dat --to NSCRIPT --encoding gbk
+garbro convert edited.txt -o data.dsm --to DSM
+```
+
+Use a separate output folder. Source files stay unchanged; failed compilation preserves an existing output. When several text files would all become `nscript.dat` or `data.dsm`, convert them separately. Recompilation does not change the game engine or guarantee support for a new character set. Ren'Py/RGSS and compiled TJS exports still use optional desktop tools.
+
+## Android development build
+
+Android 12 or later is required. Choose the ARM64 APK for most phones and tablets, or x64 for an x86 emulator. Install through Android's package installer; use the system file/folder picker to grant access. GARbro uses the same tabbed interface and background decoder service. Video/audio preview uses Android's system player. FFmpeg-based media conversion and optional desktop script tools are unavailable on Android. CI APKs are development builds, not an F-Droid/IzzyOnDroid release; temporary-key builds cannot update an installation signed with a different key.
+
+The current development source requires .NET 11 on desktop. Published 1.1.0 desktop packages still require .NET 10; Store/Flatpak packages include their runtime.

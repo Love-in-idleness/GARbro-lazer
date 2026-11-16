@@ -16,7 +16,7 @@ used to reconstruct hashed DXA keys.
 Reproduce from the artifact's `Formats.json` after building the portable solution:
 
 ```sh
-dotnet modern/GARbro.Cli/bin/Release/net10.0/garbro.dll schemes /path/to/Formats.json --json > import-report.json
+dotnet modern/GARbro.Cli/bin/Release/net11.0/garbro.dll schemes /path/to/Formats.json --json > import-report.json
 python3 tools/prepare-schemes.py /path/to/Formats.json --report import-report.json
 ```
 

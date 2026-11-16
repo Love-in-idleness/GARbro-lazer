@@ -44,6 +44,13 @@ public static class AndroidSelfTest
             File.WriteAllText(Path.Combine(createRoot, "hello.txt"), "Hello writer!\n"); File.WriteAllBytes(Path.Combine(createRoot, "00000001.scr"), new byte[] { 0x53, 0x43, 0x52, 0, 1, 2, 3, 4 });
             var catalog = await Request<ResourceFormatInfo[]>(new("resource-catalog", null)); Check(catalog.Length == 1247, "Provider catalog changed.");
             var writers = catalog.Where(f => f.Type == "archive" && f.CanWrite).ToArray(); Check(writers.Length == 22, "Writer catalog changed.");
+            string scriptFile=Path.Combine(createRoot,"scene.json");
+            File.WriteAllText(scriptFile,"[\"日本語\"]");
+            string compiledScript=Path.Combine(root,"native.asb");
+            await Request<ResourceConversion>(new("resource-convert",null,Location:new(createRoot),Entry:"scene.json",Output:compiledScript,FormatId:"ASB"));
+            string exportedScript=Path.Combine(root,"native.json");
+            await Request<ResourceConversion>(new("resource-convert",null,Location:new(root),Entry:"native.asb",Output:exportedScript,FormatId:"JSON"));
+            Check(File.ReadAllText(exportedScript).Contains("日本語") || File.ReadAllText(exportedScript).Contains("\\u65E5"),"Native ASB compilation failed."); checks.Add("native-script-roundtrip");
             var exports = new List<object>(); string archives = Path.Combine(root, "created-archives"); Directory.CreateDirectory(archives);
             for (int i = 0; i < writers.Length; i++)
             {

@@ -21,7 +21,7 @@ try:
         manager=subprocess.Popen([args.window_manager,'--sm-disable'],stdout=manager_log,stderr=subprocess.STDOUT)
         time.sleep(.5)
         if manager.poll()is not None:raise RuntimeError('The test window manager did not start: '+(args.output/'window-manager.log').read_text())
-    subprocess.run([args.dotnet,str(ROOT/'tests/GARbro.Desktop.NativeSmoke/bin/Release/net10.0/GARbro.Desktop.NativeSmoke.dll'),
+    subprocess.run([args.dotnet,str(ROOT/'tests/GARbro.Desktop.NativeSmoke/bin/Release/net11.0/GARbro.Desktop.NativeSmoke.dll'),
                     str(ROOT/'tests/fixtures/generated/standard.xfl'),str(args.output.resolve())],check=True,timeout=90 if os.environ.get("GARBRO_LOCALIZATION_SNAPSHOTS")=="1" else 45)
 finally:
     if manager is not None:

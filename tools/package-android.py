@@ -12,7 +12,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','0.3.0-preview.1'))
+    parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','1.1.1'))
     parser.add_argument('--rid',choices=['android-arm64','android-x64'],default='android-arm64')
     parser.add_argument('--test',action='store_true')
     parser.add_argument('--sign',action='store_true')

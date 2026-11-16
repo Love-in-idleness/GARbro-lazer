@@ -259,14 +259,24 @@ public static partial class ResourceService
         string forcedType=options.TypeOverrides?.GetValueOrDefault(name);
         if (forcedType is null or "script")
         {
-            string script = ScriptOutputFormats.ForInput(name);
-            if (script == null && options.ConvertScripts && ScriptOutputFormats.NeedsSignature(name))
+            if (options.ConvertScripts && options.ScriptFormat != null)
             {
-                using var input = session.OpenEntry(name);
-                if (ScriptTools.IsBgi(input)) script = "BSD";
+                if (!ScriptOutputFormats.Recompile.Contains(options.ScriptFormat)) throw new ArgumentException("Unsupported script output format.");
+                if (ScriptOutputFormats.CanRecompile(name, options.ScriptFormat))
+                    return (options.ScriptFormat, ScriptOutputFormats.RecompileOutput(output, options.ScriptFormat));
+                if (ScriptOutputFormats.ForInput(name) != null || ScriptOutputFormats.HasRecompileInput(name)) return (null, null);
             }
-            if (script != null)
-                return options.ConvertScripts ? (script,Path.ChangeExtension(output,script.ToLowerInvariant())) : (null,null);
+            else
+            {
+                string script = ScriptOutputFormats.ForInput(name);
+                if (script == null && options.ConvertScripts && ScriptOutputFormats.NeedsSignature(name))
+                {
+                    using var input = session.OpenEntry(name);
+                    if (ScriptTools.IsBgi(input)) script = "BSD";
+                }
+                if (script != null)
+                    return options.ConvertScripts ? (script,Path.ChangeExtension(output,script.ToLowerInvariant())) : (null,null);
+            }
         }
         string kind=MediaKind(session,name,forcedType);
         string format=kind switch {"image"=>options.ImageFormat,"audio"=>options.AudioFormat,"video"=>options.VideoFormat,_=>null};
@@ -283,7 +293,8 @@ public static partial class ResourceService
         if (formatId is "FLAC" or "M4A" or "MP4" or "MKV")
             return ConvertStandardMedia(session,name,output,formatId,overwrite,maxBytes,completed,prohibited);
         bool script = ScriptOutputFormats.Supports(formatId);
-        if (script && ScriptOutputFormats.ForInput(name) != formatId &&
+        bool recompile = ScriptOutputFormats.Recompile.Contains(formatId);
+        if (script && (recompile ? !ScriptOutputFormats.CanRecompile(name, formatId) : ScriptOutputFormats.ForInput(name) != formatId) &&
             !(formatId == "BSD" && ScriptOutputFormats.NeedsSignature(name)))
             throw new NotSupportedException("The selected output format does not match this script.");
         string scratch = WorkerTemporaryFiles.CreateDirectory(Path.GetTempPath());
@@ -386,7 +397,7 @@ public static partial class ResourceService
 
     public static void CopyOriginalMedia(ResourceSession session, string name, string converted, OverwritePolicy overwrite)
     {
-        string copy = Path.ChangeExtension(converted, Path.GetExtension(name.Replace('\\', '/')));
+        string copy = Path.Combine(Path.GetDirectoryName(converted), Path.GetFileName(name.Replace('\\', '/')));
         if (Path.GetFullPath(copy).Equals(Path.GetFullPath(converted), StringComparison.OrdinalIgnoreCase)) return;
         string sourcePath=session.Physical?session.PhysicalPath(name):session.Location.RootPath;
         if(Path.GetFullPath(copy).Equals(Path.GetFullPath(sourcePath),OperatingSystem.IsWindows()?StringComparison.OrdinalIgnoreCase:StringComparison.Ordinal))return;

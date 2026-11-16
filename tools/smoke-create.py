@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--dotnet', default='dotnet')
 args = parser.parse_args()
-cli = ROOT/'modern/GARbro.Cli/bin/Release/net10.0/garbro.dll'
+cli = ROOT/'modern/GARbro.Cli/bin/Release/net11.0/garbro.dll'
 
 def run(*arguments, code=0):
     result = subprocess.run([args.dotnet, str(cli), '--json', *map(str, arguments)], capture_output=True, text=True)

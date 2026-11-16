@@ -8,9 +8,9 @@
     <Compile Include="Program.fs" />
     <PackageReference Include="FSharp.Core" />
     <!-- Build tool only; keep aligned with the Store's pinned runtime. -->
-    <PackageDownload Include="Microsoft.NET.ILLink.Tasks" Version="[10.0.14]" />
+    <PackageDownload Include="Microsoft.NET.ILLink.Tasks" Version="[11.0.0]" />
   </ItemGroup>
   <Target Name="WriteLinkerLocation" AfterTargets="Build">
-    <WriteLinesToFile File="$(TargetDir)illink-path.txt" Lines="$(NuGetPackageRoot)/microsoft.net.illink.tasks/10.0.14/tools/net/illink.dll" Overwrite="true" />
+    <WriteLinesToFile File="$(TargetDir)illink-path.txt" Lines="$(NuGetPackageRoot)/microsoft.net.illink.tasks/11.0.0/tools/net/illink.dll" Overwrite="true" />
   </Target>
 </Project>

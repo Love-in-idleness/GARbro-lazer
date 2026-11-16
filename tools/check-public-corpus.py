@@ -36,7 +36,7 @@ def main():
             partial.unlink()
             raise ValueError('Public corpus SHA-256 does not match the official release.')
         partial.replace(package)
-    cli=ROOT/'modern/GARbro.Cli/bin/Release/net10.0/garbro.dll'
+    cli=ROOT/'modern/GARbro.Cli/bin/Release/net11.0/garbro.dll'
     with tempfile.TemporaryDirectory(prefix='garbro-public-corpus-') as folder:
         output=Path(folder)
         subprocess.run([args.dotnet,str(cli),'extract',str(package),'-o',str(output),'--json'],

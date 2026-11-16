@@ -29,7 +29,7 @@ version=os.environ.get('GARBRO_PACKAGE_VERSION','1.0.5')
 application=Path('/app/lib/garbro/app')
 for project in ('GARbro.Desktop','GARbro.Worker','GARbro.Cli'):
     path=f'modern/{project}/{project}.csproj'
-    options=['-r',rid,'-p:SelfContained=true','-p:RuntimeFrameworkVersion=10.0.14','-p:NuGetAudit=false']
+    options=['-r',rid,'-p:SelfContained=true','-p:RuntimeFrameworkVersion=11.0.0','-p:NuGetAudit=false']
     subprocess.run(['dotnet','restore',path,*options,'--configfile',str(offline_config)],check=True)
     subprocess.run(['dotnet','publish',path,*options,'--no-restore','-c','Release','-o',str(application),
                     '-p:Version='+version,'-m:1','-nr:false','-p:UseSharedCompilation=false'],check=True)

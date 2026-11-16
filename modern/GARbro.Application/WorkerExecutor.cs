@@ -64,7 +64,7 @@ public static class WorkerExecutor
                             {
                                 var target=request.FormatId=="MEDIA"?ResourceService.MediaConversionTarget(resource,request.Entry,request.Output,request.ResourceOptions??new()):(request.FormatId,request.Output);
                                 if(target.Item1==null){value=new ResourceConversion(null,0,false);break;}
-                                var converted=ResourceService.ConvertFile(resource,request.Entry,target.Item2,target.Item1,request.Overwrite);
+                                var converted=ResourceService.ConvertFile(resource,request.Entry,target.Item2,target.Item1,request.Overwrite,maxBytes:request.Extraction?.MaxEntryBytes ?? (2L << 30));
                                 if(converted.Written && request.ResourceOptions?.DiscardOriginalMedia==false)
                                     ResourceService.CopyOriginalMedia(resource,request.Entry,converted.Path,request.Overwrite);
                                 value=converted;

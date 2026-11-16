@@ -15,12 +15,14 @@ public sealed class MediaConversionPanel : StackPanel
 {
     readonly ComboBox image,audio,video;
     readonly CheckBox scripts;
+    readonly ComboBox scriptOutput;
     public event Action Changed;
     static string Value(ComboBox selector) => (selector.SelectedItem as UiChoice)?.Value is {Length:>0} value?value:null;
     public string ImageFormat => Value(image);
     public string AudioFormat => Value(audio);
     public string VideoFormat => Value(video);
     public bool ConvertScripts => scripts?.IsChecked==true;
+    public string ScriptFormat => scriptOutput == null ? null : Value(scriptOutput);
     public bool HasConversion => ImageFormat!=null || AudioFormat!=null || VideoFormat!=null || ConvertScripts;
     public MediaConversionPanel(DesktopText text,ResourceFormatInfo[] imageFormats=null,bool batch=false,bool offerScripts=false)
     {
@@ -57,6 +59,16 @@ public sealed class MediaConversionPanel : StackPanel
             };
             scripts.IsCheckedChanged += (_, _) => Changed?.Invoke();
             Children.Add(scripts);
+            Children.Add(Dialogs.Label(text,"ScriptOutputFormat"));
+            scriptOutput = new ComboBox
+            {
+                Name="ScriptOutputFormat", HorizontalAlignment=HorizontalAlignment.Stretch,
+                ItemsSource=new[]{new UiChoice("",text["ScriptExport"])}.Concat(ScriptOutputFormats.Recompile.Select(format=>
+                    new UiChoice(format,text["ScriptRecompile"]+" · "+format))).ToArray(),SelectedIndex=0,
+                ItemTemplate=new FuncDataTemplate<UiChoice>((choice,_)=>new TextBlock {Text=choice?.Label,TextWrapping=TextWrapping.Wrap})
+            };
+            scripts.IsCheckedChanged+=(_,_)=>scriptOutput.IsEnabled=ConvertScripts;
+            scriptOutput.SelectionChanged+=(_,_)=>Changed?.Invoke();Children.Add(scriptOutput);
             Children.Add(new TextBlock { Text = text["ScriptConverterHint"], TextWrapping = TextWrapping.Wrap, Classes = { "muted" } });
         }
     }

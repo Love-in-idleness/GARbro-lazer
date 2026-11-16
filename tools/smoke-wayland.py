@@ -72,7 +72,7 @@ def main():
                 helper=subprocess.Popen([str(executable),str(probe)],env=environment,stdout=ime_log,stderr=subprocess.STDOUT)
                 wait_for(lambda:(probe/'ime-helper-ready').exists(),helper,'Input-method protocol probe did not start.')
                 environment['WAYLAND_DEBUG']='client'
-                subprocess.run([args.dotnet,str(ROOT/'tests/GARbro.Desktop.NativeSmoke/bin/Release/net10.0/GARbro.Desktop.NativeSmoke.dll'),
+                subprocess.run([args.dotnet,str(ROOT/'tests/GARbro.Desktop.NativeSmoke/bin/Release/net11.0/GARbro.Desktop.NativeSmoke.dll'),
                     str(ROOT/'tests/fixtures/generated/standard.xfl'),str(probe),'--wayland-ime'],
                     env=environment,stdout=app_log,stderr=subprocess.STDOUT,check=True,timeout=45)
                 if helper.wait(timeout=5)!=0:raise RuntimeError('Input-method protocol probe failed.')

@@ -54,7 +54,7 @@ def main():
     import dbus
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--dotnet',default='dotnet')
-    parser.add_argument('--probe',type=Path,default=ROOT/'tests/GARbro.Desktop.NativeSmoke/bin/Release/net10.0/GARbro.Desktop.NativeSmoke.dll')
+    parser.add_argument('--probe',type=Path,default=ROOT/'tests/GARbro.Desktop.NativeSmoke/bin/Release/net11.0/GARbro.Desktop.NativeSmoke.dll')
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--expect-fallback',action='store_true',help='Require protocol absence, e.g. on KWin 5.27')
     parser.add_argument('--cursor-size',default='8',help='Client fallback size; ignored by compositor-owned shapes')

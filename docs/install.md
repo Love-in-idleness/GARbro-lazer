@@ -1,13 +1,13 @@
 # Install GARbro 1.0
 
-Portable downloads, DEB and side-loaded MSIX require the external **.NET 10 Runtime**
+Portable downloads, DEB and side-loaded MSIX require the external **.NET 11 Runtime**
 (not the Windows Desktop Runtime or SDK), matching the package architecture. Linux
 packages support Debian 13 and Ubuntu 24.04 on x64 and ARM64. Store submission
 packages carry their runtime; they are not ordinary side-loading downloads.
 
 ## Debian / Ubuntu
 
-Enable a .NET 10 package source for your distribution using Microsoft's official
+Enable a .NET 11 package source for your distribution using Microsoft's official
 instructions (Ubuntu's distribution archive may also supply it). Then install:
 
 ```sh
@@ -31,7 +31,7 @@ The Linux tarball can also be unpacked and run without installation. See
 
 ## Windows MSIX
 
-Install the x64 or ARM64 .NET 10 Runtime matching your chosen package first. Download the MSIX and **matching public
+Install the x64 or ARM64 .NET 11 Runtime matching your chosen package first. Download the MSIX and **matching public
 `.cer` certificate** from the same release and verify `SHA256SUMS`.
 The MSIX uses a self-signed preview certificate. Review its subject
 `CN=GARbro-no-wpf-Test` and fingerprint before trusting it. In an administrator
@@ -60,7 +60,7 @@ run `app\GARbro.Desktop.exe`; the CLI is `app\garbro.exe`.
 ## macOS
 
 macOS 14 or later is supported on Intel (`osx-x64`) and Apple silicon (`osx-arm64`).
-Install the matching .NET 10 Runtime, open the DMG and copy its whole GARbro folder
+Install the matching .NET 11 Runtime, open the DMG and copy its whole GARbro folder
 to `/Applications` or `~/Applications`. Open `GARbro.app`; the command-line tool
 is `GARbro.app/Contents/Resources/app/garbro` and shares the application's libraries.
 Tarballs are also available. Keep the accompanying files together.

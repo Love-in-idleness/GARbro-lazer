@@ -1,5 +1,7 @@
 # GARbro-lazer
 
+
+Development version 1.1.1 uses .NET 11; the published 1.1.0 downloads still use .NET 10. See the [guide](docs/manual.en-US.md) for Android development builds and native script compilation.
 [简体中文](README.md) · **English** · [Русский](README.ru.md) · [日本語](README.ja.md)
 
 Open a game's resource archives, browse pictures, play audio and video, and extract the files you need. GARbro has a desktop interface and a command-line tool.
@@ -21,7 +23,7 @@ The GUI and CLI now share the `app` folder in one download. Packages for 1.0.4 a
 | macOS 14 or later | `osx-arm64.dmg` for Apple silicon, `osx-x64.dmg` for Intel | Open the disk image, copy the whole GARbro folder to your Mac, then open `GARbro.app` |
 | Flatpak | Matching `.flatpak` | Open with your software center, or run `flatpak install --user filename.flatpak` |
 
-Desktop downloads other than Flatpak and Store packages require the matching [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0). See the [installation guide](docs/install.md) for missing libraries or certificate prompts. Package filenames also contain the version number.
+Desktop downloads other than Flatpak and Store packages require the matching [.NET 11 Runtime](https://dotnet.microsoft.com/download/dotnet/11.0). See the [installation guide](docs/install.md) for missing libraries or certificate prompts. Package filenames also contain the version number.
 
 This is a stable desktop release; some game-specific formats or encryption methods may still be unsupported. GARbro is also available from the [Microsoft Store](https://apps.microsoft.com/detail/9NP39X1TRVNM). Flathub publication is being prepared, and Android development is on hold. The `store.msixupload` download is for Store submission; you do not need it to use GARbro.
 

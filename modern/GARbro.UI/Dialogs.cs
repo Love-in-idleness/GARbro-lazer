@@ -16,7 +16,7 @@ namespace GARbro.Desktop;
 
 public sealed record ExtractionChoice(string Output, ResourceExtractionOptions Options, OverwritePolicy Overwrite);
 public sealed record CreationChoice(string Output, string FormatId, string OptionsJson, OverwritePolicy Overwrite, ArchivePackingOptions PackingOptions = null);
-public sealed record ConversionChoice(string Output, string FormatId, OverwritePolicy Overwrite, bool DiscardOriginalMedia, string AudioFormat = null, string VideoFormat = null, bool ConvertScripts = false);
+public sealed record ConversionChoice(string Output, string FormatId, OverwritePolicy Overwrite, bool DiscardOriginalMedia, string AudioFormat = null, string VideoFormat = null, bool ConvertScripts = false, string ScriptFormat = null);
 
 public static class Dialogs
 {
@@ -167,7 +167,7 @@ public static class Dialogs
     }
     public static async Task<ConversionChoice> Conversion(AppWindow owner,DesktopText text,ResourceFormatInfo[] formats,string initial,int selectedCount=0,bool offerScripts=false)
     {
-        var window=Window(text,"Convert",780,offerScripts?645:580);var body=Panel();
+        var window=Window(text,"Convert",780,offerScripts?760:580);var body=Panel();
         if(selectedCount>0)body.Children.Add(new TextBlock {Text=text.Format("ConversionSelectionScope",selectedCount),TextWrapping=Avalonia.Media.TextWrapping.Wrap,Classes={"muted"}});
         body.Children.Add(Output(owner,text,initial,out var path));
         var conversion=new MediaConversionPanel(text,formats,true,offerScripts);body.Children.Add(conversion);
@@ -179,7 +179,7 @@ public static class Dialogs
         {
             if(!Path.IsPathFullyQualified(PathValue(path)??"")){error.Text=text["SelectOutput"];return;}
             if(!conversion.HasConversion){error.Text=text["SelectConversionFormat"];return;}
-            window.Close(new ConversionChoice(PathValue(path),conversion.ImageFormat,(OverwritePolicy)overwrite.SelectedIndex,discard.IsChecked==true,conversion.AudioFormat,conversion.VideoFormat,conversion.ConvertScripts));
+            window.Close(new ConversionChoice(PathValue(path),conversion.ImageFormat,(OverwritePolicy)overwrite.SelectedIndex,discard.IsChecked==true,conversion.AudioFormat,conversion.VideoFormat,conversion.ConvertScripts,conversion.ScriptFormat));
         }),Button(text,"Cancel",()=>window.Close()));
         return await window.ShowDialog<ConversionChoice>(owner);
     }

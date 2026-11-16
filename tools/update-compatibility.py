@@ -11,7 +11,7 @@ parser.add_argument('--dotnet',default='dotnet')
 args=parser.parse_args()
 source=json.loads((ROOT/'docs/compatibility/baseline-source.json').read_text())['formats']
 legacy=json.loads((ROOT/'docs/compatibility/baseline-runtime.json').read_text())
-result=subprocess.run([args.dotnet,str(ROOT/'modern/GARbro.Cli/bin/Release/net10.0/garbro.dll'),'formats','--json'],capture_output=True,text=True,check=True)
+result=subprocess.run([args.dotnet,str(ROOT/'modern/GARbro.Cli/bin/Release/net11.0/garbro.dll'),'formats','--json'],capture_output=True,text=True,check=True)
 compiled=json.loads(result.stdout)
 manifest=json.loads((ROOT/'tests/fixtures/generated/manifest.json').read_text())
 variants={}

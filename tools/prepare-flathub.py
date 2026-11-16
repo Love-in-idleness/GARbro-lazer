@@ -3,6 +3,8 @@
 import argparse
 import hashlib
 import json
+import platform
+from flatpak_sdk import prepare_sdk
 import re
 import subprocess
 import urllib.request
@@ -34,16 +36,17 @@ def main():
     args=parser.parse_args()
     if not re.fullmatch('[0-9a-f]{40}',args.revision):parser.error('A full source commit is required')
     args.output.mkdir(parents=True,exist_ok=True);sources={};local=local_packages(ROOT)
+    sdk=prepare_sdk(ROOT) if args.in_sdk else None
     for rid,arch in [('linux-x64','x86_64'),('linux-arm64','aarch64')]:
         for project in ('GARbro.Desktop','GARbro.Worker','GARbro.Cli'):
             host=['dotnet']
             if args.in_sdk:
                 host=['flatpak','run','--share=network','--filesystem='+str(ROOT),'--command=sh',
                       '--env=NUGET_PACKAGES='+str(ROOT/'artifacts/flatpak-nuget-cache'),
-                      '--runtime=org.freedesktop.Sdk//26.08','org.freedesktop.Sdk.Extension.dotnet10//26.08',
-                      '-c','export DOTNET_ROOT=/usr/lib/sdk/dotnet10/lib; exec /usr/lib/sdk/dotnet10/bin/dotnet "$@"','--']
+                      'org.freedesktop.Sdk//26.08',
+                      '-c','export DOTNET_ROOT="$1"; shift; exec "$DOTNET_ROOT/dotnet" "$@"','--',str(sdk)]
             subprocess.run([*host,'restore',str(ROOT/f'modern/{project}/{project}.csproj'),'-r',rid,
-                '-p:SelfContained=true','-p:RuntimeFrameworkVersion=10.0.14','-p:NuGetAudit=false'],cwd=ROOT,check=True)
+                '-p:SelfContained=true','-p:RuntimeFrameworkVersion=11.0.0','-p:NuGetAudit=false'],cwd=ROOT,check=True)
             assets=json.loads((ROOT/f'modern/{project}/obj/project.assets.json').read_text())
             for identity,library in package_records(assets,local):
                 name,version=identity.lower().split('/');filename=f'{name}.{version}.nupkg'

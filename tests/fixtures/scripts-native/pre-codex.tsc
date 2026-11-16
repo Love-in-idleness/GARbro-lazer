@@ -1,0 +1,10 @@
+;@gsc-byte-format legacy-28
+;@gsc-schema pre-codex
+:L_start
+*TXT 0 0 0 0 "" "日本語"
+*wait @7
+*goto L_end
+*vm 0x4800 1 1 0
+:L_end
+*end
+*datablock 0 2 -1 7

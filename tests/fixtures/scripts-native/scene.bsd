@@ -1,0 +1,8 @@
+#header "BurikoCompiledScriptVer1.00"
+#import "init"
+push_string("日本語");
+push_dword(-3);
+push_offset(L_end);
+line("scene.bss", 42);
+L_end:
+ret();

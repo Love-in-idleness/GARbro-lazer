@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using GARbro.Domain;
+using GARbro.Scripting;
 using GameRes;
 using GameRes.Formats.KiriKiri;
 using GameRes.Formats.NScripter;
@@ -29,33 +31,73 @@ internal static class ScriptTools
         return directories.Where(Path.IsPathFullyQualified).Select(path => Path.Combine(path, file)).FirstOrDefault(File.Exists);
     }
 
-    static string GscEncoding() => Encodings.ResourceEncodingOverride?.CodePage switch
-    {
-        null => "auto",
-        932 => "cp932",
-        936 => "gbk",
-        54936 => "gb18030",
-        949 or 950 or >= 1250 and <= 1258 => $"cp{Encodings.ResourceEncodingOverride.CodePage}",
-        _ => throw new NotSupportedException("This text encoding is not supported for GSC conversion. Choose Auto, CP932 or GBK.")
-    };
+    static Encoding CompileEncoding() => Encodings.ResourceEncodingOverride ?? Encodings.cp932;
 
-    static string BgiEncoding() => Encodings.ResourceEncodingOverride?.CodePage switch
+    static void PrepareCompilation(string input, CancellationToken cancellation)
     {
-        null or 932 => "cp932",
-        936 => "gbk",
-        950 => "big5",
-        65001 => "utf-8",
-        _ => throw new NotSupportedException("This text encoding is not supported for BGI conversion. Choose Auto, CP932 or GBK.")
-    };
+        using (var source = File.OpenRead(input))
+        using (var normalized = File.Create(input + ".utf8"))
+        {
+            if (source.Length > 64L << 20) throw new InvalidDataException("Resource exceeds the size limit.");
+            ScriptTextEncoding.WriteEncoded(source, normalized, new UTF8Encoding(false, true), cancellation);
+        }
+        File.Move(input + ".utf8", input, true);
+    }
 
     internal static void Convert(string input, string originalName, Stream destination, string format, long maxBytes, CancellationToken cancellation)
     {
         cancellation.ThrowIfCancellationRequested();
+        if (ScriptOutputFormats.Recompile.Contains(format)) PrepareCompilation(input, cancellation);
         using (var source = File.OpenRead(input))
         {
             var encoding = Encodings.ResourceEncodingOverride;
+            if (format is "GSC" or "BGI" or "BGI-BP" or "ASB" or "TSC" or "BSD" or "BPD" or "JSON")
+            {
+                if (source.Length > 64L << 20) throw new InvalidDataException("Resource exceeds the size limit.");
+                byte[] converted;
+                if (ScriptOutputFormats.Recompile.Contains(format))
+                {
+                    string text = File.ReadAllText(input, new UTF8Encoding(false, true));
+                    converted = format switch
+                    {
+                        "GSC" => GscScript.Compile(text, CompileEncoding(), cancellation),
+                        "ASB" => AsbScript.Compile(text, encoding ?? Encoding.UTF8, cancellation),
+                        _ => BgiScript.Compile(text, format == "BGI-BP", CompileEncoding(), cancellation)
+                    };
+                }
+                else
+                {
+                    byte[] bytes = File.ReadAllBytes(input);
+                    string text = format switch
+                    {
+                        "TSC" => GscScript.Export(bytes, CompileEncoding(), cancellation),
+                        "JSON" => AsbScript.Export(bytes, encoding ?? Encoding.UTF8, cancellation),
+                        "BPD" => BgiScript.ExportBp(bytes, CompileEncoding(), cancellation),
+                        _ => BgiScript.Export(bytes, CompileEncoding(), cancellation)
+                    };
+                    converted = Encoding.UTF8.GetBytes(text);
+                }
+                if (converted.LongLength > maxBytes) throw new InvalidDataException("Output limit exceeded.");
+                cancellation.ThrowIfCancellationRequested();
+                destination.Write(converted);
+                return;
+            }
             switch (format)
             {
+                case "NSCRIPT":
+                case "DSM":
+                    var targetEncoding = format == "DSM" ? new UTF8Encoding(false, true) : CompileEncoding();
+                    if (format == "NSCRIPT" && targetEncoding.CodePage is 1200 or 1201 or 12000 or 12001)
+                        throw new NotSupportedException("This text encoding is not supported for NScripter compilation.");
+                    using (var encoded = new MemoryStream())
+                    {
+                        ScriptTextEncoding.WriteEncoded(source, encoded, targetEncoding, cancellation); encoded.Position = 0;
+                        using var binary = new BinaryStream(encoded, originalName, true);
+                        ScriptFormat compiler = format == "NSCRIPT" ? new NSOpener() : new DsmConverter();
+                        using var compiled = compiler.ConvertBack(binary);
+                        ResourceService.CopyBounded(compiled, destination, maxBytes);
+                    }
+                    return;
                 case "TXT":
                     if (source.Length > 64L << 20) throw new InvalidDataException("Resource exceeds the size limit.");
                     bool nscript = VFS.IsPathEqualsToFileName(originalName.Replace('\\', '/'), "nscript.dat");
@@ -95,31 +137,18 @@ internal static class ScriptTools
         if (OperatingSystem.IsAndroid()) throw new NotSupportedException("Script conversion requires a desktop helper.");
         var (name, variable) = format switch
         {
-            "TSC" => ("liarsofttool", "GARBRO_LIARSOFTTOOL"),
             "RPY" => ("unrpyc", "GARBRO_UNRPYC"),
             "TJS" => ("tjs2dec", "GARBRO_TJS2DEC"),
-            "JSON" => ("msg_tool", "GARBRO_MSG_TOOL"),
             "RB" => ("rvpacker-txt-rs", "GARBRO_RVPACKER"),
-            _ => ("Bgi_asdisEN", "GARBRO_BGI_ASDIS")
+            _ => throw new NotSupportedException("The selected output format does not match this script.")
         };
         string unavailable = $"Script converter unavailable: {name} ({variable})";
-        bool bgi = format is "BSD" or "BPD";
         string configured = Environment.GetEnvironmentVariable(variable);
         string helper = configured ?? FindProgram(name);
-        string common = null;
-        if (bgi)
-        {
-            if (string.IsNullOrEmpty(configured) || !Path.IsPathFullyQualified(configured))
-                throw new NotSupportedException(unavailable);
-            common = Path.Combine(configured, "src", "common");
-            helper = format == "BSD" ? Path.Combine(configured, "src", "v1", "bgidis.py")
-                                     : Path.Combine(configured, "src", "bp", "bpdis.py");
-            if (!Directory.Exists(common)) throw new NotSupportedException(unavailable);
-        }
         if (string.IsNullOrEmpty(helper) || !Path.IsPathFullyQualified(helper) || !File.Exists(helper))
             throw new NotSupportedException(unavailable);
 
-        string script = (bgi || format == "RPY") && Path.GetExtension(helper).Equals(".py", StringComparison.OrdinalIgnoreCase) ? helper : null;
+        string script = format == "RPY" && Path.GetExtension(helper).Equals(".py", StringComparison.OrdinalIgnoreCase) ? helper : null;
         if (script != null)
             helper = FindProgram(OperatingSystem.IsWindows() ? "python" : "python3") ?? throw new NotSupportedException(unavailable);
         string directory = Path.GetDirectoryName(input);
@@ -149,15 +178,12 @@ internal static class ScriptTools
             start.Environment["PYTHONIOENCODING"] = "utf-8";
             start.Environment["PYTHONDONTWRITEBYTECODE"] = "1";
         }
-        if (bgi) start.Environment["PYTHONPATH"] = common;
         string[] arguments = format switch
         {
-            "TSC" => new[] { "--gsc-to-tsc", "--encoding", GscEncoding(), "--output", output, input },
             "RPY" => new[] { "-p", "1", "--", input },
             "TJS" => new[] { "tjs", input },
-            "JSON" => new[] { "export", "-t", "artemis-asb", "-T", "custom", "--artemis-asb-no-format-lua", input, output },
             "RB" => new[] { "json", "generate", "-i", directory, "--comment-prefix", "# " },
-            _ => new[] { input, "-e", "-c", BgiEncoding() }
+            _ => throw new NotSupportedException("The selected output format does not match this script.")
         };
         foreach (string argument in arguments) start.ArgumentList.Add(argument);
         if (format == "RB" && Encodings.ResourceEncodingOverride is { } rgssEncoding)

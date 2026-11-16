@@ -28,9 +28,9 @@ def build_architecture(rid,version,output):
     app=stage/'app'
     for project in ('GARbro.Desktop','GARbro.Worker','GARbro.Cli'):
         subprocess.run(['dotnet','publish',str(ROOT/'modern'/project/(project+'.csproj')),'-c','Release','-r',rid,
-            '--self-contained','true','-p:RuntimeFrameworkVersion=10.0.14','-o',str(app),'-p:Version='+version,'-p:UseSharedCompilation=false','-m:1','-nr:false','--nologo'],check=True)
+            '--self-contained','true','-p:RuntimeFrameworkVersion=11.0.0','-o',str(app),'-p:Version='+version,'-p:UseSharedCompilation=false','-m:1','-nr:false','--nologo'],check=True)
     runtime_report=output/('runtime-compaction-'+rid+'.json')
-    subprocess.run(['dotnet',str(ROOT/'tools/RuntimeCompactor/bin/Release/net10.0/RuntimeCompactor.dll'),str(app),str(runtime_report)],check=True)
+    subprocess.run(['dotnet',str(ROOT/'tools/RuntimeCompactor/bin/Release/net11.0/RuntimeCompactor.dll'),str(app),str(runtime_report)],check=True)
     compaction=json.loads(runtime_report.read_text())
     compact_application(app)
     helpers=importlib.import_module('build-media').build(rid,ROOT/'artifacts/media')

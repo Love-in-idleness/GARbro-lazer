@@ -74,10 +74,42 @@ type ScriptOutputFormats private () =
         let fileName = ScriptOutputFormats.FileName(name)
         fileName <> "" && not (Path.HasExtension fileName)
 
+    static member Recompile = [| "GSC"; "NSCRIPT"; "DSM"; "BGI"; "BGI-BP"; "ASB" |]
+
+    static member CanRecompile(name: string, format: string) =
+        let extension = Path.GetExtension(ScriptOutputFormats.FileName(name)).ToLowerInvariant()
+        match format, extension with
+        | "GSC", ".tsc" | "NSCRIPT", ".txt" | "DSM", ".txt"
+        | "BGI", ".bsd" | "BGI-BP", ".bpd" | "ASB", ".json" -> true
+        | _ -> false
+
+    static member HasRecompileInput(name: string) =
+        ScriptOutputFormats.Recompile |> Array.exists (fun target -> ScriptOutputFormats.CanRecompile(name, target))
+
+    static member FromOutputName(name: string) =
+        let name = ScriptOutputFormats.FileName(name).ToLowerInvariant()
+        match name, Path.GetExtension(name) with
+        | "nscript.dat", _ -> "NSCRIPT"
+        | _, ".gsc" -> "GSC"
+        | _, ".dsm" -> "DSM"
+        | _, "._bs" -> "BGI"
+        | _, "._bp" -> "BGI-BP"
+        | _, ".asb" -> "ASB"
+        | _ -> null
+
+    static member RecompileOutput(path: string, format: string) =
+        match format with
+        | "NSCRIPT" -> Path.Combine(Path.GetDirectoryName(path), "nscript.dat")
+        | "DSM" -> Path.Combine(Path.GetDirectoryName(path), "data.dsm")
+        | "BGI" -> Path.ChangeExtension(path, null)
+        | "BGI-BP" -> Path.ChangeExtension(path, "_bp")
+        | "GSC" | "ASB" -> Path.ChangeExtension(path, format.ToLowerInvariant())
+        | _ -> invalidArg "format" "Unsupported script output format."
+
     static member Supports(format: string) =
         match format with
         | "TSC" | "RPY" | "KS" | "TJS" | "AST" | "JSON" | "BSD" | "BPD" | "TXT" | "RB" -> true
-        | _ -> false
+        | _ -> ScriptOutputFormats.Recompile |> Array.contains format
 
     static member UsesBinaryPreview(name: string) =
         match ScriptOutputFormats.ForInput(name) with

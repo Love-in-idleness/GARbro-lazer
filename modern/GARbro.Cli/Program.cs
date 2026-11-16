@@ -178,7 +178,7 @@ internal static class Program
             {
                 if (files.Count != 1 || output == null)
                     throw new ArgumentException("convert requires one input and an output file.");
-                var target=MediaOutputFormats.Normalize(Get("--to",Path.GetExtension(output).TrimStart('.')));
+                var target=MediaOutputFormats.Normalize(Get("--to",ScriptOutputFormats.FromOutputName(output) ?? Path.GetExtension(output).TrimStart('.')));
                 string input=Path.GetFullPath(files[0]);output=Path.GetFullPath(output);
                 string entry=Get("--entry");
                 bool script=ScriptOutputFormats.Supports(target);

@@ -3,9 +3,6 @@
   "runtime": "org.freedesktop.Platform",
   "runtime-version": "26.08",
   "sdk": "org.freedesktop.Sdk",
-  "sdk-extensions": [
-    "org.freedesktop.Sdk.Extension.dotnet10"
-  ],
   "command": "garbro-desktop",
   "finish-args": [
     "--share=ipc",
@@ -16,14 +13,43 @@
     "--share=network"
   ],
   "build-options": {
-    "append-path": "/usr/lib/sdk/dotnet10/bin",
+    "append-path": "/app/lib/sdk/dotnet11",
     "env": {
-      "DOTNET_ROOT": "/usr/lib/sdk/dotnet10/lib",
+      "DOTNET_ROOT": "/app/lib/sdk/dotnet11",
       "DOTNET_CLI_TELEMETRY_OPTOUT": "true",
       "DOTNET_SKIP_FIRST_TIME_EXPERIENCE": "true"
     }
   },
   "modules": [
+    {
+      "name": "dotnet11-sdk",
+      "buildsystem": "simple",
+      "build-commands": [
+        "mkdir -p /app/lib/sdk/dotnet11",
+        "cp -a . /app/lib/sdk/dotnet11/"
+      ],
+      "cleanup": [
+        "/lib/sdk"
+      ],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/11.0.100/dotnet-sdk-11.0.100-linux-x64.tar.gz",
+          "sha512": "1bec9cca2ec689b1e80245b84f2b53c9441d1aa6daccf2ceb27490768bffa95954fa585bd275def31069d874d543d9ba9e6591fe9ade2dbd9f34ec5c0fd0050c",
+          "only-arches": [
+            "x86_64"
+          ]
+        },
+        {
+          "type": "archive",
+          "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/11.0.100/dotnet-sdk-11.0.100-linux-arm64.tar.gz",
+          "sha512": "cfa248bb1377606e868602fb5b4d66fa16b7546156593937d1982f7f2142e6ded76d71c4a26efdab99f87c46ab40c3c672ab1b57ef7fa25449efe5b140a55af4",
+          "only-arches": [
+            "aarch64"
+          ]
+        }
+      ]
+    },
     {
       "name": "ffmpeg",
       "buildsystem": "simple",

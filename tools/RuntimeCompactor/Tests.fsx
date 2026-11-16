@@ -1,4 +1,4 @@
-#r "bin/Release/net10.0/RuntimeCompactor.dll"
+#r "bin/Release/net11.0/RuntimeCompactor.dll"
 
 open Garbro.Build.RuntimeCompactor
 

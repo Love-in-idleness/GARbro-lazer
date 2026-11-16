@@ -31,7 +31,7 @@ The local reference is Sway 1.10.1 / wlroots 0.18.2; CI retains the protocol tra
 and screenshot. Native portal file-picker dialogs and every desktop IME are not
 covered by that test.
 
-Linux needs the .NET 10 runtime, Wayland client/EGL/GLES, xkbcommon and fontconfig
+Linux needs the .NET 11 runtime, Wayland client/EGL/GLES, xkbcommon and fontconfig
 libraries. On Debian/Ubuntu, the native Wayland dependencies include
 `libwayland-client0 libwayland-cursor0 libwayland-egl1 libegl1 libgles2 libxkbcommon0 libfontconfig1`.
 X11 libraries are also needed for the fallback. A compositor-appropriate

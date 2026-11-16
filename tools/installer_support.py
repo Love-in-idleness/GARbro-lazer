@@ -143,7 +143,7 @@ def build_deb(stage, output, version, rid='linux-x64'):
         icon = root/f'usr/share/icons/hicolor/{size}x{size}/apps'; icon.mkdir(parents=True)
         shutil.copy2(ROOT/f'modern/GARbro.UI/Assets/app-icon-{size}.png', icon/(APP_ID+'.png'))
     control = root/'DEBIAN'; control.mkdir()
-    depends = ('dotnet-runtime-10.0 (>= 10.0), libc6 (>= 2.35), libstdc++6, libfontconfig1, libfreetype6, '
+    depends = ('dotnet-runtime-11.0 (>= 11.0), libc6 (>= 2.35), libstdc++6, libfontconfig1, libfreetype6, '
                'libx11-6, libx11-xcb1, libxcb1, libxcb-render0, libxcb-shm0, libxcb-xfixes0, '
                'libice6, libsm6, libegl1, libgles2, libwayland-client0, libwayland-egl1, libwayland-cursor0, libxkbcommon0, '
                'libgomp1, libpulse0, libsdl2-2.0-0 (>= 2.0.22), ffmpeg, libglib2.0-bin, desktop-file-utils, shared-mime-info, xdg-utils, python3 (>= 3.9)')

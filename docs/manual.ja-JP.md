@@ -1,6 +1,6 @@
 # GARbro の使い方
 
-GARbro はゲームのアーカイブを開き、リソースを閲覧・プレビュー・抽出するアプリです。通常のデスクトップ版には、使用する CPU に合った .NET 10 Runtime が必要です。Flatpak と Microsoft Store 版にはランタイムが含まれます。自己署名 MSIX は、同じリリースに付属する証明書を信頼してからインストールしてください。
+GARbro はゲームのアーカイブを開き、リソースを閲覧・プレビュー・抽出するアプリです。通常のデスクトップ版には、使用する CPU に合った .NET 11 Runtime が必要です。Flatpak と Microsoft Store 版にはランタイムが含まれます。自己署名 MSIX は、同じリリースに付属する証明書を信頼してからインストールしてください。
 
 ## タブでの閲覧
 
@@ -104,3 +104,26 @@ garbro create "assets" -o "data.xp3" --format XP3 --scheme none
 ```
 
 `create --help` で書き込み設定、文字コード、上書き方針、制限を確認できます。単一フォルダーではその内容を、複数入力では共通の親からの相対パスを使用します。既存の書き込み形式のみ対応します。変換後のメディアをゲームで読めるかはエンジン次第で、スクリプトの参照は変更しません。再コンパイルは形式変換に属し、本開発版では追加しません。
+
+## スクリプトの再コンパイル（1.1.1 開発版）
+
+編集したファイルを選び、形式変換でスクリプトの変換と再コンパイルを選択します。TSC は GSC、BSD は BGI、BPD は BGI-BP、ASB の完全な JSON は ASB を指定します。通常のテキストは NSCRIPT（`nscript.dat`）または DSM（`data.dsm`）に変換できます。従来の中間形式を使います。会話文だけの ASB JSON は使用できません。
+
+この 6 種類のコンパイラーは GARbro に内蔵され、デスクトップと Android で Python や外部コンパイラーなしで動作します。ソースは UTF-8 または BOM 付き Unicode にしてください。文字コードは出力文字列に適用され、自動では GSC・BGI・NScripter が CP932、ASB が UTF-8、DSM は常に UTF-8 です。表現できない文字はエラーになります。外部 `#string_table` は事前に BSD 内へ統合してください。不明な GSC 命令形式はチェックサム付き生データで出力され、元のバイト列を復元できますが翻訳には使えません。
+
+```sh
+garbro convert edited.tsc -o scene.gsc --encoding shift-jis
+garbro convert edited.bsd -o scene --to BGI
+garbro convert edited.bpd -o scene._bp --to BGI-BP
+garbro convert edited.json -o scene.asb
+garbro convert edited.txt -o nscript.dat --to NSCRIPT --encoding gbk
+garbro convert edited.txt -o data.dsm --to DSM
+```
+
+別の出力フォルダーを選んでください。元ファイルは変更せず、失敗時は既存の出力も保持します。複数のテキストが同じ `nscript.dat` や `data.dsm` になる場合は別々に変換してください。再コンパイルでエンジン自体や対応文字セットは変わりません。Ren'Py・RGSS・コンパイル済み TJS の出力には、引き続き任意のデスクトップ用ツールが必要です。
+
+## Android 開発パッケージ
+
+Android 12 以降が必要です。一般的なスマートフォン・タブレットは ARM64 APK、x86 エミュレーターは x64 を選びます。システムのインストーラーで導入し、ファイル・フォルダー選択画面でアクセスを許可します。共通のタブ UI、バックグラウンドのデコードサービス、Android のメディアプレーヤーを使用します。FFmpeg によるメディア変換と外部デスクトップ用ツールは Android では使用できません。CI の APK は開発用で、F-Droid・IzzyOnDroid には未公開です。署名鍵の異なるインストールを一時鍵の APK で更新することはできません。
+
+現在のデスクトップ開発ソースには .NET 11 が必要です。公開済み 1.1.0 は .NET 10 が必要で、Store・Flatpak 版にはランタイムが含まれます。

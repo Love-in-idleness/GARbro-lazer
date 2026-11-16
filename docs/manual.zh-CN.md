@@ -1,6 +1,6 @@
 # GARbro 使用说明
 
-便携包和侧载包运行前需安装 .NET 10 Runtime；微软商店包和 Flatpak 包自带运行时。Linux DEB 还需要 linux-desktop.md 中列出的原生库。
+便携包和侧载包运行前需安装 .NET 11 Runtime；微软商店包和 Flatpak 包自带运行时。Linux DEB 还需要 linux-desktop.md 中列出的原生库。
 Windows MSIX 预览包使用测试证书，安装或升级前需信任本次发行附带的证书；也可使用 ZIP 包。
 
 顶部六组简约线条图标菜单依次整理“文件、处理、选择、视图、设置、帮助”。
@@ -109,3 +109,26 @@ garbro create "assets" -o "data.xp3" --format XP3 --scheme none
 ```
 
 `create --help` 列出归档参数、编码、覆盖策略和资源限制。单目录以其内容为根，多输入保留相对于共同父目录的路径。只提供已有可写归档格式。游戏能否读取转换后的媒体取决于引擎支持，不会自动修改脚本中的资源引用。脚本回编译属于格式转换，本开发版不新增回编译。
+
+## 脚本回编（1.1.1 开发版）
+
+选中编辑好的文件，打开“格式转换”，勾选“转换脚本”，再选择“回编译”和目标格式：TSC 选 GSC，BSD 选 BGI，BPD 选 BGI-BP，ASB 的完整 JSON 选 ASB。普通文本可回编为 NSCRIPT（`nscript.dat`）或 DSM（`data.dsm`）。继续使用原来的中间格式；ASB 不接受仅有对白的 JSON。
+
+这六种编译器已写入 GARbro，桌面与 Android 均不需要 Python 或外部编译程序。源文本请使用 UTF-8 或带 Unicode BOM 的编码。编码选项控制编译后文本：自动时 GSC／BGI／NScripter 使用 CP932，ASB 使用 UTF-8；DSM 固定 UTF-8。无法表示的字符会报错。引用外部 `#string_table` 的 BSD 请先合并为单个文件。无法识别指令布局的 GSC 会导出带校验的原始数据，只能原样还原，不能据此翻译。
+
+```sh
+garbro convert edited.tsc -o scene.gsc --encoding shift-jis
+garbro convert edited.bsd -o scene --to BGI
+garbro convert edited.bpd -o scene._bp --to BGI-BP
+garbro convert edited.json -o scene.asb
+garbro convert edited.txt -o nscript.dat --to NSCRIPT --encoding gbk
+garbro convert edited.txt -o data.dsm --to DSM
+```
+
+请使用单独的输出目录。源文件不会改变，回编失败也会保留已有输出。多个文本会生成同一个 `nscript.dat` 或 `data.dsm` 时，请分别转换。回编不会改变游戏引擎，也不保证游戏支持新的字符集。Ren'Py／RGSS 和已编译 TJS 的导出仍使用可选桌面工具。
+
+## Android 开发包
+
+需要 Android 12 或更高版本。大多数手机和平板选择 ARM64 APK，x86 模拟器选择 x64。通过系统安装器安装后，用系统文件／目录选择器授权访问资源。沿用相同的标签页界面和后台解码服务；音视频预览使用 Android 系统播放器。Android 暂不支持依赖 FFmpeg 的媒体转换和可选桌面脚本工具。CI APK 是开发包，尚未进入 F-Droid／IzzyOnDroid；临时签名与其他签名不兼容，不能直接覆盖安装。
+
+当前桌面开发源码需要 .NET 11；已发布的 1.1.0 桌面包仍需要 .NET 10。商店与 Flatpak 包自带运行时。

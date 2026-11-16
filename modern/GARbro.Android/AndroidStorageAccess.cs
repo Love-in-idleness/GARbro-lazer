@@ -190,8 +190,8 @@ public sealed class AndroidStorageAccess : IStorageAccess
             {
                 if (request.Operation == "resource-preview" || request.Operation == "resource-audio")
                     await Hydrate(mapping, path, uri, false, 0, cancellation);
-                else if (request.Operation is "resource-extract" or "resource-create")
-                    await Hydrate(mapping, path, uri, request.Operation == "resource-create" || request.ResourceOptions?.Recursive == true, 0, cancellation);
+                else if (request.Operation is "resource-extract" or "resource-create" or "resource-pack")
+                    await Hydrate(mapping, path, uri, request.Operation is "resource-create" or "resource-pack" || request.ResourceOptions?.Recursive == true, 0, cancellation);
             }
             else if (mapping.Folder) await Hydrate(mapping, Path.GetDirectoryName(path), Resolve(mapping, Path.GetDirectoryName(path)), false, 0, cancellation);
             else await DownloadAsync(path, uri, cancellation);

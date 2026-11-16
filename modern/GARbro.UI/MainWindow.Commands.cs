@@ -298,11 +298,21 @@ public sealed partial class MainWindow
         {
             catalog??=await Request<ResourceFormatInfo[]>(new("resource-catalog",null));
             if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return (ConversionChoice)null;}
-            bool offerScripts=!UiPlatform.IsMobile && selected.Any(e=>ScriptOutputFormats.ForInput(e.Name)!=null || ScriptOutputFormats.NeedsSignature(e.Name));
+            bool offerScripts= selected.Any(e=>ScriptOutputFormats.ForInput(e.Name)!=null || ScriptOutputFormats.NeedsSignature(e.Name) || ScriptOutputFormats.HasRecompileInput(e.Name));
             return await Dialogs.Conversion(this,Text,catalog.Where(f=>f.Type=="image"&&f.CanWrite).ToArray(),Settings.OutputDirectory,selected.Length,offerScripts);
         });
         if(choice==null)return;
         if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return;}
+        if(choice.ConvertScripts && choice.ScriptFormat!=null)
+        {
+            var destinations=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach(var entry in selected.Where(e=>ScriptOutputFormats.CanRecompile(e.Name,choice.ScriptFormat)))
+            {
+                string name=ScriptOutputFormats.RecompileOutput(ExtractionScope.RelativeName(source.Directory,entry.Name),choice.ScriptFormat);
+                string destination=ExtractionPath.Resolve(choice.Output,name);
+                if(!destinations.Add(destination))throw new IOException("Conversion output collides with another resource: "+destination);
+            }
+        }
         previewCancellation?.Cancel();StopAudio();using var operation=CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);active=operation;SetBusy(true);
         var failures=new List<string>();
         try
@@ -318,7 +328,7 @@ public sealed partial class MainWindow
                     string target=ExtractionPath.Resolve(choice.Output,ExtractionScope.RelativeName(source.Directory,entry.Name));
                     var result=await Request<ResourceConversion>(new("resource-convert",null,Location:source,Entry:entry.Name,Output:target,FormatId:"MEDIA",Overwrite:choice.Overwrite,
                         ResourceOptions:new(ImageFormat:choice.FormatId,AudioFormat:choice.AudioFormat,VideoFormat:choice.VideoFormat,
-                            TypeOverrides:overrides,DiscardOriginalMedia:choice.DiscardOriginalMedia,ConvertScripts:choice.ConvertScripts)),operation.Token);
+                            TypeOverrides:overrides,DiscardOriginalMedia:choice.DiscardOriginalMedia,ConvertScripts:choice.ConvertScripts,ScriptFormat:choice.ScriptFormat)),operation.Token);
                     if(result.Path!=null && result.Written)done++;else skipped++;
                 }
                 catch(WorkerOperationException e){failures.Add(entry.DisplayName+": "+e.Message);DesktopServices.Log(e);}

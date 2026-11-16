@@ -7,6 +7,7 @@
     <ProjectReference Include="../../modern/GARbro.Application/GARbro.Application.csproj" />
     <ProjectReference Include="../../modern/GARbro.Worker/GARbro.Worker.csproj" />
     <ProjectReference Include="../GARbro.Worker.Probe/GARbro.Worker.Probe.csproj" />
+    <None Include="../fixtures/scripts-native/**" LinkBase="NativeScripts" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../fixtures/generated/**" LinkBase="Fixtures" CopyToOutputDirectory="PreserveNewest" />
     <ProjectReference Include="../../modern/GARbro.Core/GARbro.Core.csproj" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

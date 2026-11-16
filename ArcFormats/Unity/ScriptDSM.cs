@@ -55,7 +55,24 @@ namespace GameRes.Formats.NScripter
         
         public override Stream ConvertBack (IBinaryStream file)
         {
-            throw new NotSupportedException();
+            byte[] source;
+            using (var copy = new MemoryStream())
+            {
+                file.AsStream.CopyTo(copy);
+                source = copy.ToArray();
+            }
+            using (var cipher = Aes.Create())
+            {
+                byte[] key, iv;
+                DsmDecryptor.GenerateKeyFromPassword("pass", cipher.KeySize, out key, cipher.BlockSize, out iv);
+                cipher.Key = key;
+                cipher.IV = iv;
+                using (var transform = cipher.CreateEncryptor())
+                {
+                    var encrypted = transform.TransformFinalBlock(source, 0, source.Length);
+                    return new BinMemoryStream(Encoding.UTF8.GetBytes(System.Convert.ToBase64String(encrypted)), file.Name);
+                }
+            }
         }
     }
 
@@ -64,15 +81,14 @@ namespace GameRes.Formats.NScripter
         internal static void GenerateKeyFromPassword (string password, int keySize, out byte[] key, int blockSize, out byte[] iv)
         {
             var bytes = Encoding.UTF8.GetBytes ("saltは必ず8バイト以上");
-            var derive = new Rfc2898DeriveBytes (password, bytes);
-            derive.IterationCount = 1000;
-            key = derive.GetBytes (keySize / 8);
-            iv = derive.GetBytes (blockSize / 8);
+            var material = Rfc2898DeriveBytes.Pbkdf2(password, bytes, 1000, HashAlgorithmName.SHA1, (keySize + blockSize) / 8);
+            key = material[..(keySize / 8)];
+            iv = material[(keySize / 8)..];
         }
 
         internal static byte[] DecryptString (string sourceString, string password)
         {
-            var rij = new RijndaelManaged();
+            using var rij = Aes.Create();
             byte[] key, iv;
             GenerateKeyFromPassword (password, rij.KeySize, out key, rij.BlockSize, out iv);
             rij.Key = key;

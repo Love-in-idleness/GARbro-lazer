@@ -13,7 +13,13 @@ public static class ScriptTextEncoding
         Encoding.Unicode, Encoding.UTF8
     };
 
-    public static void WriteUtf8(Stream source, Stream destination, Encoding encoding, CancellationToken cancellation = default)
+    public static void WriteUtf8(Stream source, Stream destination, Encoding encoding, CancellationToken cancellation = default) =>
+        WriteText(source, destination, encoding, Utf8, cancellation);
+
+    public static void WriteEncoded(Stream source, Stream destination, Encoding target, CancellationToken cancellation = default) =>
+        WriteText(source, destination, Utf8, target.CodePage == 65001 ? Utf8 : target.WithFatalFallback(), cancellation);
+
+    static void WriteText(Stream source, Stream destination, Encoding encoding, Encoding target, CancellationToken cancellation)
     {
         cancellation.ThrowIfCancellationRequested();
         byte[] bytes = new byte[8192];
@@ -51,9 +57,9 @@ public static class ScriptTextEncoding
         encoding = (encoding ?? Encodings.cp932).WithFatalFallback();
         var decoder = encoding.GetDecoder();
         var chars = new char[encoding.GetMaxCharCount(bytes.Length)];
-        using var writer = new StreamWriter(destination, Utf8, 4096, leaveOpen: true);
         try
         {
+            using var writer = new StreamWriter(destination, target, 4096, leaveOpen: true);
             while (true)
             {
                 cancellation.ThrowIfCancellationRequested();
@@ -67,6 +73,10 @@ public static class ScriptTextEncoding
         catch (DecoderFallbackException error)
         {
             throw new InvalidDataException("Script text does not match its encoding.", error);
+        }
+        catch (EncoderFallbackException error)
+        {
+            throw new InvalidDataException("Script text cannot be represented by the target encoding.", error);
         }
     }
 }

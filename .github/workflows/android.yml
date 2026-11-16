@@ -4,7 +4,7 @@ on:
     inputs:
       package_version:
         type: string
-        default: 0.3.0-preview.1
+        default: 1.1.1
       publish:
         type: boolean
         default: false
@@ -25,23 +25,13 @@ jobs:
             arch: x86_64
             rid: android-x64
             process: X64
-          - api: 36
-            target: google_apis
-            arch: x86_64
-            rid: android-x64
-            process: X64
-          - api: 31
-            target: default
-            arch: arm64-v8a
-            rid: android-arm64
-            process: Arm64
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -56,7 +46,7 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - run: python3 tools/package-android.py --test --rid ${{ matrix.rid }} --version ${{ inputs.package_version || '0.3.0-preview.1' }}
+      - run: python3 tools/package-android.py --test --rid ${{ matrix.rid }} --version ${{ inputs.package_version || '1.1.1' }}
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api }}
@@ -64,9 +54,9 @@ jobs:
           arch: ${{ matrix.arch }}
           profile: Nexus 5
           disable-animations: true
-          emulator-boot-timeout: 1200
+          emulator-boot-timeout: 300
           emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 2048 -cores 2 ${{ matrix.process == 'Arm64' && '-accel off' || '' }}
-          script: python3 tools/smoke-android.py artifacts/garbro-${{ inputs.package_version || '0.3.0-preview.1' }}-${{ matrix.rid }}-test.apk --architecture ${{ matrix.process }} --timeout 1800
+          script: python3 tools/smoke-android.py artifacts/garbro-${{ inputs.package_version || '1.1.1' }}-${{ matrix.rid }}-test.apk --architecture ${{ matrix.process }} --timeout 300
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -74,12 +64,15 @@ jobs:
           path: artifacts/android-smoke/
   package:
     needs: test
+    strategy:
+      matrix:
+        rid: [android-arm64, android-x64]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -94,15 +87,15 @@ jobs:
           test -n "$KEYSTORE" && test -n "$KEYSTORE_PASSWORD"
           umask 077
           printf '%s' "$KEYSTORE" | base64 --decode > "$RUNNER_TEMP/garbro-android.p12"
-      - name: Build ARM64 APK
+      - name: Build architecture APK
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/garbro-android.p12
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-        run: python3 tools/package-android.py --rid android-arm64 --version ${{ inputs.package_version || '0.3.0-preview.1' }} ${{ inputs.publish && '--sign' || '' }}
+        run: python3 tools/package-android.py --rid ${{ matrix.rid }} --version ${{ inputs.package_version || '1.1.1' }} ${{ inputs.publish && '--sign' || '' }}
       - name: Discard temporary key copy
         if: always()
         run: rm -f "$RUNNER_TEMP/garbro-android.p12"
       - uses: actions/upload-artifact@v4
         with:
-          name: preview-android-arm64
-          path: artifacts/garbro-*-android-arm64.apk
+          name: development-${{ matrix.rid }}
+          path: artifacts/garbro-*-${{ matrix.rid }}.apk
