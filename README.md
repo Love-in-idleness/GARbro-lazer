@@ -25,7 +25,7 @@ GUI 和 CLI 现在共用 `app` 目录，无需分别下载。1.0.4 及更早的�
 
 除自带运行时的 Flatpak、商店包以外，桌面下载包需要先安装对应架构的 [.NET 11 Runtime](https://dotnet.microsoft.com/download/dotnet/11.0)。缺少依赖或遇到证书提示时，请看[安装说明](docs/install.md)。文件名中的版本号会随更新改变。
 
-这是正式桌面版，部分游戏的特殊加密或格式变体仍可能打不开。也可以从 [Microsoft Store](https://apps.microsoft.com/detail/9NP39X1TRVNM) 安装；Flathub 上架准备仍在进行中。Android 开发暂缓。`store.msixupload` 是商店提交文件，普通用户无需下载。
+这是正式桌面版，部分游戏的特殊加密或格式变体仍可能打不开。也可以从 [Microsoft Store](https://apps.microsoft.com/detail/9NP39X1TRVNM) 安装；Flathub 上架准备仍在进行中。Android 开发已恢复，安装方法与当前功能范围见上方使用说明。`store.msixupload` 是商店提交文件，普通用户无需下载。
 
 ## 图形界面怎么用
 

@@ -15,7 +15,7 @@ Synthetic [compatibility fixtures](../tests/fixtures/scripts-native/README.md) w
 
 ## Builds
 
-Android remains a separate project, so desktop builds do not install mobile workloads. Android 12+ ARM64/x64 APKs use the same UI and a bound decoder service. The Android workflow runs one x64 emulator smoke pass, then builds architecture-specific packages. APK publication requires persistent signing credentials; development artifacts use temporary keys.
+Android remains a separate project, so desktop builds do not install mobile workloads. Android 12+ ARM64/x64 APKs use the same UI and a bound decoder service. ReadyToRun is disabled for Android: CoreCLR builds otherwise hit the upstream [binding rewrite failure](https://github.com/dotnet/android/issues/11025); managed IL retains every decoder and avoids the extra native-code payload. The Android workflow runs one x64 emulator smoke pass, then builds architecture-specific packages. APK publication requires persistent signing credentials; development artifacts use temporary keys.
 
 Store builds pin runtime/ILLink 11.0.0. The Wayland compatibility package remains pinned to its original SDK 10.0.403 and net10.0 assembly identity, consumed unchanged by .NET 11. Flatpak uses a checksummed, build-only official SDK 11.0.100 archive because no dotnet11 SDK extension is published yet; the SDK is removed during cleanup. Offline NuGet generation resolves with the same SDK in the Freedesktop sandbox.
 

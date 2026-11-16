@@ -95,4 +95,4 @@ see [submission instructions](flathub.md) for the exact immutable manifest bundl
 The Microsoft Store submission package is also downloadable; Store publication
 requires Partner Center access. These are separate from the ready-to-install bundles.
 
-Flatpak 安装包支持 x64、ARM64，自带运行时及视频工具，可按上述命令直接安装。Flathub 和微软商店尚未上架，提交资料与权限要求见对应文档。Android 开发继续暂缓。
+Flatpak 安装包支持 x64、ARM64，自带运行时及视频工具，可按上述命令直接安装。Flathub 上架仍在准备中，微软商店可通过 README 的入口安装。Android 开发已恢复，APK 安装与限制见四语言使用说明。

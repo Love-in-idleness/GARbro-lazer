@@ -11,6 +11,8 @@
     <AndroidPackageFormats>apk</AndroidPackageFormats>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">android-arm64</RuntimeIdentifier>
     <PublishTrimmed>false</PublishTrimmed>
+    <!-- CoreCLR R2R bindings cannot be rewritten by Android's abstract-method fixer (dotnet/android#11025). -->
+    <PublishReadyToRun>false</PublishReadyToRun>
     <RunAOTCompilation>false</RunAOTCompilation>
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
     <AndroidUseAssemblyStore>true</AndroidUseAssemblyStore>

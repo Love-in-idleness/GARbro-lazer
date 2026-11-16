@@ -2,7 +2,7 @@ name: Android
 on:
   push:
     branches: [migration/net10]
-    paths: [".github/workflows/android.yml"]
+    paths: [".github/workflows/android.yml", "modern/GARbro.Android/GARbro.Android.csproj"]
   workflow_call:
     inputs:
       package_version:

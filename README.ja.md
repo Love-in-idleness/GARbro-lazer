@@ -25,7 +25,7 @@ GUI と CLI は同じ配布パッケージの `app` フォルダーを共有し�
 
 Flatpak と Store 版以外には、CPU に合った [.NET 11 Runtime](https://dotnet.microsoft.com/download/dotnet/11.0) が必要です。依存ライブラリーや証明書については[インストール手順](docs/install.md)をご覧ください。
 
-一部のゲーム固有の暗号化や形式には対応していない場合があります。[Microsoft Store](https://apps.microsoft.com/detail/9NP39X1TRVNM) からもインストールできます。Flathub での公開は準備中です。Android の開発は保留中です。`store.msixupload` はストア提出用で、通常の利用には不要です。
+一部のゲーム固有の暗号化や形式には対応していない場合があります。[Microsoft Store](https://apps.microsoft.com/detail/9NP39X1TRVNM) からもインストールできます。Flathub での公開は準備中です。Android の開発を再開しました。対応範囲は上記の使用説明をご覧ください。`store.msixupload` はストア提出用で、通常の利用には不要です。
 
 ## ウィンドウで使う
 
