@@ -494,7 +494,7 @@
   "Error.Packing conversion failed: ": "封包前转换失败：",
   "Error.Packing input changed: ": "封包过程中输入发生变化：",
   "Cli.Help.create": "garbro create 输入... -o 归档文件 [选项]\n\n示例：\n  garbro create assets -o data.xfl\n  garbro create image.png voice.mp3 -o data.xp3 --format XP3 --scheme none\n  garbro create assets -o data.zip --image-format webp --audio-format wav --discard-original-media\n\n目录会包含子目录。仅处理明确指定的输入。\n单目录以目录内容为根；多个输入以共同父目录保留相对路径。\n  --format 格式标识        选择可写归档格式；仅扩展名唯一时允许自动推断\n  --options 文件          归档写入器的 JSON 创建参数\n  --scheme 方案, --schemes 数据库文件, --encoding 编码\n  --image-format 格式     PNG、WEBP、BMP、JPEG、TIFF、TGA 或其他可写图像格式\n  --audio-format 格式     AUTO、WAV、FLAC、M4A\n  --video-format 格式     MP4、MKV\n  --discard-original-media  只打包转换件，不打包原始多媒体副本\n  --overwrite fail|skip|replace（默认 fail）\n  --max-entry 字节, --max-total 字节, --timeout 秒, --max-memory 字节\n  --json                  输出路径、格式、写入状态、文件数、转换数及大小\n\n默认保持媒体原格式；开启转换后默认同时打包原件。\n转换失败或重名会中止整包，源文件及已有输出包保持不变。\n转换多媒体格式不会自动修改游戏脚本中的资源引用。",
-  "ScriptOutputFormat": "脚本输出",
+  "ScriptOutputFormat": "脚本输出格式",
   "ScriptExport": "导出可编辑文本",
   "ScriptRecompile": "回编译",
   "Error.Script text cannot be represented by the target encoding.": "目标编码无法表示脚本中的字符。",
@@ -583,5 +583,6 @@
   "Error.Unterminated BPD string.": "BPD 字符串未结束。",
   "Error.Unterminated GSC string.": "GSC 字符串未结束。",
   "ScriptLineError": "脚本第 {0} 行：{1}",
-  "Error.This text encoding is not supported for script compilation.": "此文本编码不适用于脚本回编。"
+  "Error.This text encoding is not supported for script compilation.": "此文本编码不适用于脚本回编。",
+  "NoScriptConversion": "不转换脚本"
 }

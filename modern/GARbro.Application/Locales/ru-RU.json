@@ -494,7 +494,7 @@
   "Error.Packing conversion failed: ": "Ошибка преобразования перед упаковкой: ",
   "Error.Packing input changed: ": "Входной файл изменился во время упаковки: ",
   "Cli.Help.create": "garbro create ВХОД... -o АРХИВ [ПАРАМЕТРЫ]\n\nПримеры:\n  garbro create assets -o data.xfl\n  garbro create image.png voice.mp3 -o data.xp3 --format XP3 --scheme none\n  garbro create assets -o data.zip --image-format webp --audio-format wav --discard-original-media\n\nПапки включают вложенные папки. Упаковываются только указанные входные данные.\nДля одной папки корнем служит её содержимое, для нескольких входов — общий родитель.\n  --format ТЕГ_ИЛИ_ID     Формат записи; расширение определяется только однозначно\n  --options ФАЙЛ         Параметры создания архива в JSON\n  --scheme ИМЯ, --schemes ФАЙЛ, --encoding КОДИРОВКА\n  --image-format ФОРМАТ  PNG, WEBP, BMP, JPEG, TIFF, TGA или другой формат записи\n  --audio-format ФОРМАТ  AUTO, WAV, FLAC, M4A\n  --video-format ФОРМАТ  MP4, MKV\n  --discard-original-media  Исключить оригиналы преобразованных медиафайлов\n  --overwrite fail|skip|replace (по умолчанию fail)\n  --max-entry БАЙТЫ, --max-total БАЙТЫ, --timeout СЕКУНДЫ, --max-memory БАЙТЫ\n  --json                 Путь, формат, статус записи, число файлов, преобразований и размер\n\nПо умолчанию медиафайлы не меняются. При преобразовании оригиналы сохраняются,\nесли не указано их исключение. Ошибка или совпадение имён отменяет создание\nархива, сохраняя исходники и предыдущий архив. Ссылки в сценариях не изменяются.",
-  "ScriptOutputFormat": "Выходной формат сценария",
+  "ScriptOutputFormat": "Формат сценария",
   "ScriptExport": "Экспорт редактируемого текста",
   "ScriptRecompile": "Компиляция",
   "Error.Script text cannot be represented by the target encoding.": "Символы сценария не представимы в выбранной кодировке.",
@@ -583,5 +583,6 @@
   "Error.Unterminated BPD string.": "Незавершённая строка BPD.",
   "Error.Unterminated GSC string.": "Незавершённая строка GSC.",
   "ScriptLineError": "Строка сценария {0}: {1}",
-  "Error.This text encoding is not supported for script compilation.": "Эта кодировка не подходит для компиляции сценария."
+  "Error.This text encoding is not supported for script compilation.": "Эта кодировка не подходит для компиляции сценария.",
+  "NoScriptConversion": "Не преобразовывать сценарии"
 }

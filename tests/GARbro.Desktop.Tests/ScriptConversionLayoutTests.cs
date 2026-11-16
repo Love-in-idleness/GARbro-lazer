@@ -16,7 +16,7 @@ using Xunit;
 public sealed class ScriptConversionLayoutTests
 {
     [AvaloniaFact]
-    public async Task ScriptTargetsRenderInFourLanguagesAndRespectTheCheckbox()
+    public async Task ScriptTargetsShareTheFormatRowAndOfferNoConversionInFourLanguages()
     {
         string snapshots=Environment.GetEnvironmentVariable("GARBRO_SCRIPT_SCREENSHOTS");
         if(snapshots!=null)Directory.CreateDirectory(snapshots);
@@ -26,15 +26,17 @@ public sealed class ScriptConversionLayoutTests
             foreach(string language in new[]{"en-US","zh-CN","ru-RU","ja-JP"})
             {
                 MaterialTheme.Apply(new AppSettings {Theme="dark",DynamicColors=false});var text=new DesktopText(language);
-                var pending=Dialogs.Conversion(owner,text,Array.Empty<ResourceFormatInfo>(),"/Games/output",1,true);
+                var pending=Dialogs.Conversion(owner,text,new[]{new ResourceFormatInfo("PNG","PNG","image","PNG",new[]{"png"},true,null,null)},"/Games/output",1,true);
                 var host=Assert.Single(owner.DesktopHost.OwnedWindows);
                 var controls=host.GetVisualDescendants().ToArray();
-                var scripts=controls.OfType<CheckBox>().Single(c=>c.Name=="ConvertScripts");
+                Assert.DoesNotContain(controls.OfType<CheckBox>(),c=>c.Name=="ConvertScripts");
                 var target=controls.OfType<ComboBox>().Single(c=>c.Name=="ScriptOutputFormat");
-                Assert.Equal(7,target.Items.Count);Assert.Equal("",Assert.IsType<UiChoice>(target.SelectedItem).Value);
+                Assert.Equal(8,target.Items.Count);Assert.Equal("EXPORT",Assert.IsType<UiChoice>(target.SelectedItem).Value);
+                target.SelectedIndex=0;Assert.Equal("",Assert.IsType<UiChoice>(target.SelectedItem).Value);
                 target.SelectedItem=target.Items.OfType<UiChoice>().Single(c=>c.Value=="GSC");
-                scripts.IsChecked=false;Assert.False(target.IsEnabled);scripts.IsChecked=true;Assert.True(target.IsEnabled);
                 await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);await Task.Delay(60);
+                var selectors=controls.OfType<ComboBox>().Where(c=>c.Name is "ImageOutputFormat" or "AudioOutputFormat" or "VideoOutputFormat" or "ScriptOutputFormat").ToArray();
+                var rows=selectors.Select(c=>c.TranslatePoint(new Point(),host).Value.Y).ToArray();Assert.True(rows.Max()-rows.Min()<1);
                 var action=controls.OfType<Button>().Single(c=>c.Content as string==text["Start"]);var at=action.TranslatePoint(new Point(),host).Value;
                 Assert.True(at.Y>=0 && at.Y+action.Bounds.Height<=host.ClientSize.Height+1);
                 using var frame=host.CaptureRenderedFrame();Assert.NotNull(frame);

@@ -494,7 +494,7 @@
   "Error.Packing conversion failed: ": "Packing conversion failed: ",
   "Error.Packing input changed: ": "Packing input changed: ",
   "Cli.Help.create": "garbro create INPUT... -o ARCHIVE [OPTIONS]\n\nExamples:\n  garbro create assets -o data.xfl\n  garbro create image.png voice.mp3 -o data.xp3 --format XP3 --scheme none\n  garbro create assets -o data.zip --image-format webp --audio-format wav --discard-original-media\n\nDirectories include subfolders. Only explicitly selected inputs are packed.\nOne directory uses its contents as the root; multiple inputs use their common parent.\n  --format TAG_OR_ID       Writable archive format; inferred only for a unique extension\n  --options FILE          JSON creation parameters for the archive writer\n  --scheme NAME, --schemes FILE, --encoding CODEPAGE\n  --image-format FORMAT   PNG, WEBP, BMP, JPEG, TIFF, TGA or a writable image tag\n  --audio-format FORMAT   AUTO, WAV, FLAC, M4A\n  --video-format FORMAT   MP4, MKV\n  --discard-original-media  Pack converted media without original copies\n  --overwrite fail|skip|replace (default: fail)\n  --max-entry BYTES, --max-total BYTES, --timeout SECONDS, --max-memory BYTES\n  --json                  Output path, format, written, entries, converted and bytes\n\nBy default media stays unchanged. Conversions retain originals unless omitted.\nA conversion failure or name conflict cancels the whole archive; sources and the\nprevious output are preserved. Changing media formats does not update game scripts.",
-  "ScriptOutputFormat": "Script output",
+  "ScriptOutputFormat": "Script output format",
   "ScriptExport": "Export editable text",
   "ScriptRecompile": "Recompile",
   "Error.Script text cannot be represented by the target encoding.": "Script text cannot be represented by the target encoding.",
@@ -583,5 +583,6 @@
   "Error.Unterminated BPD string.": "Unterminated BPD string.",
   "Error.Unterminated GSC string.": "Unterminated GSC string.",
   "ScriptLineError": "Script line {0}: {1}",
-  "Error.This text encoding is not supported for script compilation.": "This text encoding is not supported for script compilation."
+  "Error.This text encoding is not supported for script compilation.": "This text encoding is not supported for script compilation.",
+  "NoScriptConversion": "Do not convert scripts"
 }

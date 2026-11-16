@@ -494,7 +494,7 @@
   "Error.Packing conversion failed: ": "格納前の変換に失敗しました: ",
   "Error.Packing input changed: ": "格納中に入力が変更されました: ",
   "Cli.Help.create": "garbro create 入力... -o アーカイブ [オプション]\n\n例:\n  garbro create assets -o data.xfl\n  garbro create image.png voice.mp3 -o data.xp3 --format XP3 --scheme none\n  garbro create assets -o data.zip --image-format webp --audio-format wav --discard-original-media\n\nフォルダーはサブフォルダーも含みます。指定した入力だけを格納します。\n単一フォルダーではその内容をルートにし、複数入力では共通の親からの相対パスを使います。\n  --format タグまたはID    書き込み形式。拡張子からの推定は候補が一つの場合のみ\n  --options ファイル       アーカイブ作成用の JSON パラメーター\n  --scheme 名前, --schemes ファイル, --encoding 文字コード\n  --image-format 形式     PNG、WEBP、BMP、JPEG、TIFF、TGA または対応する書き込み形式\n  --audio-format 形式     AUTO、WAV、FLAC、M4A\n  --video-format 形式     MP4、MKV\n  --discard-original-media  変換したメディアの元ファイルを含めない\n  --overwrite fail|skip|replace（既定: fail）\n  --max-entry バイト, --max-total バイト, --timeout 秒, --max-memory バイト\n  --json                  パス、形式、書き込み状態、件数、変換数、サイズを出力\n\n既定ではメディアを変換しません。変換時は除外指定がない限り元ファイルも格納します。\n変換失敗や名前の衝突があると全体を中止し、入力と既存の出力を保持します。\nゲームのスクリプト内の参照は自動で変更しません。",
-  "ScriptOutputFormat": "スクリプトの出力",
+  "ScriptOutputFormat": "スクリプト出力形式",
   "ScriptExport": "編集用テキストを出力",
   "ScriptRecompile": "再コンパイル",
   "Error.Script text cannot be represented by the target encoding.": "スクリプトに出力先の文字コードで表せない文字があります。",
@@ -583,5 +583,6 @@
   "Error.Unterminated BPD string.": "BPD の文字列が閉じられていません。",
   "Error.Unterminated GSC string.": "GSC の文字列が閉じられていません。",
   "ScriptLineError": "スクリプト {0} 行: {1}",
-  "Error.This text encoding is not supported for script compilation.": "この文字コードはスクリプトのコンパイルには使用できません。"
+  "Error.This text encoding is not supported for script compilation.": "この文字コードはスクリプトのコンパイルには使用できません。",
+  "NoScriptConversion": "スクリプトを変換しない"
 }

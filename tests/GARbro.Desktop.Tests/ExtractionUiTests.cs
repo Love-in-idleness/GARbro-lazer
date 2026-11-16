@@ -150,10 +150,14 @@ public sealed class ExtractionUiTests
             }, Path.GetTempPath(), 1, offerScripts: true);
             var dialog = Assert.Single(owner.DesktopHost.OwnedWindows);
             var controls = dialog.GetVisualDescendants().ToArray();
-            Assert.True(controls.OfType<CheckBox>().Single(c => c.Name == "ConvertScripts").IsChecked);
+            Assert.Equal("EXPORT",Assert.IsType<UiChoice>(controls.OfType<ComboBox>().Single(c=>c.Name=="ScriptOutputFormat").SelectedItem).Value);
             foreach (var selector in controls.OfType<ComboBox>().Where(c =>
                 c.Name is "ImageOutputFormat" or "AudioOutputFormat" or "VideoOutputFormat"))
                 selector.SelectedIndex = 0;
+            var scripts=controls.OfType<ComboBox>().Single(c=>c.Name=="ScriptOutputFormat");
+            var panel=controls.OfType<MediaConversionPanel>().Single();
+            scripts.SelectedIndex=0;Assert.False(panel.ConvertScripts);Assert.Null(panel.ScriptFormat);Assert.False(panel.HasConversion);
+            scripts.SelectedIndex=1;Assert.True(panel.ConvertScripts);Assert.Null(panel.ScriptFormat);
             controls.OfType<Button>().Single(c => c.Content as string == text["Start"])
                 .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             var choice = await result;

@@ -82,7 +82,7 @@ Alt+Shift+T/M/S 切换工具栏、菜单栏、状态栏；Alt 可恢复隐藏菜
 
 ## 脚本转换
 
-选择磁盘或归档中的受支持脚本，在「转换」中勾选「转换脚本」。
+选择磁盘或归档中的受支持脚本，在「转换」中在「脚本输出格式」选择「导出可编辑文本」。
 
 - CodeX RScript GSC → UTF-8 TSC 由内置解码器完成，Ren’Py RPYC → RPY 使用 unrpyc。
 - KiriKiri 的 KS 和 TJS 文本可转为 UTF-8，已编译的 TJS2100 使用 tjs2dec。
@@ -112,7 +112,7 @@ garbro create "assets" -o "data.xp3" --format XP3 --scheme none
 
 ## 脚本回编（1.1.1 开发版）
 
-选中编辑好的文件，打开“格式转换”，勾选“转换脚本”，再选择“回编译”和目标格式：TSC 选 GSC，BSD 选 BGI，BPD 选 BGI-BP，ASB 的完整 JSON 选 ASB。普通文本可回编为 NSCRIPT（`nscript.dat`）或 DSM（`data.dsm`）。继续使用原来的中间格式；ASB 不接受仅有对白的 JSON。
+选中编辑好的文件，打开“格式转换”，在与图像、音频、视频并列的“脚本输出格式”中选择“回编译”和目标格式；选择“不转换脚本”即可跳过脚本：TSC 选 GSC，BSD 选 BGI，BPD 选 BGI-BP，ASB 的完整 JSON 选 ASB。普通文本可回编为 NSCRIPT（`nscript.dat`）或 DSM（`data.dsm`）。继续使用原来的中间格式；ASB 不接受仅有对白的 JSON。
 
 这六种编译器已写入 GARbro，桌面与 Android 均不需要 Python 或外部编译程序。源文本请使用 UTF-8 或带 Unicode BOM 的编码。编码选项控制编译后文本：自动时 GSC／BGI／NScripter 使用 CP932，ASB 使用 UTF-8；DSM 固定 UTF-8。无法表示的字符会报错。引用外部 `#string_table` 的 BSD 请先合并为单个文件。无法识别指令布局的 GSC 会导出带校验的原始数据，只能原样还原，不能据此翻译。
 

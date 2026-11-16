@@ -167,7 +167,7 @@ public static class Dialogs
     }
     public static async Task<ConversionChoice> Conversion(AppWindow owner,DesktopText text,ResourceFormatInfo[] formats,string initial,int selectedCount=0,bool offerScripts=false)
     {
-        var window=Window(text,"Convert",780,offerScripts?760:580);var body=Panel();
+        var window=Window(text,"Convert",offerScripts?940:780,offerScripts?620:580);var body=Panel();
         if(selectedCount>0)body.Children.Add(new TextBlock {Text=text.Format("ConversionSelectionScope",selectedCount),TextWrapping=Avalonia.Media.TextWrapping.Wrap,Classes={"muted"}});
         body.Children.Add(Output(owner,text,initial,out var path));
         var conversion=new MediaConversionPanel(text,formats,true,offerScripts);body.Children.Add(conversion);

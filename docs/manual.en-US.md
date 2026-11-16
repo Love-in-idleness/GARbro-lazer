@@ -103,7 +103,7 @@ Choose **WebP (lossless)** under Image output format when extracting or converti
 
 ## Convert scripts
 
-Select a supported script on disk or in an archive, open **Convert** and enable **Convert scripts**.
+Select a supported script on disk or in an archive, open **Convert** and choose **Export editable text** under **Script output format**.
 
 - CodeX RScript GSC → UTF-8 TSC is built in. Ren’Py RPYC → RPY uses unrpyc.
 - KiriKiri KS and TJS text → UTF-8. Compiled TJS2100 uses tjs2dec.
@@ -133,7 +133,7 @@ garbro create "assets" -o "data.xp3" --format XP3 --scheme none
 
 ## Script recompilation (1.1.1 development)
 
-Select the edited files and choose **Convert → Convert scripts → Recompile**. Choose GSC for TSC, BGI for BSD, BGI-BP for BPD, or ASB for its structured JSON export. Plain text can become NSCRIPT (`nscript.dat`) or DSM (`data.dsm`). Each target uses its original intermediate format; dialogue-only ASB JSON is not accepted.
+Select the edited files and choose **Convert → Script output format → Recompile**. Choose **Do not convert scripts** to skip scripts. Choose GSC for TSC, BGI for BSD, BGI-BP for BPD, or ASB for its structured JSON export. Plain text can become NSCRIPT (`nscript.dat`) or DSM (`data.dsm`). Each target uses its original intermediate format; dialogue-only ASB JSON is not accepted.
 
 These six compilers are built into GARbro and work on desktop and Android without Python or another compiler. Source text must use UTF-8 or a Unicode BOM. The text encoding option selects the compiled strings: Auto uses CP932 for GSC/BGI/NScripter and UTF-8 for ASB; DSM always uses UTF-8. Characters that cannot be encoded produce an error. BGI sources referencing an external `#string_table` must first be merged into a self-contained BSD. Unknown GSC layouts export as checked raw envelopes; their payload is preserved, not translated.
 

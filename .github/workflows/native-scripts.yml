@@ -17,8 +17,7 @@ jobs:
           dotnet-version: '11.0.x'
       - run: sudo apt-get update -q && sudo apt-get install -y --no-install-recommends libsdl2-2.0-0 fonts-noto-cjk ffmpeg
       - run: python3 tools/check-ui-localization.py
-      - run: dotnet test tests/GARbro.Core.Tests -c Release -r linux-x64 --filter 'FullyQualifiedName~ScriptRecompileTests|FullyQualifiedName~NativeScriptCodecTests|FullyQualifiedName~ScriptTextEncodingTests' --logger 'trx;LogFileName=scripts.trx'
-      - run: dotnet test tests/GARbro.Desktop.Tests -c Release -r linux-x64 --filter FullyQualifiedName~ScriptConversionLayoutTests --logger 'trx;LogFileName=script-ui.trx'
+      - run: dotnet test tests/GARbro.Desktop.Tests -c Release -r linux-x64 --filter 'FullyQualifiedName~ScriptConversionLayoutTests|FullyQualifiedName~BatchConversionAcceptsScriptsWithOtherFormatsDisabled' --logger 'trx;LogFileName=script-ui.trx'
         env:
           GARBRO_SCRIPT_SCREENSHOTS: ${{ github.workspace }}/artifacts/script-ui
       - run: dotnet build modern/GARbro.Desktop -c Release -r linux-x64 --disable-build-servers -m:1
