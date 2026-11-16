@@ -29,10 +29,18 @@ public sealed class AndroidStorageAccess : IStorageAccess
     readonly HashSet<string> protectedSources = new(StringComparer.Ordinal);
     public AndroidStorageAccess(Context context)
     {
-        this.context = context; root = Path.Combine(context.FilesDir.AbsolutePath, "worksets"); registry = Path.Combine(context.FilesDir.AbsolutePath, "sources.json");
+        this.context = context; root = Path.Combine(context.FilesDir.CanonicalPath, "worksets"); registry = Path.Combine(context.FilesDir.CanonicalPath, "sources.json");
         Directory.CreateDirectory(root);
         if (File.Exists(registry))
-            try { foreach (var m in JsonSerializer.Deserialize<Mapping[]>(File.ReadAllText(registry)) ?? Array.Empty<Mapping>()) mappings[m.Id] = m; }
+            try
+            {
+                string alias=Path.Combine(context.FilesDir.AbsolutePath,"worksets")+Path.DirectorySeparatorChar;
+                foreach (var saved in JsonSerializer.Deserialize<Mapping[]>(File.ReadAllText(registry)) ?? Array.Empty<Mapping>())
+                {
+                    var mapping=saved.Path.StartsWith(alias,StringComparison.Ordinal)?saved with {Path=Path.Combine(root,saved.Path[alias.Length..])}:saved;
+                    mappings[mapping.Id]=mapping;
+                }
+            }
             catch (JsonException e) { DesktopServices.Log(e); File.Move(registry, registry + ".invalid-" + Guid.NewGuid().ToString("N")); }
         RecoverPendingDocuments();
     }
@@ -93,6 +101,7 @@ public sealed class AndroidStorageAccess : IStorageAccess
         string volume = parts[0] == "primary" ? global::Android.OS.Environment.ExternalStorageDirectory.AbsolutePath :
             System.Text.RegularExpressions.Regex.IsMatch(parts[0], "^[A-Za-z0-9-]+$") ? "/storage/" + parts[0] : null;
         if (volume == null) return null;
+        using(var directory=new Java.IO.File(volume))volume=directory.CanonicalPath;
         string path = Path.GetFullPath(Path.Combine(volume, parts[1]));
         return Inside(volume, path) && (File.Exists(path) || Directory.Exists(path) || Directory.Exists(Path.GetDirectoryName(path))) ? path : null;
     }

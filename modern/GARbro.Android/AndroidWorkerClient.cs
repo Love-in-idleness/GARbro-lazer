@@ -24,10 +24,10 @@ public sealed class AndroidWorkerClient(Context context, AndroidStorageAccess st
         operation.CancelAfter(TimeSpan.FromSeconds(limits.TimeoutSeconds));
         bool background = request.Operation is "resource-extract" or "resource-create" or "resource-pack" or "resource-convert";
         int pid = 0; bool bound = false; DecoderConnection connection = null;
-        string id = Guid.NewGuid().ToString("N"), registry = Path.Combine(context.CacheDir.AbsolutePath, "worker-" + id + ".jsonl");
+        string id = Guid.NewGuid().ToString("N"), registry = Path.Combine(context.CacheDir.CanonicalPath, "worker-" + id + ".jsonl");
         File.WriteAllText(registry, "");
         Action cancel = () => operation.Cancel();
-        string journal = Path.Combine(context.FilesDir.AbsolutePath, "last-task.json");
+        string journal = Path.Combine(context.FilesDir.CanonicalPath, "last-task.json");
         TaskCheckpoint checkpoint = null; string limitReason = null; var elapsed = Stopwatch.StartNew();
         try
         {

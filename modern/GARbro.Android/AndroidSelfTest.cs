@@ -20,8 +20,8 @@ public static class AndroidSelfTest
     static void Check(bool condition, string message) { if (!condition) throw new InvalidDataException(message); }
     public static async Task RunAsync(MainActivity activity, MainWindow browser)
     {
-        var checks = new List<string>(); string root = Path.Combine(activity.FilesDir.AbsolutePath, "self-test"); Directory.CreateDirectory(root);
-        string result = Path.Combine(activity.FilesDir.AbsolutePath, "test-results.json"); File.Delete(result);
+        var checks = new List<string>(); string root = Path.Combine(activity.FilesDir.CanonicalPath, "self-test"); Directory.CreateDirectory(root);
+        string result = Path.Combine(activity.FilesDir.CanonicalPath, "test-results.json"); File.Delete(result);
         try
         {
             await Task.Run(() => CopyAssets(activity, "TestFixtures", root));
@@ -72,7 +72,7 @@ public static class AndroidSelfTest
     }
     static async Task CheckDocuments(MainActivity activity, string archive)
     {
-        string root = Path.Combine(activity.FilesDir.AbsolutePath, "document-tests");
+        string root = Path.Combine(activity.FilesDir.CanonicalPath, "document-tests");
         string input = Path.Combine(root, "in"), output = Path.Combine(root, "out"); Directory.CreateDirectory(input); Directory.CreateDirectory(output);
         File.Copy(archive, Path.Combine(input, "中文 sample.xfl"), true);
         var storage = AndroidBootstrap.Storage;

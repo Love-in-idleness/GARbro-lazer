@@ -19,7 +19,7 @@ public sealed class TestDocumentsProvider : DocumentsProvider
     public const string Authority = "org.garbro.garbro.test.documents";
     public static bool Available = true, RenameSupported = true;
     public static long? ReportedSize;
-    string Root => Path.Combine(Context.FilesDir.AbsolutePath, "document-tests");
+    string Root => Path.Combine(Context.FilesDir.CanonicalPath, "document-tests");
     static readonly string[] columns = { Document.ColumnDocumentId, Document.ColumnDisplayName, Document.ColumnMimeType, Document.ColumnSize, Document.ColumnLastModified, Document.ColumnFlags };
     public override bool OnCreate() { Directory.CreateDirectory(Root); return true; }
     string Physical(string id)

@@ -17,7 +17,9 @@ public static class AndroidBootstrap
     public static void Initialize(Context context)
     {
         if (initialized) return;
-        string files = context.FilesDir.AbsolutePath;
+        // Resolve only Android-owned directory aliases; child resources still pass the shared link checks.
+        System.Environment.SetEnvironmentVariable("TMPDIR",context.CacheDir.CanonicalPath);
+        string files = context.FilesDir.CanonicalPath;
         string database = Path.Combine(files, "GameData"); Directory.CreateDirectory(database);
         string stamp = Path.Combine(database, ".package-version");
         string version = context.PackageManager.GetPackageInfo(context.PackageName, 0).LastUpdateTime.ToString(System.Globalization.CultureInfo.InvariantCulture);
