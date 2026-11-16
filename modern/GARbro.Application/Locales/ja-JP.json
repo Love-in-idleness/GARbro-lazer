@@ -582,5 +582,6 @@
   "Error.Unterminated BGI string.": "BGI の文字列が閉じられていません。",
   "Error.Unterminated BPD string.": "BPD の文字列が閉じられていません。",
   "Error.Unterminated GSC string.": "GSC の文字列が閉じられていません。",
-  "ScriptLineError": "スクリプト {0} 行: {1}"
+  "ScriptLineError": "スクリプト {0} 行: {1}",
+  "Error.This text encoding is not supported for script compilation.": "この文字コードはスクリプトのコンパイルには使用できません。"
 }

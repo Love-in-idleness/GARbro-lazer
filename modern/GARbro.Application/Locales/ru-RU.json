@@ -582,5 +582,6 @@
   "Error.Unterminated BGI string.": "Незавершённая строка BGI.",
   "Error.Unterminated BPD string.": "Незавершённая строка BPD.",
   "Error.Unterminated GSC string.": "Незавершённая строка GSC.",
-  "ScriptLineError": "Строка сценария {0}: {1}"
+  "ScriptLineError": "Строка сценария {0}: {1}",
+  "Error.This text encoding is not supported for script compilation.": "Эта кодировка не подходит для компиляции сценария."
 }

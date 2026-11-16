@@ -183,12 +183,12 @@ type BgiScript private () =
             let total = stringStart+int pool.Length
             writer.Write(uint32 (if explicit then total else (total+15)/16*16)); writer.Write(0u); writer.Write(0u)
         else
-            let sigBytes = encode encoding signature.Value
+            let sigBytes = cstring encoding signature.Value
             if sigBytes.Length>28 then invalid "Invalid BGI header length."
             writer.Write(sigBytes); writer.Write(Array.zeroCreate<byte> (28-sigBytes.Length))
             use body = new MemoryStream()
             use hw = new BinaryWriter(body)
-            let name value = hw.Write(encode encoding value); hw.Write(0uy)
+            let name value = hw.Write(cstring encoding value); hw.Write(0uy)
             hw.Write(uint32 imports.Count)
             for value in imports do name value
             if extras.Count>0 then

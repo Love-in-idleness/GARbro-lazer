@@ -132,7 +132,7 @@ type GscScript private () =
                 | true,id -> id
                 | _ ->
                     let id = stringIds.Count
-                    index.Write(uint32 strings.Length); strings.Write(encode encoding value); strings.WriteByte(0uy)
+                    index.Write(uint32 strings.Length); strings.Write(cstring encoding value); strings.WriteByte(0uy)
                     stringIds.Add(value,id); id
             intern "" |> ignore
             use code = new MemoryStream()

@@ -582,5 +582,6 @@
   "Error.Unterminated BGI string.": "BGI 字符串未结束。",
   "Error.Unterminated BPD string.": "BPD 字符串未结束。",
   "Error.Unterminated GSC string.": "GSC 字符串未结束。",
-  "ScriptLineError": "脚本第 {0} 行：{1}"
+  "ScriptLineError": "脚本第 {0} 行：{1}",
+  "Error.This text encoding is not supported for script compilation.": "此文本编码不适用于脚本回编。"
 }

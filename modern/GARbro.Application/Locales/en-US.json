@@ -582,5 +582,6 @@
   "Error.Unterminated BGI string.": "Unterminated BGI string.",
   "Error.Unterminated BPD string.": "Unterminated BPD string.",
   "Error.Unterminated GSC string.": "Unterminated GSC string.",
-  "ScriptLineError": "Script line {0}: {1}"
+  "ScriptLineError": "Script line {0}: {1}",
+  "Error.This text encoding is not supported for script compilation.": "This text encoding is not supported for script compilation."
 }

@@ -58,6 +58,8 @@ public sealed class NativeScriptCodecTests
         Assert.Throws<InvalidDataException>(()=>GscScript.Compile("*end",Cp932,default));
         Assert.Throws<InvalidDataException>(()=>BgiScript.Compile("#header \"BurikoCompiledScriptVer1.00\"\npush_offset(missing);",false,Cp932,default));
         Assert.Throws<InvalidDataException>(()=>AsbScript.Compile("[\"😀\"]",Cp932,default));
+        Assert.Throws<InvalidDataException>(()=>GscScript.Compile(File.ReadAllText(Fixture("modern.tsc")),Encoding.Unicode,default));
+        Assert.Throws<InvalidDataException>(()=>BgiScript.Compile(File.ReadAllText(Fixture("scene.bsd")),false,Encoding.Unicode,default));
         using var cancellation=new CancellationTokenSource();cancellation.Cancel();
         Assert.Throws<OperationCanceledException>(()=>GscScript.Compile(File.ReadAllText(Fixture("modern.tsc")),Cp932,cancellation.Token));
         var broken=File.ReadAllBytes(Fixture("scene.asb"));Array.Resize(ref broken,broken.Length-1);

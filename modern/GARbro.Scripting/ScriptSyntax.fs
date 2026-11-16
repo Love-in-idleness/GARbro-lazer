@@ -21,6 +21,12 @@ module internal ScriptSyntax =
         if value.Contains('\000') then invalid "Script strings cannot contain null bytes."
         try (strict encoding).GetBytes(value)
         with :? EncoderFallbackException as e -> raise (InvalidDataException("Script text cannot be represented by the target encoding.", e))
+    let cstring (encoding: Encoding) value =
+        if encoding.CodePage = 1200 || encoding.CodePage = 1201 || encoding.CodePage = 12000 || encoding.CodePage = 12001 then
+            invalid "This text encoding is not supported for script compilation."
+        let bytes = encode encoding value
+        if Array.contains 0uy bytes then invalid "This text encoding is not supported for script compilation."
+        bytes
     let hex (value: string) =
         try Convert.FromHexString(value.Replace(":", "").Replace(" ", ""))
         with :? FormatException -> invalid "Invalid script hexadecimal data."
@@ -71,11 +77,11 @@ module internal ScriptSyntax =
         use output = new MemoryStream()
         let mutable pos = 0
         for m in Regex.Matches(value, @"\{\{([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2})*)\}\}") do
-            output.Write(encode encoding (value.Substring(pos, m.Index-pos)))
+            output.Write(cstring encoding (value.Substring(pos, m.Index-pos)))
             output.Write(hex m.Groups[1].Value)
             pos <- m.Index + m.Length
         if pos=0 && value.StartsWith("@hex:") then output.Write(hex (value.Substring(5)))
-        else output.Write(encode encoding (value.Substring(pos)))
+        else output.Write(cstring encoding (value.Substring(pos)))
         output.ToArray()
     let writeInteger (writer: BinaryWriter) kind value =
         match kind with
