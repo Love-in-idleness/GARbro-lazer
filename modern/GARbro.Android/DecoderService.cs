@@ -47,7 +47,7 @@ public sealed class DecoderService : Service
                     WorkerExecutor.ExecuteAsync(request, Reply).GetAwaiter().GetResult();
                 }
                 catch (Exception e) { try { Reply(new("error", Error: new(e.GetType().Name, e.Message))); } catch (IOException) { } }
-                finally { writer.Flush(); write.Close(); read.Close(); }
+                finally { writer.Flush(); }
             }, System.Threading.CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
         static System.Text.Json.JsonElement JsonData(int pid) => System.Text.Json.JsonSerializer.SerializeToElement(pid);

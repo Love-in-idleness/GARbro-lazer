@@ -64,7 +64,7 @@ public sealed class AndroidWorkerClient(Context context, AndroidStorageAccess st
             if (data.Length > 32 << 20) throw new InvalidDataException("Decoder request exceeds its size limit.");
             // Java pipe streams block. Dedicated threads keep pipe I/O out of the
             // managed thread pool, including on single-core devices/emulators.
-            var writing = Task.Factory.StartNew(() => { managedInput.Write(data); managedInput.Close(); writeRequest.Close(); DesktopServices.Activity("decoder", "request sent"); }, operation.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            var writing = Task.Factory.StartNew(() => { managedInput.Write(data); managedInput.Close(); DesktopServices.Activity("decoder", "request sent"); }, operation.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
             WorkerReply result = null;
             using var watchdog = CancellationTokenSource.CreateLinkedTokenSource(operation.Token);
             var monitor = Task.Run(async () =>

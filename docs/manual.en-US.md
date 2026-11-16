@@ -105,15 +105,15 @@ Choose **WebP (lossless)** under Image output format when extracting or converti
 
 Select a supported script on disk or in an archive, open **Convert** and enable **Convert scripts**.
 
-- CodeX RScript GSC → UTF-8 TSC uses LiarsoftTool. Ren’Py RPYC → RPY uses unrpyc.
+- CodeX RScript GSC → UTF-8 TSC is built in. Ren’Py RPYC → RPY uses unrpyc.
 - KiriKiri KS and TJS text → UTF-8. Compiled TJS2100 uses tjs2dec.
-- BGI/Ethornell v1 scripts (`._bs` or extensionless) → BSD and `._bp` → BPD use Bgi_asdisEN. Auto uses CP932. GBK is also supported.
+- BGI/Ethornell v1 scripts (`._bs` or extensionless) → BSD and `._bp` → BPD use the built-in decoder. Auto uses CP932. GBK is also supported.
 - NScripter `nscript.dat` → TXT. Auto checks for a BOM and UTF-8, then falls back to CP932. For GBK files select GBK.
 - Artemis AST → UTF-8, ASB → structured JSON. Unity Utage `data.dsm` → TXT. RPG Maker XP, VX and VX Ace `Scripts.rxdata`, `Scripts.rvdata` and `Scripts.rvdata2` → Ruby source.
 
-Download optional tools under **Help → Tool downloads**. Put LiarsoftTool 2.3.1+, unrpyc 2.x and tjs2dec on `PATH`, or set `GARBRO_LIARSOFTTOOL`, `GARBRO_UNRPYC` and `GARBRO_TJS2DEC` to their absolute paths. Set `GARBRO_BGI_ASDIS` to the absolute path of the unpacked Bgi_asdisEN repository. For ASB, use msg-tool v0.4.0-alpha.3 or newer as `msg_tool` on `PATH` or set `GARBRO_MSG_TOOL`. For RGSS, use rvpacker-txt-rs v19 or newer on `PATH` or set `GARBRO_RVPACKER`. Both variables take absolute paths to the executables. Bgi_asdisEN and `unrpyc.py` require Python 3.9+ on `PATH`. Flatpak helpers must be able to run in the sandbox. For Luca System `SCRIPT.PAK`, run LuckSystem separately with the opcode table for your game.
+Optional exporters are under **Help → Tool downloads**. Put unrpyc 2.x, tjs2dec and rvpacker-txt-rs v19+ on `PATH`, or set `GARBRO_UNRPYC`, `GARBRO_TJS2DEC` and `GARBRO_RVPACKER` to absolute executable paths. `unrpyc.py` needs Python 3.9+. Flatpak helpers must run inside the sandbox. GSC/BGI/ASB do not need tools. For Luca System `SCRIPT.PAK`, run LuckSystem separately with the opcode table for your game.
 
-`garbro convert scene.gsc -o scene.tsc --encoding gbk` selects GBK explicitly. Auto lets LiarsoftTool detect the encoding. Use `garbro convert scripts.rpa --entry game/script.rpyc -o script.rpy` for an archive entry, using the entry name shown by `garbro list`.
+`garbro convert scene.gsc -o scene.tsc --encoding gbk` selects GBK explicitly. Auto uses CP932 for GSC/BGI. Use `garbro convert scripts.rpa --entry game/script.rpyc -o script.rpy` for an archive entry, using the entry name shown by `garbro list`.
 
 `--recursive` traverses disk folders; `--nested` expands child archives. Ordinary recursive disk scans skip unrecognized files and keep relative directories. Global options may precede the command; `--` protects input filenames beginning with a dash. Existing single-archive extraction and JSON field names remain supported.
 

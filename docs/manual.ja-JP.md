@@ -79,15 +79,15 @@ Flatpak ではシステムのファイル選択でアクセスを許可してく
 
 ディスクまたはアーカイブ内の対応スクリプトを選択し、「変換」で「スクリプトを変換」を有効にします。
 
-- CodeX RScript の GSC → UTF-8 の TSC には LiarsoftTool、Ren’Py の RPYC → RPY には unrpyc を使います。
+- CodeX RScript の GSC → UTF-8 の TSC は内蔵機能、Ren’Py の RPYC → RPY は unrpyc を使います。
 - 吉里吉里のテキスト KS と TJS → UTF-8。コンパイル済みの TJS2100 には tjs2dec を使います。
-- BGI/Ethornell v1 のスクリプト（`._bs` または拡張子なし）→ BSD、`._bp` → BPD には Bgi_asdisEN を使います。自動設定では CP932 を使用し、GBK も選択できます。
+- BGI/Ethornell v1 のスクリプト（`._bs` または拡張子なし）→ BSD、`._bp` → BPD は内蔵機能で変換します。自動設定では CP932 を使用し、GBK も選択できます。
 - NScripter の `nscript.dat` → TXT。自動設定では BOM と UTF-8 を判定し、それ以外は CP932 として読み込みます。GBK のファイルには GBK を指定してください。
 - Artemis の AST → UTF-8、ASB → 構造化 JSON。Unity Utage の `data.dsm` → TXT。RPG ツクール XP、VX、VX Ace の `Scripts.rxdata`、`Scripts.rvdata`、`Scripts.rvdata2` → Ruby ソース。
 
-必要なツールは「ヘルプ → ツールのダウンロード」から入手できます。LiarsoftTool 2.3.1 以降、unrpyc 2.x、tjs2dec を `PATH` に追加するか、`GARBRO_LIARSOFTTOOL`、`GARBRO_UNRPYC`、`GARBRO_TJS2DEC` に絶対パスを指定します。`GARBRO_BGI_ASDIS` には展開した Bgi_asdisEN リポジトリの絶対パスを指定します。ASB には msg-tool v0.4.0-alpha.3 以降を使います。`msg_tool` を `PATH` に追加するか、`GARBRO_MSG_TOOL` に絶対パスを指定します。RGSS には rvpacker-txt-rs v19 以降を使います。ツールを `PATH` に追加するか、`GARBRO_RVPACKER` に絶対パスを指定します。Bgi_asdisEN と `unrpyc.py` には `PATH` 上に Python 3.9 以降が必要です。Flatpak ではサンドボックス内で実行できるツールが必要です。Luca System の `SCRIPT.PAK` は、ゲームに対応する命令テーブルを指定して LuckSystem で別途処理できます。
+他の出力ツールは「ヘルプ → ツールのダウンロード」から入手できます。unrpyc 2.x、tjs2dec、rvpacker-txt-rs v19 以降を `PATH` に追加するか、`GARBRO_UNRPYC`、`GARBRO_TJS2DEC`、`GARBRO_RVPACKER` に実行ファイルの絶対パスを指定します。`unrpyc.py` には Python 3.9 以降が必要です。Flatpak ではツールがサンドボックス内で動作する必要があります。GSC・BGI・ASB に外部ツールは不要です。Luca System の `SCRIPT.PAK` はゲームに合った命令表を指定して LuckSystem で別途処理します。
 
-`garbro convert scene.gsc -o scene.tsc --encoding gbk` は GBK を明示的に指定します。自動設定では LiarsoftTool が文字コードを判定します。アーカイブ内の項目には `garbro convert scripts.rpa --entry game/script.rpyc -o script.rpy` を使います。項目名は `garbro list` で確認できます。
+`garbro convert scene.gsc -o scene.tsc --encoding gbk` は GBK を明示的に指定します。GSC・BGI の自動設定は CP932 です。アーカイブ内の項目には `garbro convert scripts.rpa --entry game/script.rpyc -o script.rpy` を使います。項目名は `garbro list` で確認できます。
 
 `--recursive` はディスクのフォルダーを探索し、`--nested` は子アーカイブを展開します。通常の探索では不明なファイルをスキップし、相対フォルダーを保持します。共通オプションはコマンドの前にも指定でき、`--` でハイフンから始まる入力名を保護できます。従来の単一アーカイブ抽出と JSON フィールドは引き続き利用できます。
 
