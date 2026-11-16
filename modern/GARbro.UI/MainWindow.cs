@@ -135,7 +135,8 @@ public sealed partial class MainWindow : AppWindow
             string sort = item.Item1.ToLowerInvariant(); label.Click += (_, _) => SetSort(sort);
             Grid.SetColumn(label, item.Item2); headings.Children.Add(label);
         }
-        headings.SizeChanged+=(_,_)=>FitFileColumns(headings,headings.Children[1]);
+        headings.SizeChanged+=(_,_)=>FitFileColumns(headings,headings.Children[1],files.Bounds.Width);
+        files.SizeChanged+=(_,_)=>FitFileColumns(headings,headings.Children[1],files.Bounds.Width);
         list.Children.Add(headings);
         files.ItemTemplate = new FuncDataTemplate<BrowserEntry>((entry, _) =>
         {
@@ -148,7 +149,7 @@ public sealed partial class MainWindow : AppWindow
             Grid.SetColumn(kind, 1); row.Children.Add(kind);
             var size = new TextBlock { Text = entry.IsDirectory ? "" : FormatSize(entry.Size), HorizontalAlignment = HorizontalAlignment.Right, FontSize = 12 };
             Grid.SetColumn(size, 2); row.Children.Add(size);
-            row.SizeChanged+=(_,_)=>FitFileColumns(row,kind);return row;
+            row.SizeChanged+=(_,_)=>FitFileColumns(row,kind,files.Bounds.Width);return row;
         });
         files.DoubleTapped += async (_, _) => await Guard(OpenSelected);
         files.SelectionChanged += async (_, _) => { if(updatingRows)return; currentTab.Selection=files.SelectedItems.Cast<BrowserEntry>().Select(e=>e.Name).ToArray(); currentTab.Focused=(files.SelectedItem as BrowserEntry)?.Name; UpdateTabHeaders(); UpdateCommands(); await PreviewSelection(); };
@@ -257,9 +258,9 @@ public sealed partial class MainWindow : AppWindow
         }
         if (width >= 600 && width < 1000 && compactPanel == "FolderPanel") browser.ColumnDefinitions = new("180,*,0");
     }
-    static void FitFileColumns(Grid row,Control type)
+    static void FitFileColumns(Grid row,Control type,double width)
     {
-        bool compact=row.Bounds.Width<480;
+        bool compact=width<480;
         type.IsVisible=!compact;
         double typeWidth=compact?0:140,sizeWidth=compact?76:90;
         if(row.ColumnDefinitions[1].Width.Value!=typeWidth)row.ColumnDefinitions[1].Width=new(typeWidth);
