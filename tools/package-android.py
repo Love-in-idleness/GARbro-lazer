@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build standalone Android APKs; publication requires the project's persistent signing key."""
 import argparse
+import hashlib
 import os
 import shutil
 import subprocess
@@ -41,6 +42,8 @@ def main():
         build_tools=sorted((Path(args.sdk)/'build-tools').iterdir())[-1]
         subprocess.run([str(build_tools/'zipalign'),'-c','-P','16','4',str(target)],check=True)
         subprocess.run([str(build_tools/'apksigner'),'verify','--verbose',str(target)],check=True)
+    with target.open('rb') as stream:digest=hashlib.file_digest(stream,'sha256').hexdigest()
+    target.with_suffix('.apk.sha256').write_text(digest+'  '+target.name+'\n')
     print(target)
 
 

@@ -2,7 +2,7 @@ name: Android
 on:
   push:
     branches: [migration/net10]
-    paths: [".github/workflows/android.yml", "modern/GARbro.Android/**"]
+    paths: ["modern/GARbro.Android/**"]
   workflow_call:
     inputs:
       package_version:
@@ -11,14 +11,25 @@ on:
       publish:
         type: boolean
         default: false
+      smoke:
+        type: boolean
+        default: true
     secrets:
       ANDROID_KEYSTORE_BASE64:
         required: false
       ANDROID_KEYSTORE_PASSWORD:
         required: false
   workflow_dispatch:
+    inputs:
+      smoke:
+        description: Run the emulator check before packaging
+        type: boolean
+        default: true
+permissions:
+  contents: read
 jobs:
   test:
+    if: github.event_name == 'push' || inputs.smoke
     strategy:
       fail-fast: false
       matrix:
@@ -67,6 +78,7 @@ jobs:
           path: artifacts/android-smoke/
   package:
     needs: test
+    if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
     strategy:
       matrix:
         rid: [android-arm64, android-x64]
@@ -101,4 +113,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: development-${{ matrix.rid }}
-          path: artifacts/garbro-*-${{ matrix.rid }}.apk
+          path: |
+            artifacts/garbro-*-${{ matrix.rid }}.apk
+            artifacts/garbro-*-${{ matrix.rid }}.apk.sha256
