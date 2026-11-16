@@ -51,6 +51,8 @@ public sealed class AndroidAudioOutput : Java.Lang.Object, IAudioOutput, AudioMa
             focus = new AudioFocusRequestClass.Builder(AudioFocus.Gain).SetAudioAttributes(attributes).SetOnAudioFocusChangeListener(this).Build();
             var channels = input.WaveFormat.Channels == 1 ? ChannelOut.Mono : ChannelOut.Stereo;
             int size = Math.Max(input.WaveFormat.AverageBytesPerSecond / 4, AudioTrack.GetMinBufferSize(input.WaveFormat.SampleRate, channels, global::Android.Media.Encoding.Pcm16bit));
+            int frameBytes=input.WaveFormat.BlockAlign;
+            size=checked((size+frameBytes-1)/frameBytes*frameBytes);
             track = new AudioTrack.Builder().SetAudioAttributes(attributes).SetAudioFormat(new AudioFormat.Builder().SetEncoding(global::Android.Media.Encoding.Pcm16bit)
                 .SetSampleRate(input.WaveFormat.SampleRate).SetChannelMask(channels).Build()).SetBufferSizeInBytes(size).SetTransferMode(AudioTrackMode.Stream).Build();
             if (track.State != AudioTrackState.Initialized) throw new IOException("No compatible audio output is available.");
