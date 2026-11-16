@@ -227,7 +227,10 @@ let main arguments =
             for flag in ["beforefieldinit"; "overrideremoval"; "unreachablebodies"; "unusedinterfaces"; "unusedtypechecks"; "ipconstprop"; "sealer"; "substitutefeatureguards"] do
                 add ["--disable-opt"; flag]
             for file in assemblies do add ["-reference"; Path.Combine(app,file.File)]
-            for file in selected do add ["--action"; "link"; Path.GetFileNameWithoutExtension file.File; "-a"; Path.Combine(app,file.File); "all"]
+            // ILLink 11 resolves root identities through the explicit reference list, rather than file paths.
+            for file in selected do
+                let name = Path.GetFileNameWithoutExtension file.File
+                add ["--action"; "link"; name; "-a"; name; "all"]
             if selected.Length > 0 then
                 // A shared GUI/CLI payload exceeds Windows' command-line limit.
                 let response = Path.Combine(temporary,"linker.rsp")
