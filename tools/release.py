@@ -36,6 +36,12 @@ def validate_store_submission(path,version):
 def prepare_assets(plan,artifacts,revision):
     if not re.fullmatch(r'[0-9a-f]{40}|[0-9a-f]{64}',revision):
         raise ValueError('A full source commit SHA is required')
+    # Public Android builds remain explicit previews until a persistent signing key is configured.
+    for rid in ('android-arm64','android-x64'):
+        source=artifacts/('garbro-'+plan['version']+'-'+rid+'.apk')
+        if source.exists():
+            source.replace(source.with_name(source.stem+'-preview.apk'))
+            source.with_suffix('.apk.sha256').unlink(missing_ok=True)
     packages=[artifacts/('garbro-'+plan['version']+'-'+rid+suffix)for rid,suffix in
               [('linux-x64','.tar.gz'),('win-x64','.zip'),('osx-arm64','.tar.gz'),
                ('linux-x64','.deb'),('win-x64','.msix'),('win-x64','.cer'),
@@ -43,20 +49,22 @@ def prepare_assets(plan,artifacts,revision):
                ('win-arm64','.msix'),('win-arm64','.cer'),
                ('store','.msixupload'),('store','.msixbundle'),
                ('osx-x64','.tar.gz'),('osx-x64','.dmg'),('osx-arm64','.dmg'),
-               ('linux-x64','.flatpak'),('linux-arm64','.flatpak')]]
+               ('linux-x64','.flatpak'),('linux-arm64','.flatpak'),
+               ('android-arm64','-preview.apk'),('android-x64','-preview.apk')]]
     packages.extend(artifacts/name for name in ('store-submission.json','store-listing.zip','flathub-submission.zip'))
     if any(not path.is_file()or not path.stat().st_size for path in packages):
-        raise ValueError('All desktop architectures, Store upload, installers and certificates must exist and be nonempty')
+        raise ValueError('All platform packages, Android previews, Store upload, installers and certificates must exist and be nonempty')
     validate_store_submission(artifacts/'store-submission.json',plan['version'])
     shutil.copy2(ROOT/'docs/compatibility/portable-status.json',artifacts/'compatibility.json')
     for name in ('Formats.json.gz','schemes.json'):
         shutil.copy2(ROOT/'modern/GameData'/name,artifacts/name)
     records=[]
-    for path in sorted(packages+[artifacts/name for name in ('compatibility.json','Formats.json.gz','schemes.json')]):
+    public=sorted(path for path in artifacts.iterdir() if path.is_file() and path.name not in ('release.json','SHA256SUMS'))
+    for path in public:
         with path.open('rb')as stream:digest=hashlib.file_digest(stream,'sha256').hexdigest()
         records.append(dict(name=path.name,size=path.stat().st_size,sha256=digest))
     manifest=artifacts/'release.json'
-    manifest.write_text(json.dumps(dict(version=plan['version'],commit=revision,assets=records),indent=2)+'\n',encoding='utf-8')
+    manifest.write_text(json.dumps(dict(version=plan['version'],commit=revision,android=dict(status='preview',signing='development',minimumVersion=12),assets=records),indent=2)+'\n',encoding='utf-8')
     digest=hashlib.sha256(manifest.read_bytes()).hexdigest()
     lines=[record['sha256']+'  '+record['name']for record in records]+[digest+'  release.json']
     (artifacts/'SHA256SUMS').write_text('\n'.join(lines)+'\n',encoding='utf-8')

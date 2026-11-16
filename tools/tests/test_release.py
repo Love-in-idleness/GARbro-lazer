@@ -47,16 +47,20 @@ class ReleaseTests(unittest.TestCase):
 
     def test_all_assets_are_bound_to_the_source_commit_and_checksums(self):
         plan=release.release_plan('v1.2.3')
-        for suffix in ('linux-x64.tar.gz','win-x64.zip','osx-arm64.tar.gz','linux-x64.deb','win-x64.msix','win-x64.cer','linux-arm64.tar.gz','linux-arm64.deb','win-arm64.zip','win-arm64.msix','win-arm64.cer','store.msixupload','store.msixbundle','osx-x64.tar.gz','osx-x64.dmg','osx-arm64.dmg','linux-x64.flatpak','linux-arm64.flatpak'):
+        for suffix in ('linux-x64.tar.gz','win-x64.zip','osx-arm64.tar.gz','linux-x64.deb','win-x64.msix','win-x64.cer','linux-arm64.tar.gz','linux-arm64.deb','win-arm64.zip','win-arm64.msix','win-arm64.cer','store.msixupload','store.msixbundle','osx-x64.tar.gz','osx-x64.dmg','osx-arm64.dmg','linux-x64.flatpak','linux-arm64.flatpak','android-arm64.apk','android-x64.apk'):
             (self.artifacts/('garbro-1.2.3-'+suffix)).write_bytes(suffix.encode())
-        for name in ('store-listing.zip','flathub-submission.zip'):(self.artifacts/name).write_bytes(b'submission')
+        for name in ('store-listing.zip','flathub-submission.zip','store-size-win-x64.json'):(self.artifacts/name).write_bytes(b'submission')
         (self.artifacts/'store-submission.json').write_text(json.dumps(dict(**self.identity,version='1.2.3.0',applicationVersion='1.2.3',selfContained=True,architectures=['x64','arm64'])))
+        (self.artifacts/'garbro-1.2.3-android-arm64.apk.sha256').write_text('obsolete name')
         release.prepare_assets(plan,self.artifacts,'a'*40)
+        self.assertFalse((self.artifacts/'garbro-1.2.3-android-arm64.apk.sha256').exists())
+        self.assertTrue((self.artifacts/'garbro-1.2.3-android-arm64-preview.apk').exists())
         manifest=json.loads((self.artifacts/'release.json').read_text())
         self.assertEqual('a'*40,manifest['commit'])
-        self.assertEqual(24,len(manifest['assets']))
+        self.assertEqual(27,len(manifest['assets']))
+        self.assertEqual('development',manifest['android']['signing'])
         checksums=(self.artifacts/'SHA256SUMS').read_text().splitlines()
-        self.assertEqual(25,len(checksums))
+        self.assertEqual(28,len(checksums))
         for line in checksums:
             digest,name=line.split('  ')
             self.assertEqual(digest,hashlib.sha256((self.artifacts/name).read_bytes()).hexdigest())

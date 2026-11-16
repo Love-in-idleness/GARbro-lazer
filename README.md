@@ -1,7 +1,5 @@
 # GARbro-lazer
 
-
-开发中的 1.1.1 已升级 .NET 11；下方下载入口当前发布的 1.1.0 仍使用 .NET 10。Android 开发包与内置脚本回编见[使用说明](docs/manual.zh-CN.md)。
 **简体中文** · [English](README.en.md) · [Русский](README.ru.md) · [日本語](README.ja.md)
 
 打开游戏资源包，看看里面的图片、播放音视频，再把需要的文件提取出来。GARbro 提供图形界面，也可以在命令行中使用。
@@ -12,7 +10,7 @@
 
 到 [正式版下载页](https://github.com/Love-in-idleness/GARbro-lazer/releases/latest) 选择与你的系统和处理器对应的文件。普通 Intel、AMD 电脑选 **x64**；Windows on ARM、ARM Linux 和 Apple 芯片选 **arm64**。
 
-GUI 和 CLI 现在共用 `app` 目录，无需分别下载。1.0.4 及更早的旧包仍使用 `desktop` 和 `cli` 两个目录。
+GUI 和 CLI 现在共用 `app` 目录，无需分别下载。
 
 | 系统 | 下载哪个 | 怎么打开 |
 | --- | --- | --- |
@@ -22,8 +20,9 @@ GUI 和 CLI 现在共用 `app` 目录，无需分别下载。1.0.4 及更早的�
 | 其他 Linux | `linux-x64.tar.gz` 或 `linux-arm64.tar.gz` | 解压后运行 `app/GARbro.Desktop` |
 | macOS 14 或更新版本 | Apple 芯片选 `osx-arm64.dmg`，Intel 选 `osx-x64.dmg` | 打开磁盘映像，将整个 GARbro 文件夹复制到本机，再打开 `GARbro.app` |
 | Flatpak | 与架构对应的 `.flatpak` | 通过软件中心打开，或使用 `flatpak install --user 文件名.flatpak` |
+| Android 12+ 开发预览 | 手机、平板通常选 `android-arm64-preview.apk`；x86 模拟器选 `android-x64-preview.apk` | 用系统安装器安装，再通过系统文件选择器授权；签名与功能限制见[说明](docs/manual.zh-CN.md) |
 
-除自带运行时的 Flatpak、商店包以外，桌面下载包需要先安装对应架构的 [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)。缺少依赖或遇到证书提示时，请看[安装说明](docs/install.md)。文件名中的版本号会随更新改变。
+除自带运行时的 Flatpak、商店包以外，桌面下载包需要先安装对应架构的 [.NET 11 Runtime](https://dotnet.microsoft.com/download/dotnet/11.0)。缺少依赖或遇到证书提示时，请看[安装说明](docs/install.md)。文件名中的版本号会随更新改变。
 
 这是正式桌面版，部分游戏的特殊加密或格式变体仍可能打不开。也可以从 [Microsoft Store](https://apps.microsoft.com/detail/9NP39X1TRVNM) 安装；Flathub 上架准备仍在进行中。Android 开发已恢复，安装方法与当前功能范围见上方使用说明。`store.msixupload` 是商店提交文件，普通用户无需下载。
 

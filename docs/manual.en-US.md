@@ -117,7 +117,7 @@ Optional exporters are under **Help → Tool downloads**. Put unrpyc 2.x, tjs2de
 
 `--recursive` traverses disk folders; `--nested` expands child archives. Ordinary recursive disk scans skip unrecognized files and keep relative directories. Global options may precede the command; `--` protects input filenames beginning with a dash. Existing single-archive extraction and JSON field names remain supported.
 
-## Packing archives (1.1.1 development)
+## Packing archives (1.1.1)
 
 Select files or folders and press F3, or choose **Create archive** from the file or context menu. With no selection, all items in the current folder are included. Folders include subfolders. Choose a writable archive format, an output file and, if needed, expand **Archive format options**.
 
@@ -131,7 +131,7 @@ garbro create "assets" -o "data.xp3" --format XP3 --scheme none
 
 `create --help` lists writer parameters, encoding, overwrite and resource limits. A single input folder contributes its contents; multiple inputs retain paths relative to their common parent. Only existing writable archive formats are offered. Converted media may require matching game-engine support; script references are not updated. Script recompilation belongs to format conversion and is not added in this development version.
 
-## Script recompilation (1.1.1 development)
+## Script recompilation (1.1.1)
 
 Select the edited files and choose **Convert → Script output format → Recompile**. Choose **Do not convert scripts** to skip scripts. Choose GSC for TSC, BGI for BSD, BGI-BP for BPD, or ASB for its structured JSON export. Plain text can become NSCRIPT (`nscript.dat`) or DSM (`data.dsm`). Each target uses its original intermediate format; dialogue-only ASB JSON is not accepted.
 

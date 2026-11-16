@@ -1,7 +1,5 @@
 # GARbro-lazer
 
-
-開発中の 1.1.1 は .NET 11 を使用します。公開済み 1.1.0 は .NET 10 が必要です。Android 開発版と内蔵スクリプトコンパイラーは[使用説明](docs/manual.ja-JP.md)をご覧ください。
 [简体中文](README.md) · [English](README.en.md) · [Русский](README.ru.md) · **日本語**
 
 ゲームのリソースアーカイブを開き、画像・音声・動画を確認して、必要なファイルを取り出せます。ウィンドウで操作するほか、コマンドラインでも使えます。
@@ -22,8 +20,9 @@ GUI と CLI は同じ配布パッケージの `app` フォルダーを共有し�
 | その他の Linux | `linux-x64.tar.gz` または `linux-arm64.tar.gz` | 展開して `app/GARbro.Desktop` を実行 |
 | macOS 14 以降 | Apple シリコンは `osx-arm64.dmg`、Intel は `osx-x64.dmg` | GARbro フォルダー全体をローカルにコピーし、`GARbro.app` を開く |
 | Flatpak | CPU に合った `.flatpak` | ソフトウェアセンターで開くか、`flatpak install --user ファイル名.flatpak` を実行 |
+| Android 12+ 開発プレビュー | 通常の端末は `android-arm64-preview.apk`、x86 エミュレーターは `android-x64-preview.apk` | システムのインストーラーとファイル選択画面を使います。署名と対応範囲は[使用説明](docs/manual.ja-JP.md)をご覧ください |
 
-Flatpak と Store 版以外には、CPU に合った [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) が必要です。依存ライブラリーや証明書については[インストール手順](docs/install.md)をご覧ください。
+Flatpak と Store 版以外には、CPU に合った [.NET 11 Runtime](https://dotnet.microsoft.com/download/dotnet/11.0) が必要です。依存ライブラリーや証明書については[インストール手順](docs/install.md)をご覧ください。
 
 一部のゲーム固有の暗号化や形式には対応していない場合があります。[Microsoft Store](https://apps.microsoft.com/detail/9NP39X1TRVNM) からもインストールできます。Flathub での公開は準備中です。Android の開発を再開しました。対応範囲は上記の使用説明をご覧ください。`store.msixupload` はストア提出用で、通常の利用には不要です。
 

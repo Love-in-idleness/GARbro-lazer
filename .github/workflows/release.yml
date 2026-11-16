@@ -42,8 +42,15 @@ jobs:
     uses: ./.github/workflows/store.yml
     with:
       package_version: ${{ needs.plan.outputs.version }}
+  android:
+    needs: plan
+    uses: ./.github/workflows/android.yml
+    with:
+      package_version: ${{ needs.plan.outputs.version }}
+      smoke: false
+      publish: false
   publish:
-    needs: [plan, portable, store, flatpak]
+    needs: [plan, portable, store, flatpak, android]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -65,6 +72,11 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           pattern: flatpak-*
+          merge-multiple: true
+          path: artifacts/release
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: development-android-*
           merge-multiple: true
           path: artifacts/release
       - run: python3 tools/release.py --artifacts artifacts/release --revision "$GITHUB_SHA"
