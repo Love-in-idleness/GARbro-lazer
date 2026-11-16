@@ -31,7 +31,7 @@ public sealed class ScriptConversionLayoutTests
                 var controls=host.GetVisualDescendants().ToArray();
                 var scripts=controls.OfType<CheckBox>().Single(c=>c.Name=="ConvertScripts");
                 var target=controls.OfType<ComboBox>().Single(c=>c.Name=="ScriptOutputFormat");
-                Assert.Equal(7,target.Items.Count);Assert.Null((target.SelectedItem as UiChoice)?.Value is ""?null:(target.SelectedItem as UiChoice)?.Value);
+                Assert.Equal(7,target.Items.Count);Assert.Equal("",Assert.IsType<UiChoice>(target.SelectedItem).Value);
                 target.SelectedItem=target.Items.OfType<UiChoice>().Single(c=>c.Value=="GSC");
                 scripts.IsChecked=false;Assert.False(target.IsEnabled);scripts.IsChecked=true;Assert.True(target.IsEnabled);
                 await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);await Task.Delay(60);

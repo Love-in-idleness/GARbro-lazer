@@ -7,7 +7,7 @@ on:
       version:
         description: Package version to validate without publishing
         type: string
-        default: 0.2.0-preview.1
+        default: 1.1.1
 permissions:
   contents: read
 concurrency:
@@ -25,12 +25,27 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
+      - name: Install Windows media build tools
+        id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          install: make pkgconf
+          path-type: inherit
+      - uses: actions/cache/restore@v4
+        with:
+          path: artifacts/media/win-*
+          key: media-store-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/build-media.py', 'tools/media-codecs.json') }}
+          restore-keys: media-store-${{ runner.os }}-${{ runner.arch }}-
+      - run: python tools/build-media.py --rid win-x64
+        env:
+          MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
       - shell: bash
         run: python tools/package-release.py --rid win-x64 --version "$GARBRO_PACKAGE_VERSION" --installer
         env:
-          GARBRO_PACKAGE_VERSION: ${{ inputs.version || '0.2.0-preview.1' }}
+          GARBRO_PACKAGE_VERSION: ${{ inputs.version || '1.1.1' }}
       - shell: pwsh
-        run: tools/smoke-msix.ps1 -Output artifacts -Version "${{ inputs.version || '0.2.0-preview.1' }}"
+        run: tools/smoke-msix.ps1 -Output artifacts -Version "${{ inputs.version || '1.1.1' }}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
