@@ -1,0 +1,20 @@
+{
+  "version": "1.1.2",
+  "validatedSource": "b9782cd5d724123097b09ab83247694eaafa960e",
+  "databaseVersion": 150,
+  "schemeGroups": 78,
+  "sharedLocaleKeys": 690,
+  "skillsInstalled": 5,
+  "upstreamSkillFilesVerified": 106,
+  "existingScriptRegressionRun": 44028144418,
+  "existingScriptTestsPassed": 54,
+  "avcAndSchemeRun": 44033534383,
+  "avcAndSchemeTestsPassed": 11,
+  "rawBrowseAndUiRun": 44034557104,
+  "rawBrowseTestsPassed": 2,
+  "uiTestsPassed": 3,
+  "cliConversionsPassed": 7,
+  "artifactSha256": "37e6e1d3aca1bf94991d2d8041ddc1e37c2436fec6e5864d40994feadc1cf2f0",
+  "note": "The first focused run had one fixture assumption failure; the corrected raw/automatic browse cases passed in the follow-up. Already-passing AVC and scheme checks were not repeated.",
+  "packageStatus": "pending release workflow"
+}
