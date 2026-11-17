@@ -61,7 +61,7 @@ public static class Dialogs
     }
     public static async Task<string> Parameters(AppWindow owner, DesktopText text, string json, string notice, string[] schemes = null)
     {
-        var window = Window(text, "MissingOptions"); var body = Panel(); body.Children.Add(new TextBlock { Text = notice, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        var window = Window(text, "MissingOptions"); var body = Panel(); body.Children.Add(new TextBlock { Text = text.ErrorMessage(notice), TextWrapping = Avalonia.Media.TextWrapping.Wrap });
         var form = new ParameterForm(text, json, schemes); body.Children.Add(form); var error = new TextBlock(); body.Children.Add(error);
         window.Content = Frame(window, body, Button(text, "Save", () => { try { window.Close(form.Value()); } catch (Exception e) { error.Text = text["Error"] + ": " + text.ErrorMessage(e.Message); } }), Button(text, "Cancel", () => window.Close()));
         return await window.ShowDialog<string>(owner);

@@ -1,0 +1,404 @@
+using System.Collections.Generic;
+using System;
+using System.IO;
+using System.Linq;
+using System.Text;
+using Furikiri.AST.Statements;
+using Furikiri.AST.Expressions;
+using Furikiri.Echo.Language;
+using Furikiri.Echo.Pass;
+using Furikiri.Emit;
+
+namespace Furikiri.Echo
+{
+    /// <summary>
+    /// TJS decompiler
+    /// </summary>
+    public class Decompiler
+    {
+        public Module Script { get; set; }
+
+        internal Decompiler()
+        {
+        }
+
+        public Decompiler(string path)
+        {
+            Script = new Module(path);
+        }
+
+        public string Decompile(string objName)
+        {
+            if (Script == null)
+            {
+                return "";
+            }
+
+            Script.Resolve();
+
+            Dictionary<Method, BlockStatement> methods = new Dictionary<Method, BlockStatement>();
+
+            //methods.Add(Script.Methods[Script.TopLevel], DecompileObject(Script.TopLevel));
+
+            var method = Script.Methods.FirstOrDefault(m => m.Key.Name == objName);
+            var block = DecompileObject(method.Key);
+            methods.Add(method.Value, block);
+            
+            var writer = new StringWriter();
+            var tjs = new TjsWriter(writer) {MethodRefs = methods};
+            tjs.WriteLicense();
+
+            foreach (var m in methods)
+            {
+                if (m.Key.IsLambda)
+                {
+                    continue;
+                }
+
+                tjs.WriteLine();
+                tjs.WriteFunction(m.Key, m.Value);
+                tjs.WriteLine();
+            }
+
+            writer.Flush();
+            return NormalizeBlankLines(writer.ToString());
+        }
+
+        public string Decompile()
+        {
+            if (Script == null)
+            {
+                return "";
+            }
+
+            Script.Resolve();
+
+            Dictionary<Method, BlockStatement> methods = new Dictionary<Method, BlockStatement>();
+            Dictionary<Property, (BlockStatement Getter, BlockStatement Setter)> propertyBlocks =
+                new Dictionary<Property, (BlockStatement Getter, BlockStatement Setter)>();
+            var classObjects = Script.Objects.Where(o => o.ContextType == TjsContextType.Class).ToList();
+            var classSuperExpressions = new Dictionary<CodeObject, List<Expression>>();
+            var classBodies = new Dictionary<CodeObject, BlockStatement>();
+
+            methods.Add(Script.Methods[Script.TopLevel], DecompileObject(Script.TopLevel));
+            foreach (var classObject in classObjects)
+            {
+                classBodies[classObject] = DecompileObject(classObject);
+            }
+            foreach (var method in Script.Methods)
+            {
+                if (method.Key == Script.TopLevel)
+                {
+                    continue;
+                }
+
+                switch (method.Key.ContextType)
+                {
+                    case TjsContextType.PropertyGetter:
+                    case TjsContextType.PropertySetter:
+                        var propMethodBlock = DecompileObject(method.Key);
+                        methods.Add(method.Value, propMethodBlock);
+                        break;
+                    case TjsContextType.Function:
+                    case TjsContextType.ExprFunction:
+                    case TjsContextType.TopLevel:
+                        var block = DecompileObject(method.Key);
+                        methods.Add(method.Value, block);
+                        break;
+                }
+            }
+
+            // Resolve/decompile superclass getter proxies so class declarations can emit extends.
+            foreach (var classObj in classObjects)
+            {
+                if (classObj.SuperClass == null)
+                {
+                    continue;
+                }
+
+                var getter = classObj.SuperClass;
+                var pointers = getter.SuperClassGetterPointer;
+                var starts = pointers?.Length > 0 ? pointers : new[] { 0 };
+                var expressions = new List<Expression>();
+                for (var index = 0; index < starts.Length; index++)
+                {
+                    // Each superclass proxy entry is an independent function.
+                    // A CFG rooted at zero cannot reach the later entries.
+                    var start = starts[index];
+                    var end = index + 1 < starts.Length ? starts[index + 1] : getter.Code.Length;
+                    if (start < 0 || end <= start || end > getter.Code.Length)
+                        throw new InvalidDataException("Invalid superclass proxy entry range.");
+                    var entry = new CodeObject(getter.Script, getter.Name, (int)getter.ContextType,
+                        getter.Code.Skip(start).Take(end - start).ToArray(), getter.Variants,
+                        getter.MaxVariableCount, getter.VariableReserveCount, getter.MaxFrameCount,
+                        getter.FuncDeclArgCount, getter.FuncDeclUnnamedArgArrayBase,
+                        getter.FuncDeclCollapseBase, false, Array.Empty<long>(), Array.Empty<int>())
+                    { Parent = getter.Parent };
+                    var superBlock = DecompileObject(entry);
+                    var expression = superBlock.Statements.OfType<ExpressionStatement>()
+                        .Select(statement => statement.Expression).OfType<ReturnExpression>()
+                        .Select(ret => ret.Return).FirstOrDefault(value => value != null);
+                    if (expression == null)
+                        throw new InvalidDataException("Superclass proxy has no return expression.");
+                    expressions.Add(expression);
+                }
+                classSuperExpressions[classObj] = expressions;
+            }
+
+            // Build property blocks before class/function emission so class writer can inline
+            // class-owned properties into class bodies.
+            foreach (var property in Script.Properties.Values)
+            {
+                BlockStatement getterBlock = null;
+                BlockStatement setterBlock = null;
+                if (property.Getter != null)
+                {
+                    methods.TryGetValue(property.Getter, out getterBlock);
+                }
+
+                if (property.Setter != null)
+                {
+                    methods.TryGetValue(property.Setter, out setterBlock);
+                }
+
+                propertyBlocks[property] = (getterBlock, setterBlock);
+            }
+
+            var writer = new StringWriter();
+            var tjs = new TjsWriter(writer)
+            {
+                MethodRefs = methods,
+                PropertyRefs = propertyBlocks,
+                ClassSuperExpressions = classSuperExpressions,
+                ClassBodies = classBodies
+            };
+            tjs.WriteLicense();
+
+            var topLevelMethod = Script.Methods[Script.TopLevel];
+            // 嵌套类由所属类递归写出。若在这里也按对象表平铺，`Outer.Inner` 会被错误
+            // 变成全局 `Inner`，虽然文本仍能编译，运行时的成员查找却已经改变。
+            var rootClasses = classObjects
+                .Where(classObj => classObj.Parent == Script.TopLevel)
+                .ToList();
+            foreach (var classObj in rootClasses)
+            {
+                tjs.WriteLine();
+                tjs.WriteClass(classObj);
+                tjs.WriteLine();
+            }
+
+            // Write normal function declarations first so top-level `delete foo` statements
+            // always appear after `function foo(...)` declarations.
+            foreach (var m in methods)
+            {
+                if (m.Key == topLevelMethod || m.Key.IsLambda)
+                {
+                    continue;
+                }
+
+                if (m.Key.Object.ContextType is TjsContextType.PropertyGetter or TjsContextType.PropertySetter)
+                {
+                    continue;
+                }
+
+                if (m.Key.Object.Parent?.ContextType != TjsContextType.TopLevel)
+                {
+                    continue;
+                }
+
+                tjs.WriteLine();
+                tjs.WriteFunction(m.Key, m.Value);
+                tjs.WriteLine();
+            }
+
+            tjs.WriteLine();
+
+            // Then output top-level properties with associated getter/setter bodies.
+            foreach (var propertyBlock in propertyBlocks)
+            {
+                if (propertyBlock.Key.Parent != Script.TopLevel)
+                {
+                    continue;
+                }
+
+                tjs.WriteProperty(propertyBlock.Key, propertyBlock.Value.Getter, propertyBlock.Value.Setter);
+                tjs.WriteLine();
+            }
+
+            // Finally write top-level body.
+            tjs.WriteLine();
+            tjs.WriteFunction(topLevelMethod, methods[topLevelMethod]);
+            tjs.WriteLine();
+
+            writer.Flush();
+            return NormalizeBlankLines(writer.ToString());
+        }
+
+        /// <summary>
+        /// 多层结构语句各自追加分隔行时，方法尾部可能累计出多个空行。
+        /// 统一压缩为最多一个空白行，并删除紧邻右大括号之前的
+        /// 结构分隔行，避免简短 if 使方法尾部显得松散。
+        /// </summary>
+        private static string NormalizeBlankLines(string source)
+        {
+            if (string.IsNullOrEmpty(source))
+            {
+                return source;
+            }
+
+            var newLine = source.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+            var lines = source.Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Replace('\r', '\n')
+                .Split('\n');
+            var output = new List<string>(lines.Length);
+            for (var index = 0; index < lines.Length; index++)
+            {
+                var line = lines[index];
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    var nextIndex = index + 1;
+                    while (nextIndex < lines.Length && string.IsNullOrWhiteSpace(lines[nextIndex]))
+                    {
+                        nextIndex++;
+                    }
+
+                    // Writer 会在 if/for/while 等结构后追加分隔行。
+                    // 若后面紧接外层右大括号，该空行没有分组作用。
+                    if (nextIndex < lines.Length && lines[nextIndex].TrimStart().StartsWith("}", StringComparison.Ordinal))
+                    {
+                        index = nextIndex - 1;
+                        continue;
+                    }
+
+                    if (output.Count == 0 || output[^1].Length != 0)
+                    {
+                        output.Add(string.Empty);
+                    }
+
+                    index = nextIndex - 1;
+                    continue;
+                }
+
+                output.Add(line);
+            }
+
+            return string.Join(newLine, output);
+        }
+
+        private BlockStatement DecompileObject(CodeObject obj)
+        {
+            var context = new DecompileContext(obj);
+            Method m;
+            if (!Script.Methods.TryGetValue(obj, out m))
+            {
+                m = obj.ResolveMethod();
+            }
+            m.Compact();
+            context.Method = m;
+            context.BuildCFG(m.Instructions);
+            if (IsDebugDumpEnabled())
+            {
+                InitDebugDump(obj);
+                DumpDebugState(obj, context, "After BuildCFG");
+            }
+            
+            // Pass 1: Register members
+            var pass1 = new RegMemberPass();
+            var entry = pass1.Process(context, new BlockStatement());
+            DumpDebugState(obj, context, "After RegMemberPass");
+
+            // Pass 2: Build expressions (generates Phi nodes)
+            var pass2 = new ExpressionPass();
+            entry = pass2.Process(context, entry);
+            DumpDebugState(obj, context, "After ExpressionPass");
+
+            // Pass 3: Expression propagation and Phi elimination
+            var pass3 = new ExpressionPropagationPass();
+            entry = pass3.Process(context, entry);
+            DumpDebugState(obj, context, "After ExpressionPropagationPass");
+
+            // Pass 4: Control flow analysis
+            var pass4 = new ControlFlowPass();
+            entry = pass4.Process(context, entry);
+            DumpDebugState(obj, context, "After ControlFlowPass");
+
+            // Pass 5: Collect statements
+            var pass5 = new StatementCollectPass();
+            entry = pass5.Process(context, entry);
+            DumpDebugState(obj, context, "After StatementCollectPass");
+
+            // Pass 6: Reconcile explicit terminal returns with the original CFG.
+            var pass6 = new TerminalReturnReconciliationPass();
+            entry = pass6.Process(context, entry);
+
+            // Pass 7: Normalize only control-flow facts that are provable from the AST.
+            var pass7 = new StructuredAstNormalizationPass();
+            entry = pass7.Process(context, entry);
+            DumpDebugState(obj, context, "After StructuredAstNormalizationPass");
+
+            m.Vars = context.Vars;
+            
+            return entry;
+        }
+
+        private static bool IsDebugDumpEnabled()
+        {
+            return Config.DumpDecompileDebug ||
+                   string.Equals(Environment.GetEnvironmentVariable("FURIKIRI_DEBUG_DUMP"), "1",
+                       StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string GetDebugDumpDir()
+        {
+            var envDir = Environment.GetEnvironmentVariable("FURIKIRI_DEBUG_DIR");
+            if (!string.IsNullOrWhiteSpace(envDir))
+            {
+                return envDir;
+            }
+
+            return Path.Combine(Directory.GetCurrentDirectory(), "decompile-debug");
+        }
+
+        private static string GetDebugDumpPath(CodeObject obj)
+        {
+            var dir = GetDebugDumpDir();
+            Directory.CreateDirectory(dir);
+            var rawName = string.IsNullOrWhiteSpace(obj?.Name) ? "top-level" : obj.Name;
+            if (!string.IsNullOrWhiteSpace(obj?.Parent?.Name))
+            {
+                rawName = $"{obj.Parent.Name}__{rawName}__{obj.ContextType}";
+            }
+            // 同一父对象下可能有多个同名匿名函数。对象表序号来自字节码文件且稳定，
+            // 用它区分调试文件，避免后反编译的闭包覆盖先前闭包的 CFG。
+            var objectIndex = obj?.Script?.Objects?.IndexOf(obj) ?? -1;
+            if (objectIndex >= 0)
+            {
+                rawName = $"{rawName}__obj{objectIndex:D4}";
+            }
+            var invalid = Path.GetInvalidFileNameChars();
+            var safeName = new string(rawName.Select(c => invalid.Contains(c) ? '_' : c).ToArray());
+            return Path.Combine(dir, $"{safeName}.debug.txt");
+        }
+
+        private static void InitDebugDump(CodeObject obj)
+        {
+            var path = GetDebugDumpPath(obj);
+            var banner = new StringBuilder();
+            banner.AppendLine($"Decompiler debug dump for: {obj?.Name ?? "top-level"}");
+            banner.AppendLine();
+            File.WriteAllText(path, banner.ToString());
+        }
+
+        private static void DumpDebugState(CodeObject obj, DecompileContext context, string stage)
+        {
+            if (!IsDebugDumpEnabled())
+            {
+                return;
+            }
+
+            var path = GetDebugDumpPath(obj);
+            File.AppendAllText(path, context.DumpState(stage));
+        }
+
+    }
+}

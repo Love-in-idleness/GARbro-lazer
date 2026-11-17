@@ -23,11 +23,6 @@ public sealed class HelpWindow : AppWindow
         tools.Children.Add(new TextBlock { Text = text["ToolDownloadsHint"], TextWrapping = TextWrapping.Wrap });
         foreach (var (label, url) in new[]
         {
-            ("unrpyc", "https://github.com/CensoredUsername/unrpyc/releases"),
-            ("tjs2dec", "https://github.com/crate-1556/tjs2-decompiler"),
-            ("rvpacker-txt-rs", "https://github.com/RPG-Maker-Translation-Tools/rvpacker-txt-rs/releases"),
-            ("Python", DesktopServices.PythonDownloads),
-            ("LuckSystem", "https://github.com/wetor/LuckSystem/releases"),
             ("demoleition VS", DesktopServices.MoleBoxToolDownload)
         })
         {

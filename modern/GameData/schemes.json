@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "version": 148,
+  "version": 149,
   "portable_schema": 2,
-  "source_sha256": "786d13f33a59de9542562c5d3208ce830a2d56a5b0ec5be00dedb79b35dcc7f7",
-  "json_sha256": "e7d7325958aeee328f2e8e1507184e6182b02a11a067aefbae25a60ea61821ac",
+  "source_sha256": "2e74c05c430b40fadbea0a291fe26168463379ca4b731c7578a337601b5a1f98",
+  "json_sha256": "9ed892ceac64428e636a88443dc37e60b4fdd71d1f2ec87e168a83e904911a51",
   "applied": [
     "ACV",
     "ADS",
@@ -53,6 +53,7 @@
     "KCAP",
     "LIBP",
     "LPK",
+    "LUCA-SCRIPT",
     "MBL",
     "MCG",
     "MED",
@@ -83,7 +84,5 @@
     "YPF",
     "ZIP"
   ],
-  "unported": [
-    "DAT/AI5WIN"
-  ]
+  "unported": []
 }

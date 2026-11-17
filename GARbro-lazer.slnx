@@ -1,6 +1,8 @@
 <Solution>
   <Folder Name="/modern/">
     <Project Path="modern/GARbro.Scripting/GARbro.Scripting.fsproj" />
+    <Project Path="modern/GARbro.Scripting.Tjs/GARbro.Scripting.Tjs.csproj" />
+    <Project Path="modern/GARbro.SchemeTool/GARbro.SchemeTool.csproj" />
     <Project Path="modern/GARbro.Media/GARbro.Media.fsproj" />
     <Project Path="modern/GARbro.Domain/GARbro.Domain.fsproj" />
     <Project Path="modern/GARbro.Imaging.Magick/GARbro.Imaging.Magick.csproj" />

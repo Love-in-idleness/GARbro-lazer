@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><AssemblyName>ArcFormats.Portable</AssemblyName><RootNamespace>GameRes.Formats</RootNamespace></PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../GARbro.Scripting/GARbro.Scripting.fsproj" />
     <Compile Include="../../ArcFormats/Properties/Settings.Designer.cs" Link="Properties/Settings.Designer.cs" />
     <PackageReference Include="BCnEncoder.Net" />
     <PackageReference Include="BouncyCastle.Cryptography" />

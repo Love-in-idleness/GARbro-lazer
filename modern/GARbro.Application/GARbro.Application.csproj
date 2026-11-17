@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <ProjectReference Include="../GARbro.Scripting.Tjs/GARbro.Scripting.Tjs.csproj" />
     <ProjectReference Include="../GARbro.Scripting/GARbro.Scripting.fsproj" />
     <ProjectReference Include="../GARbro.Domain/GARbro.Domain.fsproj" />
     <ProjectReference Include="../GARbro.Media/GARbro.Media.fsproj" />

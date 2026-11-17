@@ -26,6 +26,7 @@ public sealed class ResourceSession : IDisposable
     public ArcFile Archive { get; }
     public bool Physical => physical;
     public bool Synthetic => Archive?.Tag == "DAT/BOGUS";
+    internal void SetScriptOptionsLocation(string name = null) => scoped?.SetLocation(physical && name != null ? new ResourceLocation(PhysicalPath(name)) : Location);
     public ResourceSession(ResourceLocation location, IOptionsProvider options = null, bool allowPlainFile = false, bool forcePlainFile = false)
     {
         ArchiveService.EnsureFormats();

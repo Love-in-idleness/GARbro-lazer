@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using GameRes;
@@ -261,6 +262,8 @@ public static partial class ResourceService
         {
             if (options.ConvertScripts && options.ScriptFormat != null)
             {
+                if (options.ScriptFormat == "RB")
+                    return ScriptOutputFormats.CanExport(name,"RB") ? ("RB",ScriptOutputFormats.ExportOutput(output,"RB")) : (null,null);
                 if (!ScriptOutputFormats.Recompile.Contains(options.ScriptFormat)) throw new ArgumentException("Unsupported script output format.");
                 if (ScriptOutputFormats.CanRecompile(name, options.ScriptFormat))
                     return (options.ScriptFormat, ScriptOutputFormats.RecompileOutput(output, options.ScriptFormat));
@@ -275,7 +278,7 @@ public static partial class ResourceService
                     if (ScriptTools.IsBgi(input)) script = "BSD";
                 }
                 if (script != null)
-                    return options.ConvertScripts ? (script,Path.ChangeExtension(output,script.ToLowerInvariant())) : (null,null);
+                    return options.ConvertScripts ? (script,ScriptOutputFormats.ExportOutput(output,script)) : (null,null);
             }
         }
         string kind=MediaKind(session,name,forcedType);
@@ -294,7 +297,7 @@ public static partial class ResourceService
             return ConvertStandardMedia(session,name,output,formatId,overwrite,maxBytes,completed,prohibited);
         bool script = ScriptOutputFormats.Supports(formatId);
         bool recompile = ScriptOutputFormats.Recompile.Contains(formatId);
-        if (script && (recompile ? !ScriptOutputFormats.CanRecompile(name, formatId) : ScriptOutputFormats.ForInput(name) != formatId) &&
+        if (script && (recompile ? !ScriptOutputFormats.CanRecompile(name, formatId) : !ScriptOutputFormats.CanExport(name,formatId)) &&
             !(formatId == "BSD" && ScriptOutputFormats.NeedsSignature(name)))
             throw new NotSupportedException("The selected output format does not match this script.");
         string scratch = WorkerTemporaryFiles.CreateDirectory(Path.GetTempPath());
@@ -304,6 +307,11 @@ public static partial class ResourceService
             string path = Path.Combine(scratch, script ? "input" + Path.GetExtension(name.Replace('\\', '/')).ToLowerInvariant() : Path.GetFileName(name));
             using (var sourceInput = session.OpenEntry(name))
             using (var target = File.Create(path)) CopyBounded(sourceInput, target, 2L << 30);
+            if (formatId == "RGSS")
+            {
+                if (new FileInfo(path).Length > 64L << 20) throw new InvalidDataException("Resource exceeds the size limit.");
+                output = Path.ChangeExtension(output, GARbro.Scripting.RgssScript.OutputExtension(File.ReadAllText(path, new UTF8Encoding(false, true))));
+            }
             using var input = script ? null : new BinaryStream(File.OpenRead(path), name);
             using var audio = formatId is "WAV" or "AUDIO" ? AudioFormat.Read(input) : null;
             if(formatId is "WAV" or "AUDIO" && audio==null)
@@ -330,7 +338,11 @@ public static partial class ResourceService
             using (var bounded = new BoundedOutput(file, maxBytes))
             {
                 if (script)
-                    ScriptTools.Convert(path, name, bounded, formatId, maxBytes, cancellation);
+                {
+                    session.SetScriptOptionsLocation(name);
+                    try { ScriptTools.Convert(path, name, bounded, formatId, maxBytes, cancellation); }
+                    finally { session.SetScriptOptionsLocation(); }
+                }
                 else if (audio != null)
                 {
                     if (passthrough) { audio.Source.Position = 0; CopyBounded(audio.Source, bounded, maxBytes); }

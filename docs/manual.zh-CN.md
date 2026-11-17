@@ -84,13 +84,21 @@ Alt+Shift+T/M/S 切换工具栏、菜单栏、状态栏；Alt 可恢复隐藏菜
 
 选择磁盘或归档中的受支持脚本，在「转换」中在「脚本输出格式」选择「导出可编辑文本」。
 
-- CodeX RScript GSC → UTF-8 TSC 由内置解码器完成，Ren’Py RPYC → RPY 使用 unrpyc。
-- KiriKiri 的 KS 和 TJS 文本可转为 UTF-8，已编译的 TJS2100 使用 tjs2dec。
+- CodeX RScript 的 GSC → UTF-8 TSC、Ren’Py 的 RPYC/RPYMC → RPY/RPYM 均已内置。
+- KiriKiri 的 KS 和 TJS 文本可转为 UTF-8，已编译的 TJS2100 通过内置 Furikiri Core 导出为可读 TJS。
 - BGI/Ethornell 的 v1 脚本（`._bs` 或无扩展名）→ BSD，`._bp` → BPD，使用内置解码器。自动使用 CP932，也可指定 GBK。
 - NScripter 的 `nscript.dat` → TXT。自动识别 BOM 和 UTF-8，其余按 CP932 读取，GBK 文件可手动选 GBK。
-- Artemis AST → UTF-8、ASB → 结构化 JSON。Unity Utage 的 `data.dsm` → TXT。RPG Maker XP、VX、VX Ace 的 `Scripts.rxdata`、`Scripts.rvdata` 和 `Scripts.rvdata2` → Ruby 源码。
+- Artemis AST → UTF-8、ASB → 结构化 JSON。Unity Utage 的 `data.dsm` → TXT。RPG Maker XP／VX／VX Ace 的 `Scripts.rxdata`、`Scripts.rvdata`、`Scripts.rvdata2` → 可编辑的 RGSS JSON，也可只导出 Ruby 源码。Luca System 的 `SCRIPT.PAK` 按游戏方案导出为可编辑的 Luca JSON。
 
-在「帮助 → 工具下载」按需获取其他导出工具。将 unrpyc 2.x、tjs2dec 和 rvpacker-txt-rs v19 以上版本加入 `PATH`，或用 `GARBRO_UNRPYC`、`GARBRO_TJS2DEC`、`GARBRO_RVPACKER` 指定可执行文件的绝对路径。`unrpyc.py` 需要 Python 3.9 以上版本。Flatpak 工具须能在沙箱内运行。GSC／BGI／ASB 不需要安装工具。Luca System 的 `SCRIPT.PAK` 可独立使用 LuckSystem，需选择游戏对应的指令表。
+以上脚本处理均可离线使用，不用另装工具。「脚本输出格式」选「导出」使用默认格式，RGSS 也可选「Ruby 源码」。回编时选择 RGSS 或 LUCA，使用导出的 JSON，保留条目和元数据，只编辑文本值。Luca 会要求选择游戏对应的方案，例如 LOOPERS。Ren’Py 与已编译 TJS 目前只支持导出。遇到未支持的变体会报错，并保留已有输出。「帮助 → 工具下载」仅保留外部 MoleBox 解壳工具。
+```sh
+garbro convert Scripts.rvdata2 -o Scripts.rvdata2.rgss.json
+garbro convert Scripts.rvdata2.rgss.json -o Scripts.rvdata2 --to RGSS
+garbro convert Scripts.rvdata2 -o scripts.rb --to RB
+garbro convert SCRIPT.PAK -o SCRIPT.PAK.luca.json --scheme LOOPERS
+garbro convert SCRIPT.PAK.luca.json -o SCRIPT.PAK --to LUCA
+```
+
 
 `garbro convert scene.gsc -o scene.tsc --encoding gbk` 显式指定 GBK。GSC／BGI 的「自动」使用 CP932。转换归档条目可用 `garbro convert scripts.rpa --entry game/script.rpyc -o script.rpy`，条目名称以 `garbro list` 的结果为准。
 
@@ -125,7 +133,7 @@ garbro convert edited.txt -o nscript.dat --to NSCRIPT --encoding gbk
 garbro convert edited.txt -o data.dsm --to DSM
 ```
 
-请使用单独的输出目录。源文件不会改变，回编失败也会保留已有输出。多个文本会生成同一个 `nscript.dat` 或 `data.dsm` 时，请分别转换。回编不会改变游戏引擎，也不保证游戏支持新的字符集。Ren'Py／RGSS 和已编译 TJS 的导出仍使用可选桌面工具。
+请使用单独的输出目录。源文件不会改变，回编失败也会保留已有输出。多个文本会生成同一个 `nscript.dat` 或 `data.dsm` 时，请分别转换。回编不会改变游戏引擎，也不保证游戏支持新的字符集。
 
 ## Android 开发包
 

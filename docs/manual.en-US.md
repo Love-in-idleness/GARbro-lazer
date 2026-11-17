@@ -105,13 +105,21 @@ Choose **WebP (lossless)** under Image output format when extracting or converti
 
 Select a supported script on disk or in an archive, open **Convert** and choose **Export editable text** under **Script output format**.
 
-- CodeX RScript GSC → UTF-8 TSC is built in. Ren’Py RPYC → RPY uses unrpyc.
-- KiriKiri KS and TJS text → UTF-8. Compiled TJS2100 uses tjs2dec.
+- CodeX RScript GSC → UTF-8 TSC and Ren’Py RPYC/RPYMC → RPY/RPYM are built in.
+- KiriKiri KS and TJS text → UTF-8; compiled TJS2100 → readable TJS with the bundled Furikiri Core.
 - BGI/Ethornell v1 scripts (`._bs` or extensionless) → BSD and `._bp` → BPD use the built-in decoder. Auto uses CP932. GBK is also supported.
 - NScripter `nscript.dat` → TXT. Auto checks for a BOM and UTF-8, then falls back to CP932. For GBK files select GBK.
-- Artemis AST → UTF-8, ASB → structured JSON. Unity Utage `data.dsm` → TXT. RPG Maker XP, VX and VX Ace `Scripts.rxdata`, `Scripts.rvdata` and `Scripts.rvdata2` → Ruby source.
+- Artemis AST → UTF-8, ASB → structured JSON. Unity Utage `data.dsm` → TXT. RPG Maker XP/VX/VX Ace `Scripts.rxdata`, `Scripts.rvdata` and `Scripts.rvdata2` → editable RGSS JSON, or Ruby source. Luca System `SCRIPT.PAK` → editable Luca JSON using the game scheme.
 
-Optional exporters are under **Help → Tool downloads**. Put unrpyc 2.x, tjs2dec and rvpacker-txt-rs v19+ on `PATH`, or set `GARBRO_UNRPYC`, `GARBRO_TJS2DEC` and `GARBRO_RVPACKER` to absolute executable paths. `unrpyc.py` needs Python 3.9+. Flatpak helpers must run inside the sandbox. GSC/BGI/ASB do not need tools. For Luca System `SCRIPT.PAK`, run LuckSystem separately with the opcode table for your game.
+These script operations work offline without extra tools. Choose **Script output format → Export** for the default output, or **Ruby source** for RGSS source only. Select **RGSS** or **LUCA** to compile the exported JSON; keep its entries and metadata, and edit the text values. Luca asks for the game's scheme, such as LOOPERS. Ren’Py and compiled TJS currently support export only. Unsupported variants report an error and preserve existing output. **Help → Tool downloads** retains only the external MoleBox wrapper tool.
+```sh
+garbro convert Scripts.rvdata2 -o Scripts.rvdata2.rgss.json
+garbro convert Scripts.rvdata2.rgss.json -o Scripts.rvdata2 --to RGSS
+garbro convert Scripts.rvdata2 -o scripts.rb --to RB
+garbro convert SCRIPT.PAK -o SCRIPT.PAK.luca.json --scheme LOOPERS
+garbro convert SCRIPT.PAK.luca.json -o SCRIPT.PAK --to LUCA
+```
+
 
 `garbro convert scene.gsc -o scene.tsc --encoding gbk` selects GBK explicitly. Auto uses CP932 for GSC/BGI. Use `garbro convert scripts.rpa --entry game/script.rpyc -o script.rpy` for an archive entry, using the entry name shown by `garbro list`.
 
@@ -146,7 +154,7 @@ garbro convert edited.txt -o nscript.dat --to NSCRIPT --encoding gbk
 garbro convert edited.txt -o data.dsm --to DSM
 ```
 
-Use a separate output folder. Source files stay unchanged; failed compilation preserves an existing output. When several text files would all become `nscript.dat` or `data.dsm`, convert them separately. Recompilation does not change the game engine or guarantee support for a new character set. Ren'Py/RGSS and compiled TJS exports still use optional desktop tools.
+Use a separate output folder. Source files stay unchanged; failed compilation preserves an existing output. When several text files would all become `nscript.dat` or `data.dsm`, convert them separately. Recompilation does not change the game engine or guarantee support for a new character set.
 
 ## Android development build
 

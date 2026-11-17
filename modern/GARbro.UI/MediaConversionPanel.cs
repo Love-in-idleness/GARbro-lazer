@@ -44,7 +44,7 @@ public sealed class MediaConversionPanel : StackPanel
         audio=Selector("AudioOutputFormat","AudioFormat",new[]{original,new UiChoice("AUTO",text["AudioAuto"]),new UiChoice("WAV","WAV"),new UiChoice("FLAC","FLAC"),new UiChoice("M4A","M4A (AAC)")},batch?1:0);
         video=Selector("VideoOutputFormat","VideoFormat",new[]{original,new UiChoice("MP4","MP4 (MPEG-4/AAC)"),new UiChoice("MKV",text["VideoMkv"])},batch?1:0);
         if(offerScripts)
-            scriptOutput=Selector("ScriptOutputFormat","ScriptOutputFormat",new[]{new UiChoice("",text["NoScriptConversion"]),new UiChoice("EXPORT",text["ScriptExport"])}
+            scriptOutput=Selector("ScriptOutputFormat","ScriptOutputFormat",new[]{new UiChoice("",text["NoScriptConversion"]),new UiChoice("EXPORT",text["ScriptExport"]),new UiChoice("RB",text["ScriptRubyExport"])}
                 .Concat(ScriptOutputFormats.Recompile.Select(format=>new UiChoice(format,text["ScriptRecompile"]+" · "+format))).ToArray(),1);
         SizeChanged+=(_,_)=>
         {

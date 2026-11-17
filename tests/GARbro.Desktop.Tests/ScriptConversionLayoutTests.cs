@@ -52,7 +52,7 @@ public sealed class ScriptConversionLayoutTests
                 var controls=host.GetVisualDescendants().ToArray();
                 Assert.DoesNotContain(controls.OfType<CheckBox>(),c=>c.Name=="ConvertScripts");
                 var target=controls.OfType<ComboBox>().Single(c=>c.Name=="ScriptOutputFormat");
-                Assert.Equal(8,target.Items.Count);Assert.Equal("EXPORT",Assert.IsType<UiChoice>(target.SelectedItem).Value);
+                Assert.Equal(11,target.Items.Count);Assert.Equal("EXPORT",Assert.IsType<UiChoice>(target.SelectedItem).Value);
                 target.SelectedIndex=0;Assert.Equal("",Assert.IsType<UiChoice>(target.SelectedItem).Value);
                 target.SelectedItem=target.Items.OfType<UiChoice>().Single(c=>c.Value=="GSC");
                 await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);await Task.Delay(60);

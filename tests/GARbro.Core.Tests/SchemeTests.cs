@@ -16,10 +16,11 @@ public sealed class SchemeTests
     {
         var report = ArchiveService.BundledSchemes;
         Assert.NotNull(report);
-        Assert.Equal(148, report.Version);
+        Assert.Equal(149, report.Version);
         Assert.Empty(report.Failed);
         Assert.Contains("XP3", report.Applied);
-        Assert.Equal(77, report.Applied.Length);
+        Assert.Equal(78, report.Applied.Length);
+        Assert.Contains("LUCA-SCRIPT", report.Applied);
         Assert.Empty(report.Unported);
         Assert.Contains("DXA", report.Applied);
         Assert.Contains("DXA8", report.Applied);

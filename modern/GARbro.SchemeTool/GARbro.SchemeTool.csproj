@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><AssemblyName>SchemeTool</AssemblyName></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../GARbro.Formats/GARbro.Formats.csproj" />
+    <ProjectReference Include="../GARbro.Legacy/GARbro.Legacy.csproj" />
+    <ProjectReference Include="../GARbro.Experimental/GARbro.Experimental.csproj" />
+  </ItemGroup>
+</Project>

@@ -59,6 +59,11 @@ def licenses(destination):
     shutil.copy2(ROOT/'LICENSE',destination/'LICENSE')
     shutil.copy2(ROOT/'docs/third-party.md',destination/'third-party.md')
     shutil.copytree(ROOT/'docs/licenses',directory/'source-notices')
+    # Keep the small dynamically linked LGPL component's exact source with binaries.
+    with tarfile.open(directory/'Furikiri-source.tar.gz','w:gz') as source:
+        for path in ('third_party/Furikiri','modern/GARbro.Scripting.Tjs/GARbro.Scripting.Tjs.csproj',
+                     'Directory.Build.props','Directory.Packages.props','global.json','NuGet.Config'):
+            source.add(ROOT/path,arcname=path)
     shutil.copy2(ROOT/'docs/compatibility.md',destination/'compatibility.md')
     shutil.copytree(ROOT/'docs/compatibility',destination/'compatibility')
     shutil.copy2(ROOT/'docs/migration-status.md',destination/'migration-status.md')

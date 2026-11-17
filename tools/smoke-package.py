@@ -76,12 +76,15 @@ with tempfile.TemporaryDirectory(prefix='garbro-package-')as folder:
     schemes=json.loads(gzip.decompress(database.read_bytes()))
     metadata=json.loads(database.with_name('schemes.json').read_text())
     assert list((desktop/'GameData').glob('*.lst.gz')) and not list((desktop/'GameData').glob('*.lst'))
-    assert schemes['Version']==metadata['version']==148 and schemes['PortableSchemaVersion']==2
+    assert schemes['Version']==metadata['version']==149 and schemes['PortableSchemaVersion']==2
     assert sorted(schemes['SchemeMap'])==metadata['applied']
     assert hashlib.sha256(gzip.decompress(database.read_bytes())).hexdigest()==metadata['json_sha256']
     assert json.loads((package/'dependencies.json').read_text())
-    for notice in ('GPPG.md','GPLEX.md','Concentus.Oggfile.txt','SQLite3MC.txt','SQLite3MC-NuGet.txt','SQLitePCLRaw.txt','NWayland.txt'):
+    for notice in ('GPPG.md','GPLEX.md','Concentus.Oggfile.txt','SQLite3MC.txt','SQLite3MC-NuGet.txt','SQLitePCLRaw.txt','NWayland.txt','Furikiri-LGPL-3.0.txt','Furikiri-GPL-3.0.txt','unrpyc.txt','LuckSystem.txt'):
         assert (package/'licenses/source-notices'/notice).exists(),notice
+    assert (desktop/'Furikiri.Core.dll').is_file() and (desktop/'Superpower.dll').is_file()
+    with tarfile.open(package/'licenses/Furikiri-source.tar.gz') as source:
+        assert 'third_party/Furikiri/Furikiri.Core/Emit/Module.cs' in source.getnames()
     if args.quick:
         version=subprocess.check_output([args.dotnet,str(cli),'--version'],text=True,timeout=15)
         assert args.version in version,version

@@ -32,6 +32,10 @@ remain authoritative and must accompany binary distribution.
 | MaterialColorUtilities | MIT | HCT Material color roles |
 | FSharp.Core | MIT | Pure transformations and native script codecs |
 | Bgi_asdisEN | MIT, Daniel Wu (2025) | BGI/BPD opcode layouts and assembler port |
+| Furikiri Core | LGPL-3.0 | Managed TJS2100 decompiler, kept in a separate assembly; source and build instructions below |
+| Superpower 3.1.0 | Apache-2.0 | Furikiri's parser combinators |
+| unrpyc | MIT / BSD-3-Clause | Reference for the native Ren’Py AST emitter; no Python runtime is distributed |
+| LuckSystem | MIT | Luca layout data and native codec reference |
 | SkiaSharp / Hjg.Pngcs / LibTiff.NET | MIT / Apache-2.0 / BSD-3-Clause | Portable raster backend for Android |
 | Microsoft .NET packages | MIT | MEF, configuration and bounded NRBF record parsing |
 | GPPG / GPLEX runtime sources | BSD-3-Clause | Existing Artemis IPT parser and scanner |
@@ -67,6 +71,15 @@ SQLitePCLRaw's Apache-2.0 license is retained there as well (upstream license
 blob `d645695673349e3947e8e5ae42332d0ac3164cd7`).
 
 Media tools on Windows/macOS are FFmpeg 8.0.3 (LGPL-2.1-or-later only, no GPL/nonfree components). They run as separate processes. Corresponding source, licenses and the exact build recipe are included once in the shared `app/media` directory. Linux uses distribution FFmpeg; Flatpak builds the same pinned LGPL source inside the sandbox. See [FFmpeg notice](licenses/FFmpeg.md).
+
+Furikiri is pinned to `c19ef85607c7de207f8edc8147926c67e75fda6c`.
+Its Core remains dynamically linked and replaceable. Corresponding source,
+bounds-check modifications, license texts and the .NET 11 build recipe are in
+[the source notes](../third_party/Furikiri/SOURCE.md); desktop distributions
+include `licenses/Furikiri-source.tar.gz`. GARbro permits reverse engineering
+for debugging modifications of this LGPL component. The native Ren’Py and Luca
+codecs preserve their reference notices in `licenses/unrpyc.txt` and
+`licenses/LuckSystem.txt`, also embedded in `GARbro.Scripting` for Android/CLI.
 
 
 ## Bgi_asdisEN

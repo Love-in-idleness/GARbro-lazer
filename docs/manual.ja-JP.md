@@ -79,13 +79,21 @@ Flatpak ではシステムのファイル選択でアクセスを許可してく
 
 ディスクまたはアーカイブ内の対応スクリプトを選択し、「変換」で「スクリプト出力形式」で編集用テキストの出力を選びます。
 
-- CodeX RScript の GSC → UTF-8 の TSC は内蔵機能、Ren’Py の RPYC → RPY は unrpyc を使います。
-- 吉里吉里のテキスト KS と TJS → UTF-8。コンパイル済みの TJS2100 には tjs2dec を使います。
+- CodeX RScript の GSC → UTF-8 TSC、Ren’Py の RPYC/RPYMC → RPY/RPYM は内蔵機能です。
+- 吉里吉里のテキスト KS と TJS → UTF-8。コンパイル済みの TJS2100 は内蔵 Furikiri Core で読みやすい TJS に出力します。
 - BGI/Ethornell v1 のスクリプト（`._bs` または拡張子なし）→ BSD、`._bp` → BPD は内蔵機能で変換します。自動設定では CP932 を使用し、GBK も選択できます。
 - NScripter の `nscript.dat` → TXT。自動設定では BOM と UTF-8 を判定し、それ以外は CP932 として読み込みます。GBK のファイルには GBK を指定してください。
-- Artemis の AST → UTF-8、ASB → 構造化 JSON。Unity Utage の `data.dsm` → TXT。RPG ツクール XP、VX、VX Ace の `Scripts.rxdata`、`Scripts.rvdata`、`Scripts.rvdata2` → Ruby ソース。
+- Artemis の AST → UTF-8、ASB → 構造化 JSON。Unity Utage の `data.dsm` → TXT。RPG ツクール XP／VX／VX Ace の `Scripts.rxdata`、`Scripts.rvdata`、`Scripts.rvdata2` → 編集可能な RGSS JSON、または Ruby ソース。Luca System の `SCRIPT.PAK` → ゲーム設定に基づく編集可能な Luca JSON。
 
-他の出力ツールは「ヘルプ → ツールのダウンロード」から入手できます。unrpyc 2.x、tjs2dec、rvpacker-txt-rs v19 以降を `PATH` に追加するか、`GARBRO_UNRPYC`、`GARBRO_TJS2DEC`、`GARBRO_RVPACKER` に実行ファイルの絶対パスを指定します。`unrpyc.py` には Python 3.9 以降が必要です。Flatpak ではツールがサンドボックス内で動作する必要があります。GSC・BGI・ASB に外部ツールは不要です。Luca System の `SCRIPT.PAK` はゲームに合った命令表を指定して LuckSystem で別途処理します。
+これらのスクリプト処理はオフラインで動作し、追加ツールは不要です。「スクリプトの出力形式」でエクスポートを選ぶと既定の形式、RGSS では Ruby ソースも選べます。JSON を再コンパイルする場合は RGSS または LUCA を選び、項目とメタデータを保持したままテキスト値を編集してください。Luca は LOOPERS などゲームに対応する設定を要求します。Ren’Py とコンパイル済み TJS は現在エクスポートのみ対応します。未対応の形式はエラーになり、既存の出力を保持します。「ヘルプ → ツールのダウンロード」には外部の MoleBox 用ツールだけを残しています。
+```sh
+garbro convert Scripts.rvdata2 -o Scripts.rvdata2.rgss.json
+garbro convert Scripts.rvdata2.rgss.json -o Scripts.rvdata2 --to RGSS
+garbro convert Scripts.rvdata2 -o scripts.rb --to RB
+garbro convert SCRIPT.PAK -o SCRIPT.PAK.luca.json --scheme LOOPERS
+garbro convert SCRIPT.PAK.luca.json -o SCRIPT.PAK --to LUCA
+```
+
 
 `garbro convert scene.gsc -o scene.tsc --encoding gbk` は GBK を明示的に指定します。GSC・BGI の自動設定は CP932 です。アーカイブ内の項目には `garbro convert scripts.rpa --entry game/script.rpyc -o script.rpy` を使います。項目名は `garbro list` で確認できます。
 
@@ -120,7 +128,7 @@ garbro convert edited.txt -o nscript.dat --to NSCRIPT --encoding gbk
 garbro convert edited.txt -o data.dsm --to DSM
 ```
 
-別の出力フォルダーを選んでください。元ファイルは変更せず、失敗時は既存の出力も保持します。複数のテキストが同じ `nscript.dat` や `data.dsm` になる場合は別々に変換してください。再コンパイルでエンジン自体や対応文字セットは変わりません。Ren'Py・RGSS・コンパイル済み TJS の出力には、引き続き任意のデスクトップ用ツールが必要です。
+別の出力フォルダーを選んでください。元ファイルは変更せず、失敗時は既存の出力も保持します。複数のテキストが同じ `nscript.dat` や `data.dsm` になる場合は別々に変換してください。再コンパイルでエンジン自体や対応文字セットは変わりません。
 
 ## Android 開発パッケージ
 

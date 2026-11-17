@@ -57,11 +57,12 @@ type ScriptOutputFormats private () =
         let fileName = ScriptOutputFormats.FileName(name).ToLowerInvariant()
         match fileName with
         | "nscript.dat" | "data.dsm" -> "TXT"
-        | "scripts.rxdata" | "scripts.rvdata" | "scripts.rvdata2" -> "RB"
+        | "scripts.rxdata" | "scripts.rvdata" | "scripts.rvdata2" -> "RGSS-JSON"
+        | "script.pak" -> "LUCA-JSON"
         | _ ->
             match Path.GetExtension(fileName) with
             | ".gsc" -> "TSC"
-            | ".rpyc" -> "RPY"
+            | ".rpyc" | ".rpymc" -> "RPY"
             | ".ks" -> "KS"
             | ".tjs" -> "TJS"
             | ".ast" -> "AST"
@@ -74,13 +75,16 @@ type ScriptOutputFormats private () =
         let fileName = ScriptOutputFormats.FileName(name)
         fileName <> "" && not (Path.HasExtension fileName)
 
-    static member Recompile = [| "GSC"; "NSCRIPT"; "DSM"; "BGI"; "BGI-BP"; "ASB" |]
+    static member Recompile = [| "GSC"; "NSCRIPT"; "DSM"; "BGI"; "BGI-BP"; "ASB"; "RGSS"; "LUCA" |]
+
+    static member CanExport(name: string, format: string) =
+        ScriptOutputFormats.ForInput(name)=format || (format="RB" && ScriptOutputFormats.ForInput(name)="RGSS-JSON")
 
     static member CanRecompile(name: string, format: string) =
         let extension = Path.GetExtension(ScriptOutputFormats.FileName(name)).ToLowerInvariant()
         match format, extension with
         | "GSC", ".tsc" | "NSCRIPT", ".txt" | "DSM", ".txt"
-        | "BGI", ".bsd" | "BGI-BP", ".bpd" | "ASB", ".json" -> true
+        | "BGI", ".bsd" | "BGI-BP", ".bpd" | "ASB", ".json" | "RGSS", ".json" | "LUCA", ".json" -> true
         | _ -> false
 
     static member HasRecompileInput(name: string) =
@@ -89,6 +93,11 @@ type ScriptOutputFormats private () =
     static member FromOutputName(name: string) =
         let name = ScriptOutputFormats.FileName(name).ToLowerInvariant()
         match name, Path.GetExtension(name) with
+        | _, ".rpym" | _, ".rpy" -> "RPY"
+        | _,_ when name.EndsWith(".rgss.json",StringComparison.Ordinal) -> "RGSS-JSON"
+        | _,_ when name.EndsWith(".luca.json",StringComparison.Ordinal) -> "LUCA-JSON"
+        | _, ".rxdata" | _, ".rvdata" | _, ".rvdata2" -> "RGSS"
+        | "script.pak", _ -> "LUCA"
         | "nscript.dat", _ -> "NSCRIPT"
         | _, ".gsc" -> "GSC"
         | _, ".dsm" -> "DSM"
@@ -99,6 +108,13 @@ type ScriptOutputFormats private () =
 
     static member RecompileOutput(path: string, format: string) =
         match format with
+        | "RGSS" ->
+            let original=if path.EndsWith(".rgss.json",StringComparison.OrdinalIgnoreCase) then path.Substring(0,path.Length-10) else path
+            if List.contains (Path.GetExtension(original).ToLowerInvariant()) [".rxdata";".rvdata";".rvdata2"] then original
+            else Path.ChangeExtension(original,"rvdata2")
+        | "LUCA" ->
+            if path.EndsWith(".luca.json",StringComparison.OrdinalIgnoreCase) then path.Substring(0,path.Length-10)
+            else Path.Combine(Path.GetDirectoryName(path),"SCRIPT.PAK")
         | "NSCRIPT" -> Path.Combine(Path.GetDirectoryName(path), "nscript.dat")
         | "DSM" -> Path.Combine(Path.GetDirectoryName(path), "data.dsm")
         | "BGI" -> Path.ChangeExtension(path, null)
@@ -106,12 +122,19 @@ type ScriptOutputFormats private () =
         | "GSC" | "ASB" -> Path.ChangeExtension(path, format.ToLowerInvariant())
         | _ -> invalidArg "format" "Unsupported script output format."
 
+    static member ExportOutput(path: string, format: string) =
+        match format with
+        | "RGSS-JSON" -> path+".rgss.json"
+        | "LUCA-JSON" -> path+".luca.json"
+        | "RPY" when Path.GetExtension(path).Equals(".rpymc",StringComparison.OrdinalIgnoreCase) -> Path.ChangeExtension(path,"rpym")
+        | _ -> Path.ChangeExtension(path,format.ToLowerInvariant())
+
     static member Supports(format: string) =
         match format with
-        | "TSC" | "RPY" | "KS" | "TJS" | "AST" | "JSON" | "BSD" | "BPD" | "TXT" | "RB" -> true
+        | "TSC" | "RPY" | "KS" | "TJS" | "AST" | "JSON" | "BSD" | "BPD" | "TXT" | "RB" | "RGSS-JSON" | "LUCA-JSON" -> true
         | _ -> ScriptOutputFormats.Recompile |> Array.contains format
 
     static member UsesBinaryPreview(name: string) =
         match ScriptOutputFormats.ForInput(name) with
-        | "TSC" | "RPY" | "JSON" | "BSD" | "BPD" | "RB" -> true
+        | "TSC" | "RPY" | "JSON" | "BSD" | "BPD" | "RB" | "RGSS-JSON" | "LUCA-JSON" -> true
         | _ -> false

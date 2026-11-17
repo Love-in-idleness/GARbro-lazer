@@ -1,6 +1,17 @@
 # Native script codecs and .NET 11
 
-The 1.1.1 development tree uses SDK 11.0.100 / runtime 11.0.0. No Python, Rust, C++ runtime or separately installed compiler is required for TSC→GSC, BSD→BGI, BPD→BGI-BP, structured ASB JSON→ASB, TXT→NSCRIPT or TXT→DSM. Export for these formats is also built in. Ren'Py/RGSS/compiled-TJS exporters retain their existing optional desktop tools.
+The development tree after 1.1.1 uses SDK 11.0.100 / runtime 11.0.0. Script processing is managed code: no Python, Ruby, Go, Rust runtime or separately installed compiler is required. MoleBox wrapper removal remains an external tool. These changes do not alter the published 1.1.1 assets.
+
+| Input | Built-in export | Built-in compilation |
+|---|---|---|
+| GSC | TSC | TSC → GSC |
+| BGI / BPD | BSD / BPD | BSD / BPD → original binary family |
+| Artemis ASB | Existing structured JSON array | JSON → ASB |
+| NScripter / Utage | TXT | TXT → NSCRIPT / DSM |
+| RGSS Scripts (XP / VX / VX Ace) | Single `.rgss.json`, or Ruby source with `--to RB` | JSON → original `.rxdata` / `.rvdata` / `.rvdata2` |
+| Luca `SCRIPT.PAK` | Single `.luca.json` using a game scheme | JSON → complete `SCRIPT.PAK`, with relocated jumps |
+| Ren’Py `.rpyc` / `.rpymc` | RPY / RPYM | Export only |
+| TJS2100 | TJS through Furikiri Core | Export only |
 
 `GARbro.Scripting` contains pure managed F# parsing and format transformations. File ownership, bounded staging, cancellation, worker supervision and atomic output commit remain in the application. Sources are UTF-8 or BOM-marked Unicode; target encodings use strict fallback. Auto is CP932 for GSC/BGI/NScripter, UTF-8 for ASB; DSM's encoding and cryptographic parameters are fixed by its format. Sources and previous output survive a failed conversion. Fixed output names are checked for collisions before GUI batch conversion.
 
@@ -10,6 +21,22 @@ The 1.1.1 development tree uses SDK 11.0.100 / runtime 11.0.0. No Python, Rust, 
 - BGI/BPD ported from [Bgi_asdisEN](https://github.com/Checkumeito/Bgi_asdisEN/tree/44574e627093899efa9fb4b9b82d78e03fdfe447) (MIT, Daniel Wu, 2025). The embedded opcode table includes its standard aliases and mapping names; [license](licenses/Bgi_asdisEN.txt). Supports inline strings, raw string bytes, imports/exports/padding, labels and the published BPD variable-operand families. External `#string_table` is deliberately rejected rather than reading arbitrary paths; merge it into a self-contained BSD first. Engine-specific unknown instruction lengths are rejected.
 - ASB uses the existing full JSON array of labels and command objects (`name`, `line_number`, `attributes`), matching the public Artemis ASB wire layout described by [msg-tool](https://github.com/lifegpc/msg-tool/blob/master/src/scripts/artemis/asb.rs). This is an independent BCL implementation, without Lua formatting or execution. It does not accept dialogue-only exports or compile Lua source to VM bytecode.
 - NScripter uses the existing XOR codec; UTAGE DSM uses AES-256-CBC / PKCS7 with the existing PBKDF2-SHA1 parameters, preserving the original format.
+- RGSS reads a bounded Ruby Marshal data subset without instantiating Ruby objects. JSON preserves script IDs, order, names, encoding and the original template. Editing one shared source string does not change other entries. All entries must remain present; unchanged JSON returns the original bytes. Ruby-only export is for reading, not roundtrip compilation.
+- Luca follows [LuckSystem](https://github.com/wetor/LuckSystem/tree/8146592658f61cd4016464fa67da6348c6bbc3af) (MIT). Eleven game profiles are ordinary `LucaScheme` records under `LUCA-SCRIPT` in database 149: AIR, ButterflysPoisonBC, CartagraHD, HARMONIA, KANON, LOOPERS, LUNARiA, PlanetarianSG, SP, SummerPocketsRB and LB_EN. [SchemeTool data and generation](../SchemeTool/Data/SOURCE.md) keep existing groups and GameMap intact. Unsupported opcodes, missing branch layouts, unresolved targets or edits changing parameter structure reject modified output. No plugins are executed. Profiles specify covered layouts, not verified support for every edition of a game.
+- Ren’Py uses a bounded Pickle **data** reader and native F# AST emitter, referencing [unrpyc](https://github.com/CensoredUsername/unrpyc/tree/3ae8334ed71a05535927dcc559663d3aca51215b) (MIT/BSD notices retained). It never imports or invokes Python constructors or executes source expressions. RPC2 and old zlib containers are accepted; dialogue, labels, calls, menus, Python source, ATL, SL2 screens, styles, translation and common testcase nodes are supported. Unknown nodes, custom displayables and unsupported testcase options fail explicitly. Obfuscated containers and Python bytecode-only code are outside this implementation. Authored fixtures cover protocols 2 and 5; Ren’Py 8.5.3 SDK examples compile after export. This does not establish exhaustive Ren’Py 6/7 compatibility.
+- TJS2100 uses the pinned, dynamically linked LGPL-3.0 [Furikiri Core](../third_party/Furikiri/SOURCE.md), with input count checks. Its CLI, native runtimes and tools are excluded. Source reconstruction inherits Furikiri's bytecode coverage; unknown or malformed bytecode fails inside the supervised worker. No TJS compiler is claimed.
+
+```sh
+garbro convert Scripts.rvdata2 -o Scripts.rvdata2.rgss.json
+garbro convert Scripts.rvdata2.rgss.json -o Scripts.rvdata2 --to RGSS
+garbro convert Scripts.rvdata2 -o scripts.rb --to RB
+garbro convert SCRIPT.PAK -o SCRIPT.PAK.luca.json --scheme LOOPERS
+garbro convert SCRIPT.PAK.luca.json -o SCRIPT.PAK --to LUCA
+garbro convert script.rpyc -o script.rpy
+garbro convert script.tjs -o readable.tjs
+```
+
+Choose **Script output format → Export** in the GUI for these defaults, **Ruby source** for RGSS source only, or RGSS/LUCA for JSON compilation. Missing game parameters use the existing resource-scoped options dialog and retry path. Keep a separate output directory. JSON templates are data and are validated before the atomic output commit.
 
 Synthetic [compatibility fixtures](../tests/fixtures/scripts-native/README.md) were compiled with independent tools. Those tools are development oracles only and are absent from application/package dependencies. The compatibility range is the implemented wire layouts; a successful conversion does not prove that a game engine accepts a new encoding.
 

@@ -2,7 +2,14 @@ name: Native scripts and .NET 11
 on:
   push:
     branches: [migration/net10]
-    paths: [".github/workflows/native-scripts.yml"]
+    paths:
+      - .github/workflows/native-scripts.yml
+      - modern/GARbro.Scripting/**
+      - modern/GARbro.Scripting.Tjs/**
+      - modern/GARbro.SchemeTool/**
+      - modern/GARbro.Formats/LucaScriptFormat.cs
+      - modern/GARbro.Application/ScriptTools.cs
+      - tests/GARbro.Core.Tests/NativeScriptImportTests.cs
   workflow_dispatch:
     inputs:
       codecs:
@@ -11,6 +18,9 @@ on:
         default: true
 permissions:
   contents: read
+concurrency:
+  group: native-scripts-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   focused:
     runs-on: ubuntu-24.04
@@ -22,13 +32,19 @@ jobs:
           dotnet-version: '11.0.x'
       - run: sudo apt-get update -q && sudo apt-get install -y --no-install-recommends libsdl2-2.0-0 fonts-noto-cjk ffmpeg
       - run: python3 tools/check-ui-localization.py
-      - name: Validate native codecs when requested
-        if: github.event_name == 'workflow_dispatch' && inputs.codecs
-        run: dotnet test tests/GARbro.Core.Tests -c Release -r linux-x64 --filter 'FullyQualifiedName~ScriptRecompileTests|FullyQualifiedName~NativeScriptCodecTests|FullyQualifiedName~ScriptTextEncodingTests' --logger 'trx;LogFileName=scripts.trx'
+      - name: Validate changed codecs and the format database once
+        if: github.event_name != 'workflow_dispatch' || inputs.codecs
+        run: dotnet test tests/GARbro.Core.Tests -c Release -r linux-x64 --filter 'FullyQualifiedName~ScriptRecompileTests|FullyQualifiedName~NativeScriptCodecTests|FullyQualifiedName~NativeScriptImportTests|FullyQualifiedName~ScriptTextEncodingTests|FullyQualifiedName~SchemeTests' --logger 'trx;LogFileName=scripts.trx'
       - run: dotnet test tests/GARbro.Desktop.Tests -c Release -r linux-x64 --filter 'FullyQualifiedName~ScriptConversionLayoutTests|FullyQualifiedName~BatchConversionAcceptsScriptsWithOtherFormatsDisabled' --logger 'trx;LogFileName=script-ui.trx'
         env:
           GARBRO_SCRIPT_SCREENSHOTS: ${{ github.workspace }}/artifacts/script-ui
       - run: dotnet build modern/GARbro.Desktop -c Release -r linux-x64 --disable-build-servers -m:1
+      - name: Check CLI conversion and transitive offline dependency discovery
+        run: |
+          dotnet build modern/GARbro.Cli -c Release -r linux-x64 --disable-build-servers -m:1
+          python3 tools/check-native-scripts.py
+      - name: Build the portable SchemeTool
+        run: dotnet build modern/GARbro.SchemeTool -c Release --disable-build-servers -m:1
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -36,3 +52,19 @@ jobs:
           path: |
             tests/**/TestResults/*.trx
             artifacts/script-ui/
+            artifacts/native-script-check.json
+  android-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '11.0.x'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: dotnet workload install android --skip-manifest-update
+      - name: Compile shared managed codecs for Android ARM64
+        run: dotnet build modern/GARbro.Android -c Release -r android-arm64 --disable-build-servers -m:1
