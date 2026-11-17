@@ -68,3 +68,36 @@ Final APKs use source commit `6ae73a4dbcf544e1d61e5205aa7729a16ecef5aa`, built i
 - [x64 development APK and SHA-256](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/43891237292/artifacts/14235799835)
 
 Both package jobs passed the ABI/package checks, `zipalign -P 16` and `apksigner verify`. They use temporary development signatures; a persistent publication key is still required for update-compatible public Android releases. No new GitHub Release was published. The emulator ran x64; ARM64 was built and checked, not executed on a real device. Full Flatpak offline builds and macOS tests were not run for this change. The known independent Wayland rebuild hash mismatch remains as documented in the previous release; the shipped compatibility package is unchanged.
+
+## Native import validation — 2026-11-17
+
+[CI 44028144418](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/44028144418)
+passed 54 focused codec/database/worker checks, three GUI checks, seven public
+CLI conversions and the desktop/SchemeTool builds. The tests exercise source
+preservation, unchanged and edited RGSS templates, shared Marshal strings,
+resource-scoped Luca scheme retry, eleven profiles, independently checked local
+and cross-entry jumps, unsafe Pickle constructor rejection and damaged TJS count
+handling without replacing a previous output. Ren’Py's authored export was also
+compiled by the independent 8.5.3 SDK after the return-label fix.
+
+Android ARM64 compiled the shared codecs in
+[job 133851684688](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/44027633911/job/133851684688).
+It was not rebuilt for test-assertion and packaging-check corrections. The new
+codecs were not executed on an Android device. Windows execution and a full
+Flatpak offline build were not repeated; the offline source generator does
+discover the new Superpower dependency. No macOS tests or new release packaging
+were run.
+
+All four language catalogs contain the same 693 keys and checked placeholders.
+Actual Avalonia/Skia screenshots were inspected in English, Chinese, Russian and
+Japanese, including wrapped descriptions and visible action buttons; the
+four-language conversion screenshots in `docs/screenshots` were updated.
+
+The changed managed components and database add **784,854 bytes** over the public
+1.1.1 Linux x64 package. Including Furikiri's compressed corresponding source,
+the measured component increase is **1,036,303 bytes (0.99 MiB)**. This comparison
+does not include small notice/dependency-manifest changes and is not a full
+Store download/installation measurement. No Python/Ruby/Go runtime, game SDK or
+external script executable is bundled. Exact scope, source commits, artifact
+checksum and per-component sizes are in the
+[validation record](validation/native-script-imports.json).

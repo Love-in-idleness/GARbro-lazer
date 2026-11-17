@@ -1,0 +1,59 @@
+{
+  "cliConversions": 7,
+  "offlineSuperpowerDiscovered": true,
+  "helperRuntimesRequired": false,
+  "linuxX64ComponentBytes": {
+    "GARbro.Scripting.dll": 323584,
+    "Furikiri.Core.dll": 529408,
+    "Superpower.dll": 93696,
+    "GARbro.Application.dll": 485888,
+    "GARbro.UI.dll": 2687488,
+    "GARbro.Domain.dll": 46080,
+    "ArcFormats.Portable.dll": 2249728,
+    "GameData/Formats.json.gz": 7559197
+  },
+  "correspondingSourceArchiveBytes": 251449,
+  "sourceCommit": "fe678f6cfb36699a2540b8e19f9cec81bec2a9cb",
+  "workflowRun": 44028144418,
+  "coreTests": {
+    "passed": 54,
+    "failed": 0
+  },
+  "uiTests": {
+    "passed": 3,
+    "failed": 0
+  },
+  "androidArm64Build": {
+    "workflowRun": 44027633911,
+    "jobId": 133851684688,
+    "sourceCommit": "ddd50faf2074a86a809d4e09e102534fa42e7aa5",
+    "result": "passed",
+    "note": "Follow-up changes affect assertions, packaging validation and trailing newlines, not Android code."
+  },
+  "artifactSha256": "992f155965ad654c8ed21f210e76b6719db848cb8282c1e7b2d0e6b1625dab0e",
+  "baseline": {
+    "version": "1.1.1",
+    "asset": "garbro-1.1.1-linux-x64.deb",
+    "sha256": "9a277aa30a11a703c711ac3b4ca738d215d166d3b60b8620b8712c717a452f36",
+    "componentBytes": {
+      "GARbro.Scripting.dll": 214016,
+      "Furikiri.Core.dll": 0,
+      "Superpower.dll": 0,
+      "GARbro.Application.dll": 442880,
+      "GARbro.UI.dll": 2684928,
+      "GARbro.Domain.dll": 44032,
+      "ArcFormats.Portable.dll": 2247680,
+      "GameData/Formats.json.gz": 7556679
+    }
+  },
+  "componentDeltaBytes": 784854,
+  "componentAndSourceDeltaBytes": 1036303,
+  "sizeScope": "Changed managed assemblies and bundled database plus compressed corresponding source; not a full installed package or Store estimate.",
+  "notRun": [
+    "Windows execution",
+    "full Flatpak offline build",
+    "Android device execution for the new codecs",
+    "macOS tests",
+    "new release packaging"
+  ]
+}
