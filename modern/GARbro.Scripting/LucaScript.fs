@@ -357,4 +357,3 @@ type LucaScript private () =
                                (not (actual[k].Kind.StartsWith("j:",StringComparison.Ordinal)) && not (JsonNode.DeepEquals(wantedParameter["value"],actual[k].Value))) then
                                 invalid "Luca text modification changed the parameter structure."
             output.ToArray()
-

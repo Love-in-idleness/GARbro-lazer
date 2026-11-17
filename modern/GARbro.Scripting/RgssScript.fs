@@ -112,4 +112,3 @@ type RgssScript private () =
         | ".rvdata" -> ".rvdata"
         | ".rvdata2" -> ".rvdata2"
         | _ -> invalid "Unsupported RGSS Scripts extension."
-

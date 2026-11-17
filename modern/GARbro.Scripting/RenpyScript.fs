@@ -467,4 +467,3 @@ type RenpyScript private () =
         let root=PickleData.load decoded cancellation |> values
         if root.Length<>2 then invalid "Unsupported Ren'Py script root."
         RenpySource.render (values root[1]) cancellation
-

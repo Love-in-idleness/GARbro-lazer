@@ -56,4 +56,3 @@ module internal ScriptBinary =
     let decode (encoding: Encoding) (data: byte[]) =
         try (strict encoding).GetString(data)
         with :? DecoderFallbackException as error -> raise (InvalidDataException("Script text cannot be decoded with the selected encoding.", error))
-

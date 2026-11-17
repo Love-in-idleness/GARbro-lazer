@@ -16,6 +16,10 @@ on:
         description: Also run native codec regressions
         type: boolean
         default: true
+      android:
+        description: Also compile Android (skip when only desktop tests or docs changed)
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -54,6 +58,7 @@ jobs:
             artifacts/script-ui/
             artifacts/native-script-check.json
   android-build:
+    if: github.event_name == 'workflow_dispatch' && inputs.android
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:

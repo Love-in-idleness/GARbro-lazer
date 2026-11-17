@@ -128,4 +128,3 @@ module internal RubyMarshal =
             | _ -> ()
         write 0 value
         output.ToArray()
-

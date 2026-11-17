@@ -5,6 +5,7 @@ import json
 import shutil
 import subprocess
 import tempfile
+import tarfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -60,8 +61,24 @@ def main():
     assets = json.loads((ROOT / 'modern/GARbro.Cli/obj/project.assets.json').read_text())
     assert 'superpower/3.1.0' in dict(offline.package_records(assets))
     assert (CLI.parent / 'Furikiri.Core.dll').is_file()
+    spec = importlib.util.spec_from_file_location('package_release', ROOT / 'tools/package-release.py')
+    packaging = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(packaging)
+    with tempfile.TemporaryDirectory() as temporary:
+        archive = Path(temporary) / 'Furikiri-source.tar.gz'
+        packaging.script_source_archive(archive)
+        with tarfile.open(archive) as source:
+            assert 'third_party/Furikiri/Furikiri.Core/Emit/Module.cs' in source.getnames()
+            assert 'modern/GARbro.Scripting.Tjs/GARbro.Scripting.Tjs.csproj' in source.getnames()
+        source_size = archive.stat().st_size
+    desktop = ROOT / 'modern/GARbro.Desktop/bin/Release/net11.0/linux-x64'
+    sizes = {name: (desktop / name).stat().st_size for name in
+             ('GARbro.Scripting.dll', 'Furikiri.Core.dll', 'Superpower.dll',
+              'GARbro.Application.dll', 'GARbro.UI.dll', 'GARbro.Domain.dll',
+              'ArcFormats.Portable.dll', 'GameData/Formats.json.gz')}
     report = {'cliConversions': 7, 'offlineSuperpowerDiscovered': True,
-              'helperRuntimesRequired': False}
+              'helperRuntimesRequired': False, 'linuxX64ComponentBytes': sizes,
+              'correspondingSourceArchiveBytes': source_size}
     target = ROOT / 'artifacts/native-script-check.json'
     target.parent.mkdir(exist_ok=True)
     target.write_text(json.dumps(report, indent=2) + '\n')

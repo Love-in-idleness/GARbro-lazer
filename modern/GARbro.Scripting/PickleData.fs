@@ -235,4 +235,3 @@ module internal PickleData =
             | 0x62uy -> let state=pop() in applyState (peek()) state
             | _ -> invalid "Unsupported Pickle opcode in Ren'Py script."
         result.Value
-

@@ -123,7 +123,7 @@ public sealed class NativeScriptImportTests
             string output=Path.Combine(root,"output","SCRIPT.PAK.luca.json");
             var missing=await Assert.ThrowsAsync<WorkerOperationException>(()=>Request<ResourceConversion>(new("resource-convert",null,Location:new(root),Entry:"SCRIPT.PAK",Output:output,FormatId:"LUCA-JSON")));
             Assert.Equal("MissingOptionsException",missing.RemoteType);
-            Assert.Contains("LUCA-SCRIPT",missing.FormatId);Assert.NotNull(missing.ContextKey);Assert.False(File.Exists(output));
+            Assert.Equal(FormatIdentity.Of(new LucaScriptFormat()),missing.FormatId);Assert.NotNull(missing.ContextKey);Assert.False(File.Exists(output));
             var result=await Request<ResourceConversion>(new("resource-convert",null,Location:new(root),Entry:"SCRIPT.PAK",Output:output,FormatId:"LUCA-JSON",Scheme:"LOOPERS"));
             Assert.True(result.Written);Assert.Equal("LOOPERS",LucaScript.SchemeName(File.ReadAllText(output)));
             var restored=await Request<ResourceConversion>(new("resource-convert",null,Location:new(Path.GetDirectoryName(output)),Entry:Path.GetFileName(output),Output:Path.Combine(root,"rebuilt","SCRIPT.PAK"),FormatId:"LUCA"));
@@ -150,7 +150,7 @@ public sealed class NativeScriptImportTests
     [Fact]
     public void InvalidReferencesTruncationAndCancellationFailWithoutExecutingPickleConstructors()
     {
-        Assert.ThrowsAny<IOException>(()=>RenpyScript.Export(new byte[]{0x78,0x9c,0},default));
+        Assert.Throws<InvalidDataException>(()=>RenpyScript.Export(new byte[]{0x78,0x9c,0},default));
         Assert.Throws<InvalidDataException>(()=>RgssScript.Export(new byte[]{4,8,(byte)'@',99},"Scripts.rvdata2",null,false,default));
         using var cancelled=new CancellationTokenSource();cancelled.Cancel();
         Assert.Throws<OperationCanceledException>(()=>RenpyScript.Export(Fixture("renpy-rpc2.rpyc"),cancelled.Token));
