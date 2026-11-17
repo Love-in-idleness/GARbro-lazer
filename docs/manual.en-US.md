@@ -111,7 +111,7 @@ Select a supported script on disk or in an archive, open **Convert** and choose 
 - NScripter `nscript.dat` → TXT. Auto checks for a BOM and UTF-8, then falls back to CP932. For GBK files select GBK.
 - Artemis AST → UTF-8, ASB → structured JSON. Unity Utage `data.dsm` → TXT. RPG Maker XP/VX/VX Ace `Scripts.rxdata`, `Scripts.rvdata` and `Scripts.rvdata2` → editable RGSS JSON, or Ruby source. Luca System `SCRIPT.PAK` → editable Luca JSON using the game scheme.
 
-These script operations work offline without extra tools. Choose **Script output format → Export** for the default output, or **Ruby source** for RGSS source only. Select **RGSS** or **LUCA** to compile the exported JSON; keep its entries and metadata, and edit the text values. Luca asks for the game's scheme, such as LOOPERS. Ren’Py and compiled TJS currently support export only. Unsupported variants report an error and preserve existing output. **Help → Tool downloads** retains only the external MoleBox wrapper tool.
+These script operations work offline without extra tools. Choose **Script output format → Export** for the default output, or **Ruby source** for RGSS source only. Select **RGSS** or **LUCA** to compile the exported JSON; keep its entries and metadata, and edit the text values. Luca asks for the game's scheme, such as LOOPERS. Ren’Py and compiled TJS currently support export only. Unsupported variants report an error and preserve existing output.
 ```sh
 garbro convert Scripts.rvdata2 -o Scripts.rvdata2.rgss.json
 garbro convert Scripts.rvdata2.rgss.json -o Scripts.rvdata2 --to RGSS
@@ -125,7 +125,7 @@ garbro convert SCRIPT.PAK.luca.json -o SCRIPT.PAK --to LUCA
 
 `--recursive` traverses disk folders; `--nested` expands child archives. Ordinary recursive disk scans skip unrecognized files and keep relative directories. Global options may precede the command; `--` protects input filenames beginning with a dash. Existing single-archive extraction and JSON field names remain supported.
 
-## Packing archives (1.1.1)
+## Packing archives (1.1.2)
 
 Select files or folders and press F3, or choose **Create archive** from the file or context menu. With no selection, all items in the current folder are included. Folders include subfolders. Choose a writable archive format, an output file and, if needed, expand **Archive format options**.
 
@@ -139,7 +139,7 @@ garbro create "assets" -o "data.xp3" --format XP3 --scheme none
 
 `create --help` lists writer parameters, encoding, overwrite and resource limits. A single input folder contributes its contents; multiple inputs retain paths relative to their common parent. Only existing writable archive formats are offered. Converted media may require matching game-engine support; script references are not updated. To recompile scripts, convert the edited files first, then pack the resulting files.
 
-## Script recompilation (1.1.1)
+## Script recompilation (1.1.2)
 
 Select the edited files and choose **Convert → Script output format → Recompile**. Choose **Do not convert scripts** to skip scripts. Choose GSC for TSC, BGI for BSD, BGI-BP for BPD, or ASB for its structured JSON export. Plain text can become NSCRIPT (`nscript.dat`) or DSM (`data.dsm`). Each target uses its original intermediate format; dialogue-only ASB JSON is not accepted.
 
@@ -158,6 +158,6 @@ Use a separate output folder. Source files stay unchanged; failed compilation pr
 
 ## Android development build
 
-Android 12 or later is required. Choose the ARM64 APK for most phones and tablets, or x64 for an x86 emulator. Install through Android's package installer; use the system file/folder picker to grant access. GARbro uses the same tabbed interface and background decoder service. Video/audio preview uses Android's system player. FFmpeg-based media conversion and optional desktop script tools are unavailable on Android. CI APKs are development builds, not an F-Droid/IzzyOnDroid release; temporary-key builds cannot update an installation signed with a different key.
+Android 12 or later is required. Choose the ARM64 APK for most phones and tablets, or x64 for an x86 emulator. Install through Android's package installer; use the system file/folder picker to grant access. GARbro uses the same tabbed interface and background decoder service. Video/audio preview uses Android's system player. Built-in script processing is available on Android; FFmpeg-based media conversion is unavailable. CI APKs are development builds, not an F-Droid/IzzyOnDroid release; temporary-key builds cannot update an installation signed with a different key.
 
-Desktop version 1.1.1 requires .NET 11. Store and Flatpak include their runtime; other desktop packages require the matching .NET 11 Runtime to be installed.
+Desktop version 1.1.2 requires .NET 11. Store and Flatpak include their runtime; other desktop packages require the matching .NET 11 Runtime to be installed.

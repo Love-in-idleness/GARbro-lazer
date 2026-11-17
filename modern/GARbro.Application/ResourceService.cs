@@ -60,7 +60,6 @@ public sealed class ResourceSession : IDisposable
                     try {VFS.FullPath = new[] { current.RootPath }.Concat(current.Chain).Append("").ToArray();}
                     catch(UnknownFormatException)when(depth==0 && scope.MissingOptions==null && FormatCatalog.Instance.LastError is not ResourceParametersRequiredException)
                     {
-                        ArchiveService.CheckWrappedXp3(current.RootPath);
                         if (!allowPlainFile || Location.Chain.Length != 0) throw;
                         VFS.FullPath=new[]{root};VFS.Flush();
                         standalone=PlainFile();break;

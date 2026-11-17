@@ -16,7 +16,7 @@ public sealed class SchemeTests
     {
         var report = ArchiveService.BundledSchemes;
         Assert.NotNull(report);
-        Assert.Equal(149, report.Version);
+        Assert.Equal(150, report.Version);
         Assert.Empty(report.Failed);
         Assert.Contains("XP3", report.Applied);
         Assert.Equal(78, report.Applied.Length);

@@ -153,7 +153,7 @@ public sealed partial class MainWindow
             button.Click += (_, _) => button.ContextMenu.Open(button); menu.Children.Add(button);
         }
     }
-    static readonly string[] HelpPages = { "Manual", "ToolDownloads", "Feedback", "Troubleshoot", "Updates", "License", "ExportLogs", "About" };
+    static readonly string[] HelpPages = { "Manual", "Feedback", "Troubleshoot", "Updates", "License", "ExportLogs", "About" };
     void ShowHelpMenu(Control target)
     {
         var popup = new ContextMenu(); foreach (string page in HelpPages) popup.Items.Add(Item(page)); target.ContextMenu = popup; popup.Open(target);

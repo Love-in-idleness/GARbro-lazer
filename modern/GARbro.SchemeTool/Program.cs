@@ -10,6 +10,7 @@ using System.Text.Json.Nodes;
 using GARbro.Scripting;
 using GameRes;
 using GameRes.Formats.Luca;
+using Avc = GameRes.Formats.AVC;
 
 namespace GARbro.SchemeTool;
 
@@ -22,11 +23,12 @@ internal static class Program
             var arguments = new Dictionary<string, string>(StringComparer.Ordinal);
             for (int i = 0; i < args.Length; i += 2)
             {
-                if (i + 1 == args.Length || args[i] is not ("--input" or "--luca" or "--output" or "--report" or "--version") || !arguments.TryAdd(args[i], args[i + 1]))
-                    throw new ArgumentException("SchemeTool --input DATABASE[.gz] --luca Luca.json --output EXPORT.json --report REPORT.json --version NUMBER");
+                if (i + 1 == args.Length || args[i] is not ("--input" or "--luca" or "--avc" or "--output" or "--report" or "--version") || !arguments.TryAdd(args[i], args[i + 1]))
+                    throw new ArgumentException("SchemeTool --input DATABASE[.gz] [--luca Luca.json] [--avc Avc.json] --output EXPORT.json --report REPORT.json --version NUMBER");
             }
-            foreach (string key in new[] { "--input", "--luca", "--output", "--report", "--version" })
+            foreach (string key in new[] { "--input", "--output", "--report", "--version" })
                 if (!arguments.ContainsKey(key)) throw new ArgumentException("Missing " + key);
+            if (!arguments.ContainsKey("--luca") && !arguments.ContainsKey("--avc")) throw new ArgumentException("Select --luca or --avc scheme data.");
             var catalog = FormatCatalog.Instance;
             JsonNode source;
             using (var file = File.OpenRead(arguments["--input"]))
@@ -41,20 +43,38 @@ internal static class Program
             int version = int.Parse(arguments["--version"], CultureInfo.InvariantCulture);
             if (version <= catalog.CurrentSchemeVersion) throw new ArgumentException("The new database version must be greater than the loaded version.");
             var options = new JsonSerializerOptions { IncludeFields = true, WriteIndented = true };
-            var schemes = JsonSerializer.Deserialize<Dictionary<string, LucaProfile>>(File.ReadAllBytes(arguments["--luca"]), options);
-            if (schemes == null || schemes.Count == 0 || schemes.Count > 1024) throw new InvalidDataException("Invalid Luca scheme database.");
-            foreach (var scheme in schemes)
+            var changed = new List<string>();
+            if (arguments.TryGetValue("--luca", out string luca))
             {
-                if (string.IsNullOrWhiteSpace(scheme.Key)) throw new InvalidDataException("Scheme names cannot be empty.");
-                LucaScript.ValidateProfile(JsonSerializer.Serialize(scheme.Value, options));
+                var schemes = JsonSerializer.Deserialize<Dictionary<string, LucaProfile>>(File.ReadAllBytes(luca), options);
+                if (schemes == null || schemes.Count == 0 || schemes.Count > 1024) throw new InvalidDataException("Invalid Luca scheme database.");
+                foreach (var scheme in schemes)
+                {
+                    if (string.IsNullOrWhiteSpace(scheme.Key)) throw new InvalidDataException("Scheme names cannot be empty.");
+                    LucaScript.ValidateProfile(JsonSerializer.Serialize(scheme.Value, options));
+                }
+                catalog.Formats.OfType<LucaScriptFormat>().Single().Scheme = new LucaScheme { KnownSchemes = schemes };
+                changed.Add("LUCA-SCRIPT");
             }
-            var format = catalog.Formats.OfType<LucaScriptFormat>().Single();
-            format.Scheme = new LucaScheme { KnownSchemes = schemes };
+            if (arguments.TryGetValue("--avc", out string avc))
+            {
+                var records = JsonSerializer.Deserialize<Avc.ArchiveScheme[]>(File.ReadAllBytes(avc), options);
+                if (records == null || records.Length == 0 || records.Length > 1024) throw new InvalidDataException("Invalid AVC scheme data.");
+                foreach (var record in records)
+                    if (record?.Password == null || record.Password.Length != 8 || record.Password.Any(c => c < 32 || c > 126) ||
+                        record.KeyOffset < 0 || record.KeyOffset > 0x78 || record.HeaderOffset < 0 || record.HeaderOffset > 0x5c)
+                        throw new InvalidDataException("Invalid AVC password or header offsets.");
+                var provider = catalog.ArcFormats.OfType<Avc.DatOpener>().Single();
+                var existing = (Avc.AvcScheme)provider.Scheme;
+                provider.Scheme = new Avc.AvcScheme { KnownSchemes = (existing.KnownSchemes ?? Array.Empty<Avc.ArchiveScheme>())
+                    .Concat(records).DistinctBy(s => (s.Password, s.KeyOffset, s.HeaderOffset)).ToArray() };
+                changed.Add("AVC");
+            }
             using var exported = new MemoryStream();
             catalog.SerializePortableSchemeJson(exported);
             var updated = JsonNode.Parse(exported.ToArray());
             var document = source.DeepClone();
-            document["SchemeMap"]["LUCA-SCRIPT"] = updated["SchemeMap"]["LUCA-SCRIPT"].DeepClone();
+            foreach (string tag in changed) document["SchemeMap"][tag] = updated["SchemeMap"][tag].DeepClone();
             document["Version"] = version;
             byte[] encoded = Encoding.UTF8.GetBytes(document.ToJsonString(options) + "\n");
             using var check = new MemoryStream(encoded, false);
@@ -62,7 +82,7 @@ internal static class Program
             if (report.Failed.Count != 0 || report.Unported.Length != 0) throw new InvalidDataException("The updated database failed its read-back validation.");
             WriteAtomic(arguments["--output"], encoded);
             WriteAtomic(arguments["--report"], JsonSerializer.SerializeToUtf8Bytes(report, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true }));
-            Console.WriteLine("Database {0}: {1} scheme groups, {2} Luca game profiles.", version, report.Applied.Length, schemes.Count);
+            Console.WriteLine("Database {0}: {1} scheme groups; updated {2}.", version, report.Applied.Length, string.Join(", ", changed));
             return 0;
         }
         catch (Exception error)

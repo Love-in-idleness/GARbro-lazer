@@ -27,7 +27,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
-using System.Linq;
 using GameRes.Utility;
 
 namespace GameRes.Formats.AVC
@@ -118,16 +117,6 @@ namespace GameRes.Formats.AVC
             {
                 if (m_input.Length != m_file.View.Read (0, m_input, 0, (uint)m_input.Length))
                     return null;
-                if (ReadIndex (0, 8, "METEOR01"))
-                {
-                    var dir = ParseIndex();
-                    long index_start = (long)m_header_offset + m_index_offset;
-                    if (null == dir || dir.Count == 0 || dir.Any (e => e.Offset < m_header_offset + m_header.Length
-                        || !e.CheckPlacement (index_start)))
-                        return null;
-                    RenameDuplicates (dir);
-                    return dir;
-                }
                 foreach (var scheme in KnownSchemes)
                 {
                     if (!ReadIndex (scheme.KeyOffset, scheme.HeaderOffset))
@@ -143,14 +132,14 @@ namespace GameRes.Formats.AVC
                 return null;
             }
 
-            bool ReadIndex (int key_offset, int header_offset, string password = null)
+            bool ReadIndex (int key_offset, int header_offset)
             {
                 // placing predefined string into XORed file is a very smart move
                 for (int i = 0; i < 8; ++i)
                 {
                     var symbol = m_input[header_offset+i] ^ "ARCHIVE\0"[i];
                     var check = (char)(m_input[key_offset+i] ^ symbol);
-                    if (password != null ? check != password[i] : !check.IsAsciiVisible())
+                    if (!check.IsAsciiVisible())
                         return false;
                     Key[i] = (byte)symbol;
                 }
@@ -199,29 +188,14 @@ namespace GameRes.Formats.AVC
                     entry.Offset = m_header_offset + LittleEndian.ToUInt32 (m_index, index_offset);
                     entry.Size   = LittleEndian.ToUInt32 (m_index, index_offset+4);
                     index_offset += 0x0c;
+                    long index_start = (long)m_header_offset + m_index_offset;
+                    long index_end = index_start + 0x114L * m_count;
+                    if (entry.Offset < (long)m_header_offset + m_header.Length || !entry.CheckPlacement (m_file.MaxOffset)
+                        || (entry.Offset < index_end && entry.Offset + entry.Size > index_start))
+                        return null;
                     dir.Add (entry);
                 }
-                return dir;
-            }
-
-            static void RenameDuplicates (List<Entry> dir)
-            {
-                // Keep the first match under its original name, as the game does.
-                var names = new HashSet<string> (dir.Select (e => e.Name), StringComparer.OrdinalIgnoreCase);
-                foreach (var group in dir.GroupBy (e => e.Name, StringComparer.OrdinalIgnoreCase))
-                {
-                    int suffix = 2;
-                    foreach (var entry in group.Skip (1))
-                    {
-                        string extension = Path.GetExtension (entry.Name);
-                        string stem = entry.Name.Substring (0, entry.Name.Length - extension.Length);
-                        do
-                        {
-                            entry.Name = stem + "#" + suffix++ + extension;
-                        }
-                        while (!names.Add (entry.Name));
-                    }
-                }
+                return dir.Count == 0 ? null : dir;
             }
 
             internal static ArchiveScheme[] KnownSchemes = new ArchiveScheme[0];

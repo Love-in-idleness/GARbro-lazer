@@ -90,7 +90,7 @@ Alt+Shift+T/M/S 切换工具栏、菜单栏、状态栏；Alt 可恢复隐藏菜
 - NScripter 的 `nscript.dat` → TXT。自动识别 BOM 和 UTF-8，其余按 CP932 读取，GBK 文件可手动选 GBK。
 - Artemis AST → UTF-8、ASB → 结构化 JSON。Unity Utage 的 `data.dsm` → TXT。RPG Maker XP／VX／VX Ace 的 `Scripts.rxdata`、`Scripts.rvdata`、`Scripts.rvdata2` → 可编辑的 RGSS JSON，也可只导出 Ruby 源码。Luca System 的 `SCRIPT.PAK` 按游戏方案导出为可编辑的 Luca JSON。
 
-以上脚本处理均可离线使用，不用另装工具。「脚本输出格式」选「导出」使用默认格式，RGSS 也可选「Ruby 源码」。回编时选择 RGSS 或 LUCA，使用导出的 JSON，保留条目和元数据，只编辑文本值。Luca 会要求选择游戏对应的方案，例如 LOOPERS。Ren’Py 与已编译 TJS 目前只支持导出。遇到未支持的变体会报错，并保留已有输出。「帮助 → 工具下载」仅保留外部 MoleBox 解壳工具。
+以上脚本处理均可离线使用，不用另装工具。「脚本输出格式」选「导出」使用默认格式，RGSS 也可选「Ruby 源码」。回编时选择 RGSS 或 LUCA，使用导出的 JSON，保留条目和元数据，只编辑文本值。Luca 会要求选择游戏对应的方案，例如 LOOPERS。Ren’Py 与已编译 TJS 目前只支持导出。遇到未支持的变体会报错，并保留已有输出。
 ```sh
 garbro convert Scripts.rvdata2 -o Scripts.rvdata2.rgss.json
 garbro convert Scripts.rvdata2.rgss.json -o Scripts.rvdata2 --to RGSS
@@ -104,7 +104,7 @@ garbro convert SCRIPT.PAK.luca.json -o SCRIPT.PAK --to LUCA
 
 `--recursive` 遍历磁盘目录，`--nested` 展开子归档。普通磁盘递归扫描会跳过无法识别的文件，保留相对目录。全局参数可放在命令前；文件名以短横线开头时，可放在 `--` 后。原有单归档提取用法和 JSON 字段保持兼容。
 
-## 封包（1.1.1）
+## 封包（1.1.2）
 
 选中文件或目录，按 F3，或在文件菜单、右键菜单选择**封包／创建归档**。没有选择时打包当前目录全部项目；目录包含子目录。选择可写归档格式和输出文件，需要时展开**归档格式参数**。
 
@@ -118,7 +118,7 @@ garbro create "assets" -o "data.xp3" --format XP3 --scheme none
 
 `create --help` 列出归档参数、编码、覆盖策略和资源限制。单目录以其内容为根，多输入保留相对于共同父目录的路径。只提供已有可写归档格式。游戏能否读取转换后的媒体取决于引擎支持，不会自动修改脚本中的资源引用。脚本回编属于格式转换：请先转换编辑好的脚本，再将结果封包。
 
-## 脚本回编（1.1.1）
+## 脚本回编（1.1.2）
 
 选中编辑好的文件，打开“格式转换”，在与图像、音频、视频并列的“脚本输出格式”中选择“回编译”和目标格式；选择“不转换脚本”即可跳过脚本：TSC 选 GSC，BSD 选 BGI，BPD 选 BGI-BP，ASB 的完整 JSON 选 ASB。普通文本可回编为 NSCRIPT（`nscript.dat`）或 DSM（`data.dsm`）。继续使用原来的中间格式；ASB 不接受仅有对白的 JSON。
 
@@ -137,6 +137,6 @@ garbro convert edited.txt -o data.dsm --to DSM
 
 ## Android 开发包
 
-需要 Android 12 或更高版本。大多数手机和平板选择 ARM64 APK，x86 模拟器选择 x64。通过系统安装器安装后，用系统文件／目录选择器授权访问资源。沿用相同的标签页界面和后台解码服务；音视频预览使用 Android 系统播放器。Android 暂不支持依赖 FFmpeg 的媒体转换和可选桌面脚本工具。CI APK 是开发包，尚未进入 F-Droid／IzzyOnDroid；临时签名与其他签名不兼容，不能直接覆盖安装。
+需要 Android 12 或更高版本。大多数手机和平板选择 ARM64 APK，x86 模拟器选择 x64。通过系统安装器安装后，用系统文件／目录选择器授权访问资源。沿用相同的标签页界面和后台解码服务；音视频预览使用 Android 系统播放器。Android 支持内置脚本处理，暂不支持依赖 FFmpeg 的媒体转换。CI APK 是开发包，尚未进入 F-Droid／IzzyOnDroid；临时签名与其他签名不兼容，不能直接覆盖安装。
 
-桌面版 1.1.1 使用 .NET 11。商店与 Flatpak 包自带运行时；其他桌面包需要先安装对应架构的 .NET 11 Runtime。
+桌面版 1.1.2 使用 .NET 11。商店与 Flatpak 包自带运行时；其他桌面包需要先安装对应架构的 .NET 11 Runtime。

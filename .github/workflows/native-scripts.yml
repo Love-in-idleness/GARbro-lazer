@@ -20,6 +20,10 @@ on:
         description: Also compile Android (skip when only desktop tests or docs changed)
         type: boolean
         default: false
+      regression_filter:
+        description: Optional focused VSTest filter (empty runs the script regression set)
+        type: string
+        default: ''
 permissions:
   contents: read
 concurrency:
@@ -38,7 +42,9 @@ jobs:
       - run: python3 tools/check-ui-localization.py
       - name: Validate changed codecs and the format database once
         if: github.event_name != 'workflow_dispatch' || inputs.codecs
-        run: dotnet test tests/GARbro.Core.Tests -c Release -r linux-x64 --filter 'FullyQualifiedName~ScriptRecompileTests|FullyQualifiedName~NativeScriptCodecTests|FullyQualifiedName~NativeScriptImportTests|FullyQualifiedName~ScriptTextEncodingTests|FullyQualifiedName~SchemeTests' --logger 'trx;LogFileName=scripts.trx'
+        env:
+          GARBRO_SCRIPT_FILTER: ${{ inputs.regression_filter || 'FullyQualifiedName~ScriptRecompileTests|FullyQualifiedName~NativeScriptCodecTests|FullyQualifiedName~NativeScriptImportTests|FullyQualifiedName~ScriptTextEncodingTests|FullyQualifiedName~SchemeTests|FullyQualifiedName~AvcTests|FullyQualifiedName~UnrecognizedResourceTests' }}
+        run: dotnet test tests/GARbro.Core.Tests -c Release -r linux-x64 --filter "$GARBRO_SCRIPT_FILTER" --logger 'trx;LogFileName=scripts.trx'
       - run: dotnet test tests/GARbro.Desktop.Tests -c Release -r linux-x64 --filter 'FullyQualifiedName~ScriptConversionLayoutTests|FullyQualifiedName~BatchConversionAcceptsScriptsWithOtherFormatsDisabled' --logger 'trx;LogFileName=script-ui.trx'
         env:
           GARBRO_SCRIPT_SCREENSHOTS: ${{ github.workspace }}/artifacts/script-ui

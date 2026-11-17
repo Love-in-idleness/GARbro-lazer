@@ -15,7 +15,7 @@ public sealed class AvcTests
     const int IndexOffset = 0x39;
 
     [Fact]
-    public void MeteorArchivesExtractDistinctPayloadsWithCollidingNames()
+    public void MeteorArchivesUseDatabaseSchemeAndPreserveStoredNames()
     {
         string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".dat");
         var data = MakeArchive();
@@ -34,14 +34,28 @@ public sealed class AvcTests
         try
         {
             ArchiveService.Formats();
+            var provider = FormatCatalog.Instance.ArcFormats.OfType<DatOpener>().Single();
+            var schemes = Assert.IsType<AvcScheme>(provider.Scheme).KnownSchemes;
+            Assert.Contains(schemes, s => s.Password == "METEOR01" && s.KeyOffset == 0 && s.HeaderOffset == 8);
+            provider.Scheme = new AvcScheme { KnownSchemes = schemes.Where(s => s.Password != "METEOR01").ToArray() };
+            try
+            {
+                using var withoutScheme = new ArcView(path);
+                Assert.Null(provider.TryOpen(withoutScheme));
+            }
+            finally { provider.Scheme = new AvcScheme { KnownSchemes = schemes }; }
             using (var view = new ArcView(path))
                 Assert.Null(new GameRes.Formats.Circus.DatOpener().TryOpenFromFooter(view));
-            using var archive = ArchiveService.Open(path);
-            Assert.Equal("AVC", archive.Tag);
-            Assert.Equal(new[] { "音声.ogg", "音声#3.OGG", "音声#2.ogg" }, archive.Entries.Select(entry => entry.Name));
-            Assert.Equal("first"u8.ToArray(), archive.ReadEntry("音声.ogg"));
-            Assert.Equal("two"u8.ToArray(), archive.ReadEntry("音声#3.OGG"));
-            Assert.Equal("third"u8.ToArray(), archive.ReadEntry("音声#2.ogg"));
+            using var archive = ArcFile.TryOpen(path);
+            Assert.NotNull(archive); Assert.Equal("AVC", archive.Tag);
+            Assert.Equal(new[] { "音声.ogg", "音声.OGG", "音声#2.ogg" }, archive.Dir.Select(entry => entry.Name));
+            var expected = new[] { "first", "two", "third" };
+            int index = 0;
+            foreach (var entry in archive.Dir)
+            {
+                using var input = archive.OpenEntry(entry); using var output = new MemoryStream(); input.CopyTo(output);
+                Assert.Equal(Encoding.ASCII.GetBytes(expected[index++]), output.ToArray());
+            }
         }
         finally
         {
@@ -65,6 +79,32 @@ public sealed class AvcTests
         using var stream = new MemoryStream(data, 0, data.Length - trim);
         using var view = new ArcView(stream, "bad.dat", (uint)stream.Length);
         Assert.Null(new DatOpener().TryOpen(view));
+    }
+
+    [Fact]
+    public void ExistingSchemeStillReadsPayloadAfterTheIndex()
+    {
+        ArchiveService.Formats();
+        const int header = 81, keyOffset = 53, directory = header + 0x24, payload = directory + RecordSize;
+        byte[] data = new byte[payload + 5];
+        "CHOKOPAI"u8.CopyTo(data.AsSpan(keyOffset));
+        "ARCHIVE\0"u8.CopyTo(data.AsSpan(header));
+        BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(header + 0x10), 0x24);
+        BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(header + 0x14), RecordSize);
+        BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(header + 0x20), 1);
+        "original.txt"u8.CopyTo(data.AsSpan(directory + 1));
+        BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(directory + 0x108), payload - header);
+        BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(directory + 0x10c), 5);
+        "first"u8.CopyTo(data.AsSpan(payload));
+        ReadOnlySpan<byte> key = [0x4d, 0x70, 0xab, 0x11, 0x61, 0x19, 0x03, 0xd2];
+        for (int i = header; i < data.Length; ++i) data[i] ^= key[(i - header) & 7];
+        for (int i = 0; i < 8; ++i) data[keyOffset + i] ^= key[i];
+        using var input = new MemoryStream(data); using var view = new ArcView(input, "original.dat", (uint)data.Length);
+        using var archive = new DatOpener().TryOpen(view);
+        Assert.NotNull(archive);
+        var entry = Assert.Single(archive.Dir); Assert.Equal("original.txt", entry.Name);
+        using var extracted = archive.OpenEntry(entry); using var output = new MemoryStream(); extracted.CopyTo(output);
+        Assert.Equal("first"u8.ToArray(), output.ToArray());
     }
 
     static byte[] MakeArchive()

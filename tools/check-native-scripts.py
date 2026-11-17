@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Focused public CLI and offline-package checks for managed script imports."""
 import importlib.util
+import argparse
 import json
 import shutil
 import subprocess
@@ -11,17 +12,25 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / 'modern/GARbro.Cli/bin/Release/net11.0/linux-x64/garbro.dll'
 FIXTURES = ROOT / 'tests/fixtures/scripts-native'
+COMMAND = ['dotnet', str(CLI)]
 
 
 def run(*arguments):
-    result = subprocess.run(['dotnet', str(CLI), '--json', *map(str, arguments)],
-                            capture_output=True, text=True, cwd=ROOT, timeout=60)
+    result = subprocess.run([*COMMAND, '--json', *map(str, arguments)],
+                            capture_output=True, text=True, encoding='utf-8', cwd=ROOT, timeout=60)
     if result.returncode:
         raise AssertionError((arguments, result.returncode, result.stdout, result.stderr))
     return json.loads(result.stdout)
 
 
 def main():
+    global CLI, COMMAND
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--cli', type=Path, default=CLI)
+    parser.add_argument('--packaged', action='store_true', help='Check a self-contained apphost instead of development output')
+    args = parser.parse_args()
+    CLI = args.cli.resolve()
+    COMMAND = [str(CLI)] if args.packaged else ['dotnet', str(CLI)]
     with tempfile.TemporaryDirectory(prefix='garbro-中文-日本語-') as temporary:
         root = Path(temporary)
         source, output, rebuilt = (root / name for name in ('input files', 'output', 'rebuilt'))
@@ -30,14 +39,14 @@ def main():
         shutil.copy2(FIXTURES / 'scripts.rvdata2', original)
         template = output / 'Scripts.rvdata2.rgss.json'
         assert run('convert', original, '-o', template)['format'] == 'RGSS-JSON'
-        data = json.loads(template.read_text())
+        data = json.loads(template.read_text(encoding='utf-8'))
         data['scripts'][0]['source'] = "puts '変更後'\n"
         template.write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
         restored = rebuilt / 'Scripts.rvdata2'
         assert run('convert', template, '-o', restored)['format'] == 'RGSS'
         ruby = output / 'scripts.rb'
         run('convert', restored, '-o', ruby, '--to', 'RB')
-        assert '変更後' in ruby.read_text()
+        assert '変更後' in ruby.read_text(encoding='utf-8')
         assert original.read_bytes() == (FIXTURES / 'scripts.rvdata2').read_bytes()
 
         archive = source / 'SCRIPT.PAK'
@@ -49,11 +58,17 @@ def main():
         assert restored.read_bytes() == archive.read_bytes()
 
         run('convert', FIXTURES / 'renpy-rpc2.rpyc', '-o', output / 'native.rpy')
-        assert 'call second from native_return' in (output / 'native.rpy').read_text()
+        assert 'call second from native_return' in (output / 'native.rpy').read_text(encoding='utf-8')
         compiled = source / 'script.tjs'
         shutil.copy2(FIXTURES / 'tjs-imt-initialize.tjsbc', compiled)
         run('convert', compiled, '-o', output / 'readable.tjs')
-        assert 'class PoolWindow' in (output / 'readable.tjs').read_text()
+        assert 'class PoolWindow' in (output / 'readable.tjs').read_text(encoding='utf-8')
+
+    if args.packaged:
+        for name in ('Furikiri.Core.dll', 'Superpower.dll'):
+            assert (CLI.parent / name).is_file()
+        print(json.dumps({'packagedCliConversions': 7, 'helperRuntimesRequired': False}))
+        return
 
     spec = importlib.util.spec_from_file_location('prepare_flathub', ROOT / 'tools/prepare-flathub.py')
     offline = importlib.util.module_from_spec(spec)

@@ -5,12 +5,12 @@ on:
       package_version:
         description: Application version for this Store upload
         type: string
-        default: 1.1.1
+        default: 1.1.2
   workflow_call:
     inputs:
       package_version:
         type: string
-        default: 1.1.1
+        default: 1.1.2
 jobs:
   build:
     runs-on: windows-latest
@@ -42,12 +42,12 @@ jobs:
       - name: Verify registered identity and build self-contained Store bundle
         run: python tools/package-store.py --version "$env:GARBRO_PACKAGE_VERSION"
         env:
-          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.1.1' }}
+          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.1.2' }}
           MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
       - name: Check shared self-contained CLI and decoder once on x64
         shell: pwsh
         env:
-          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.1.1' }}
+          GARBRO_PACKAGE_VERSION: ${{ inputs.package_version || '1.1.2' }}
         run: |
           dotnet fsi --exec tools/RuntimeCompactor/Tests.fsx
           if ($LASTEXITCODE -ne 0) { throw 'Runtime compactor checks failed.' }
@@ -61,6 +61,8 @@ jobs:
           $request = @{operation='resource-list';location=@{rootPath=(Resolve-Path 'tests/fixtures/generated/standard.xfl').Path}} | ConvertTo-Json -Compress
           $decoded = $request | & "$app/GARbro.Worker.exe" | ConvertFrom-Json
           if ($LASTEXITCODE -ne 0 -or $decoded.kind -ne 'result' -or $decoded.data.entries.Count -ne 3) { throw 'Shared worker did not decode the archive.' }
+          python tools/check-native-scripts.py --cli "$app/garbro.exe" --packaged
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged native script conversions failed.' }
           $media = & "$app/media/ffprobe.exe" -v error -show_streams -of json tests/fixtures/generated/movie.mpg | ConvertFrom-Json
           if ($LASTEXITCODE -ne 0 -or -not ($media.streams | Where-Object codec_type -eq 'video')) { throw 'Shared FFmpeg libraries did not probe video.' }
           $frame = Join-Path $env:RUNNER_TEMP 'garbro-video-frame.bmp'

@@ -19,7 +19,7 @@ parser.add_argument('--rid',required=True)
 parser.add_argument('--quick',action='store_true',help='Check package contents, one archive open and CLI startup only')
 parser.add_argument('--output',type=Path,default=ROOT/'artifacts')
 parser.add_argument('--dotnet',default='dotnet')
-parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','1.1.1'))
+parser.add_argument('--version',default=os.environ.get('GARBRO_PACKAGE_VERSION','1.1.2'))
 args=parser.parse_args()
 name='garbro-'+args.version+'-'+args.rid
 archive=args.output/(name+('.zip'if args.rid.startswith('win-')else'.tar.gz'))
@@ -76,7 +76,7 @@ with tempfile.TemporaryDirectory(prefix='garbro-package-')as folder:
     schemes=json.loads(gzip.decompress(database.read_bytes()))
     metadata=json.loads(database.with_name('schemes.json').read_text())
     assert list((desktop/'GameData').glob('*.lst.gz')) and not list((desktop/'GameData').glob('*.lst'))
-    assert schemes['Version']==metadata['version']==149 and schemes['PortableSchemaVersion']==2
+    assert schemes['Version']==metadata['version']==150 and schemes['PortableSchemaVersion']==2
     assert sorted(schemes['SchemeMap'])==metadata['applied']
     assert hashlib.sha256(gzip.decompress(database.read_bytes())).hexdigest()==metadata['json_sha256']
     assert json.loads((package/'dependencies.json').read_text())

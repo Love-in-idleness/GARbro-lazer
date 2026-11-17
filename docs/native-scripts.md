@@ -1,6 +1,6 @@
 # Native script codecs and .NET 11
 
-The development tree after 1.1.1 uses SDK 11.0.100 / runtime 11.0.0. Script processing is managed code: no Python, Ruby, Go, Rust runtime or separately installed compiler is required. MoleBox wrapper removal remains an external tool. These changes do not alter the published 1.1.1 assets.
+The development tree after 1.1.1 uses SDK 11.0.100 / runtime 11.0.0. Script processing is managed code: no Python, Ruby, Go, Rust runtime or separately installed compiler is required. Executable wrapper detection/removal is outside GARbro; there is no tool-download page. These changes do not alter the published 1.1.1 assets.
 
 | Input | Built-in export | Built-in compilation |
 |---|---|---|

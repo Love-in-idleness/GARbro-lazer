@@ -1,1 +1,1 @@
-1.1.1: align bundled manuals and installation examples with the release
+1.1.2: built-in RGSS, Luca, RenPy and TJS script processing

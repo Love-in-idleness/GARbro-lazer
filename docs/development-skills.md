@@ -1,11 +1,11 @@
 # Skills useful for GARbro development
 
-These candidates were inspected on 2026-11-17. They are recommendations, not
-installed or automatically enabled skills. Repository instructions, the shared
+These five skills were installed on 2026-11-17 under `.agents/skills`, with
+106 upstream files verified against pinned Git blobs. Repository instructions, the shared
 UI, .NET 11, SchemeTool compatibility, small dependencies, lean validation and the
 macOS build-only policy take precedence over generic advice.
 
-| Candidate | Source | Useful work |
+| Installed skill | Source | Useful work |
 |---|---|---|
 | Avalonia | [linuxdevel/Avalonia-skills](https://github.com/linuxdevel/Avalonia-skills/tree/main/skills/avalonia) | Version-aware Avalonia 12.1.4 UI, styling, performance, input and Android guidance; load only the relevant subsection. Community-maintained. |
 | .NET Performance Engineering | [wieslawsoltes/Performance-Skill](https://github.com/wieslawsoltes/Performance-Skill/blob/main/SKILL.md) | Profile browser/preview startup, allocations, native decoding and UI dispatch latency before changing code. Explicitly separates cold/warm paths and managed/native/compositor costs; select a bounded investigation rather than every profiler. |
@@ -23,5 +23,9 @@ has useful allocation/collection prompts, but its broad type-design rules are
 less suitable as a project default than measuring the actual hot path first.
 
 These skills help the coding agent; they are not GARbro runtime dependencies.
-If adopted later, pin a reviewed revision and load only the task's relevant
-sections. Do not execute installation scripts just to discover their contents.
+Each directory includes `SOURCE.md`, its license and supporting references.
+The exact revisions, original paths, Git blob hashes and SHA-256 values are in
+[sources.lock.json](../.agents/skills/sources.lock.json). The existing Ponytail
+installation is retained. No installer or dependency-installation hook was run.
+Load only the task's relevant sections. Future updates should review a new
+revision and verify its files before replacing the pinned snapshot.

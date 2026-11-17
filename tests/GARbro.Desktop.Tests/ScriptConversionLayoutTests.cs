@@ -63,6 +63,18 @@ public sealed class ScriptConversionLayoutTests
                 var action=controls.OfType<Button>().Single(c=>c.Content as string==text["Start"]);var at=action.TranslatePoint(new Point(),host).Value;
                 Assert.True(at.Y>=0 && at.Y+action.Bounds.Height<=host.ClientSize.Height+1);
                 host.Close();await pending;
+                if(snapshots!=null)
+                {
+                    var help=new HelpWindow(text,new AppSettings(),Array.Empty<ResourceFormatInfo>(),"Manual");
+                    var closed=help.ShowDialog(owner);
+                    try
+                    {
+                        await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);await Task.Delay(60);
+                        using var helpFrame=help.DesktopHost.CaptureRenderedFrame();
+                        helpFrame.Save(Path.Combine(snapshots,$"help-{language}.png"),new PngBitmapEncoderOptions());
+                    }
+                    finally{help.Close();await closed;}
+                }
             }
         }
         finally {owner.Close();MaterialTheme.Apply(new AppSettings());}
