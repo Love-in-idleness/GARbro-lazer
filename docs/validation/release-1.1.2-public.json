@@ -1,0 +1,38 @@
+{
+  "version": "1.1.2",
+  "releaseUrl": "https://github.com/Love-in-idleness/GARbro-lazer/releases/tag/v1.1.2",
+  "publishedAt": "2026-11-17T15:10:57Z",
+  "sourceCommit": "6e85aaae1f84b6caf9e0b9ced7c031c13e4001c3",
+  "publicAssetsVerified": 32,
+  "checksumEntriesVerified": 31,
+  "independentlyDownloadedAssetsVerified": 6,
+  "downloadedDebSha256": "e21c7744e402986664946a6f6f23ecbec8049f89296878ce015e3e9aeafddca3",
+  "databaseVersion": 150,
+  "storeIdentityMatches": true,
+  "storeSizes": {
+    "win-x64": {
+      "architecture": "win-x64",
+      "packageBytes": 95364304,
+      "installedBytes": 185754522,
+      "runtimeCompactionBytesSaved": 19870120,
+      "runtimeInventoryVerified": true,
+      "targetBytes": 100000000,
+      "downloadTargetMet": true,
+      "installedTargetMet": false
+    },
+    "win-arm64": {
+      "architecture": "win-arm64",
+      "packageBytes": 92119095,
+      "installedBytes": 185091116,
+      "runtimeCompactionBytesSaved": 23531912,
+      "runtimeInventoryVerified": true,
+      "targetBytes": 100000000,
+      "downloadTargetMet": true,
+      "installedTargetMet": false
+    }
+  },
+  "workflow": 44108940474,
+  "status": "passed",
+  "macOsPolicy": "packages built without runtime tests",
+  "androidStatus": "development-signed previews; no new real-device execution"
+}
