@@ -1,5 +1,8 @@
 # GARbro-lazer — 跨平台迁移计划 / Cross-platform Migration Plan
 
+> 当前跨平台工作分支为 `modern`（2026-11-17 起）；下文的 `migration/net10` 为迁移初期名称。
+> The cross-platform working branch is `modern` as of 2026-11-17; `migration/net10` below is its original name.
+
 **版本 / Version:** 1.0 (2026-10-30)  
 **仓库 / Repository:** https://github.com/Love-in-idleness/GARbro-lazer
 **上游 / Upstream:** https://github.com/crskycode/GARbro  

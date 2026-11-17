@@ -1,14 +1,14 @@
 name: GUI performance comparison
 on:
   push:
-    branches: [migration/net10]
+    branches: [modern]
     paths: ['tools/performance/**', '.github/workflows/gui-comparison.yml']
   workflow_dispatch:
     inputs:
       target_ref:
         description: Source revision for 1.0.2 and the original WPF GUI
         required: true
-        default: migration/net10
+        default: modern
         type: string
 permissions:
   contents: read
