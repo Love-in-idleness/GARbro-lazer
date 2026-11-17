@@ -8,9 +8,9 @@ using Xunit;
 public sealed class UnrecognizedResourceTests
 {
     [Theory]
-    [InlineData(16)]
-    [InlineData(17)]
-    public void UnrecognizedArchiveUsesNormalErrorAndCanStillBeBrowsedAsAFile(byte footerOffset)
+    [InlineData(16, true)]
+    [InlineData(17, false)]
+    public void UnrecognizedArchiveUsesNormalErrorAndRawBrowsingPreservesBytes(byte footerOffset, bool raw)
     {
         var bytes = new byte[64];
         bytes[0] = footerOffset;
@@ -20,7 +20,8 @@ public sealed class UnrecognizedResourceTests
         try
         {
             Assert.IsType<UnknownFormatException>(Assert.ThrowsAny<UnknownFormatException>(() => ArchiveService.Open(path, "XP3")));
-            using var session = new ResourceSession(new(path), allowPlainFile: true);
+            // The 16-byte marker also matches MOO's signature; use explicit raw mode for that lookalike.
+            using var session = new ResourceSession(new(path), allowPlainFile: true, forcePlainFile: raw);
             var entry = Assert.Single(session.List().Entries);
             using var stream = session.OpenEntry(entry.Name);
             using var copy = new MemoryStream(); stream.CopyTo(copy);
