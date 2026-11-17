@@ -118,23 +118,22 @@ namespace GameRes.Formats.AVC
             {
                 if (m_input.Length != m_file.View.Read (0, m_input, 0, (uint)m_input.Length))
                     return null;
-                if (ReadIndex (0, 8, "METEOR01"))
-                {
-                    var dir = ParseIndex();
-                    long index_start = (long)m_header_offset + m_index_offset;
-                    if (null == dir || dir.Count == 0 || dir.Any (e => e.Offset < m_header_offset + m_header.Length
-                        || !e.CheckPlacement (index_start)))
-                        return null;
-                    RenameDuplicates (dir);
-                    return dir;
-                }
                 foreach (var scheme in KnownSchemes)
                 {
-                    if (!ReadIndex (scheme.KeyOffset, scheme.HeaderOffset))
+                    bool meteor = scheme.Password == "METEOR01";
+                    if (!ReadIndex (scheme.KeyOffset, scheme.HeaderOffset, meteor ? scheme.Password : null))
                         continue;
                     try
                     {
                         var dir = ParseIndex();
+                        if (meteor)
+                        {
+                            long index_start = (long)m_header_offset + m_index_offset;
+                            if (null == dir || dir.Count == 0 || dir.Any (e => e.Offset < m_header_offset + m_header.Length
+                                || !e.CheckPlacement (index_start)))
+                                return null;
+                            RenameDuplicates (dir);
+                        }
                         if (null != dir)
                             return dir;
                     }

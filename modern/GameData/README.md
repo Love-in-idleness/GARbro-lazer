@@ -5,7 +5,7 @@ plus the legacy game-name map. It is generated from this repository's existing
 `ArcFormats/Resources/Formats.dat`; no local user game files or credentials are included.
 The original data and license remain intact.
 
-The source is the schema-2 Windows export at commit
+The baseline is the schema-2 Windows export at commit
 `a181a9760ca42734a034e7e88fc8f85cf13cbf34`, workflow run
 [40984047492](https://github.com/Love-in-idleness/GARbro-lazer/actions/runs/40984047492),
 artifact `legacy-runtime-catalog` (ID `12946361447`). `schemes.json` records the
@@ -13,7 +13,10 @@ source-export SHA-256, bundled JSON SHA-256 and exact applied/excluded tag sets.
 The export includes private serialized fields; computed password setters are never
 used to reconstruct hashed DXA keys.
 
-Reproduce from the artifact's `Formats.json` after building the portable solution:
+The bundled data includes the METEOR01 AVC scheme from the checked-in
+`Formats.dat`. Export the current database with `tools/export-legacy-catalog.ps1`
+against a legacy Windows build. After building the portable solution, use the
+exported `Formats.json` as input:
 
 ```sh
 dotnet modern/GARbro.Cli/bin/Release/net11.0/garbro.dll schemes /path/to/Formats.json --json > import-report.json
