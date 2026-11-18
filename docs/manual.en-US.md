@@ -69,7 +69,7 @@ data directory. No reports or logs are uploaded automatically.
 
 ## Shortcuts
 
-Ctrl+O: open. Ctrl+P: settings. Ctrl+Q: quit. F3: create archive.
+Ctrl+O: open. Ctrl+P: settings. Ctrl+Q: quit. F3: pack selected.
 F4: extract selected. F5: refresh. F6: convert. Enter: open selected.
 Backspace / Ctrl+PageUp: parent. Alt+Left/Right: navigation history.
 Ctrl+A: select all. Ctrl+C: copy selected filenames. Numpad +: select by wildcard.
@@ -127,7 +127,7 @@ garbro convert SCRIPT.PAK.luca.json -o SCRIPT.PAK --to LUCA
 
 ## Packing archives
 
-Select files or folders and press F3, or choose **Create archive** from the file or context menu. With no selection, all items in the current folder are included. Folders include subfolders. Choose a writable archive format, an output file and, if needed, expand **Archive format options**.
+Use **Pack selected** (F3) or **Pack all** from the toolbar, resource operations menu or context menu. **Pack all** includes items hidden by the search filter. Both commands include subfolders. Choose a writable archive format, an output file and, if needed, expand **Archive format options**.
 
 Image, audio, video and script conversion are optional. **Script output format** defaults to **Do not convert scripts**. Choose a recompilation target to pack an edited script in its game format. **Omit originals from the archive after conversion** includes only the converted version of each affected file. Other files are packed as usual. Source files are preserved, and audio AUTO passthrough is packed once. A conversion failure or name conflict cancels the archive and preserves the previous output.
 

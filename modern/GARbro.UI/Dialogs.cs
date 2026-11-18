@@ -152,7 +152,7 @@ public static class Dialogs
     static ComboBox FormatPicker(ResourceFormatInfo[] formats) => new() { ItemsSource = formats, DisplayMemberBinding = new Binding("Tag"), SelectedIndex = 0 };
     public static async Task<CreationChoice> Creation(AppWindow owner, DesktopText text, ResourceFormatInfo[] catalog, string source = null, int inputCount = 0, bool selectedOnly = false, string outputDirectory = null)
     {
-        var window = Window(text, "Create", 940, 760); var body = Panel();
+        var window = Window(text, selectedOnly ? "PackSelected" : "PackAll", 940, 760); var body = Panel();
         var archives = catalog.Where(f => f.Type == "archive" && f.CanWrite).ToArray();
         var images = catalog.Where(f => f.Type == "image" && f.CanWrite).ToArray();
         if (source != null)

@@ -9,7 +9,7 @@ The shared `DeskCommand` supplies menu, toolbar, context-menu and keyboard actio
 |---|---|---|---|
 | File: Open | File → Open; toolbar; Ctrl+O; file/folder drop; startup arguments | Idle | DesktopTests, NativeSmoke, DEB activation |
 | Open physical folders / multiple roots | File → Open folder; folder tree | Idle | ResourceBrowserTests; directories remain lazy |
-| Create archive | File / context → Create; F3 | Physical directory, idle | All 22 declared writable archive providers create and re-read a synthetic archive in ResourceBrowserTests |
+| Pack selected / all | Toolbar, resource operations menu or context menu. F3 packs selected. | Physical directory, idle. Selected requires a selection. | ExtractionUiTests checks both scopes. ResourceBrowserTests checks all 22 declared writable archive providers. |
 | Convert multimedia | File / context → Convert; F6 | Listing open, idle; choose files | Existing image/audio conversion tests; per-file errors retained |
 | Recent files / exit | File → Recent / Exit; Ctrl+Q | Recent entries exist / always | SettingsTests; native startup/close |
 | Enter item, parent, next selection | Double click / Enter; Backspace / Ctrl+PageUp; Space | Listing open; text editing takes priority | Browser tests and native window smoke |

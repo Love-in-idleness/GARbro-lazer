@@ -41,19 +41,24 @@ public sealed class LocalizationShortcutTests
         Assert.Equal("gbk",settings.TextEncoding);
     }
     [Fact]
-    public void SettingsKeepDisabledBindingsAndMigrateBothPreviousVersions()
+    public void SettingsMigrateExistingVersionsAndPreservePackingBindings()
     {
         string directory=Path.Combine(Path.GetTempPath(),"garbro-shortcuts-"+Guid.NewGuid());Directory.CreateDirectory(directory);
         try
         {
             var store=new SettingsStore(Path.Combine(directory,"settings.json"));
-            foreach(int version in new[]{1,2})
+            foreach(int version in new[]{1,2,3})
             {
-                File.WriteAllText(store.Path,"{\"Version\":"+version+",\"Language\":\"ru-RU\",\"TextEncoding\":\"shift_jis\",\"Volume\":0.4}");
+                string legacyPacking=version==3?"[\"Ctrl+Shift+F3\"]":"[]";
+                File.WriteAllText(store.Path,"{\"Version\":"+version+",\"Language\":\"ru-RU\",\"TextEncoding\":\"shift_jis\",\"Volume\":0.4,\"ShortcutBindings\":{\"Create\":"+legacyPacking+"}}");
                 var migrated=store.Load();Assert.Null(store.LoadError);Assert.Equal(3,migrated.Version);Assert.Equal(.4,migrated.Volume);
+                Assert.False(migrated.ShortcutBindings.ContainsKey("Create"));
+                string[] expected=version==3?["Ctrl+Shift+F3"]:[];
+                Assert.Equal(expected,ShortcutCatalog.Effective(migrated)["PackSelected"]);
                 migrated.ShortcutBindings["Open"]=Array.Empty<string>();
                 migrated.ShortcutBindings["Refresh"]=new[]{"Control+Shift+R","F5"};store.Save(migrated);
                 var loaded=store.Load();Assert.Empty(ShortcutCatalog.Effective(loaded)["Open"]);
+                Assert.Equal(expected,ShortcutCatalog.Effective(loaded)["PackSelected"]);
                 Assert.Equal(new[]{"Ctrl+Shift+R","F5"},ShortcutCatalog.Effective(loaded)["Refresh"]);
                 Assert.Equal("shift_jis",loaded.TextEncoding);
             }

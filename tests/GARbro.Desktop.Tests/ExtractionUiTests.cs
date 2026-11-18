@@ -3,9 +3,11 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using GARbro.Application;
@@ -41,8 +43,10 @@ public sealed class ExtractionUiTests
         }
         finally {owner.Close();}
     }
-    [AvaloniaFact]
-    public async Task ArchiveCreationCapturesInputsAndPreventsOverlappingDataDialogs()
+    [AvaloniaTheory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task PackingCommandsCaptureTheirOwnScopeAndPreventOverlappingDataDialogs(bool selectedOnly)
     {
         string root=Path.Combine(Path.GetTempPath(),"garbro-create-snapshot-"+Guid.NewGuid()),input=Path.Combine(root,"input");Directory.CreateDirectory(input);
         var store=new SettingsStore(Path.Combine(root,"settings.json"));store.Save(new AppSettings {Language="en-US"});var window=new MainWindow(store);window.Show();var text=new DesktopText("en-US");
@@ -53,22 +57,35 @@ public sealed class ExtractionUiTests
             await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);
             window.GetVisualDescendants().OfType<TextBox>().Single(c=>c.Name=="Options").Text="{\"Password\":\"reader-only\"}";
             await window.LoadArchiveAsync(input);var list=await VisibleFiles(window,3);
+            var buttons=window.GetVisualDescendants().OfType<Button>().ToArray();
+            var packSelected=buttons.Single(c=>c.Name=="PackSelected");
+            var packAll=buttons.Single(c=>c.Name=="PackAll");
+            Assert.False(packSelected.Command.CanExecute(null));
+            Assert.True(packAll.Command.CanExecute(null));
+            if(!selectedOnly)
+            {
+                window.GetVisualDescendants().OfType<TextBox>().Single(c=>c.Name=="Search").Text="one";
+                await VisibleFiles(window,1);
+            }
             foreach(var entry in list.Items.OfType<BrowserEntry>().Where(e=>e.Name!="leave.txt"))list.SelectedItems.Add(entry);
-            var menu=window.GetVisualDescendants().OfType<Button>().Single(c=>c.Name=="MenuFile").ContextMenu;
-            menu.Items.OfType<MenuItem>().Single(c=>c.Header as string==text["Create"]).Command.Execute(null);
-            Assert.False(window.GetVisualDescendants().OfType<Button>().Single(c=>c.Name=="ExtractAll").Command.CanExecute(null));
+            var pack=selectedOnly?packSelected:packAll;
+            Assert.True(pack.Command.CanExecute(null));
+            pack.Command.Execute(null);
+            Assert.False(buttons.Single(c=>c.Name=="ExtractAll").Command.CanExecute(null));
             for(int i=0;i<100 && !window.DesktopHost.OwnedWindows.Any();i++)await Task.Delay(100);
             var dialog=Assert.Single(window.DesktopHost.OwnedWindows);var controls=dialog.GetVisualDescendants().ToArray();
+            Assert.Equal(text[pack.Name],dialog.Title);
             var format=controls.OfType<ComboBox>().Single(c=>c.Name=="ArchiveOutputFormat");format.SelectedItem=format.Items.OfType<ResourceFormatInfo>().Single(f=>f.Tag=="XFL");
             var output=controls.OfType<TextBox>().Single(c=>c.Name=="ArchiveOutputPath");
             Assert.Equal(Path.Combine(input,"archive.xfl"),Dialogs.PathValue(output));
             string archive=Path.Combine(root,"result.xfl");Dialogs.SetPath(output,archive);
-            list.SelectedItems.Clear();list.SelectedItems.Add(list.Items.OfType<BrowserEntry>().Single(e=>e.Name=="leave.txt"));
+            list.SelectedItems.Clear();
             controls.OfType<Button>().Single(c=>c.Content as string==text["Create"]).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             for(int i=0;i<150 && !File.Exists(archive);i++)await Task.Delay(100);
             Assert.True(File.Exists(archive),string.Join(" | ",window.GetVisualDescendants().OfType<TextBlock>().Select(c=>c.Text)));
             var created=await WorkerArchiveSession.RequestAsync<BrowserListing>(Path.Combine(AppContext.BaseDirectory,"GARbro.Worker.dll"),new("resource-list",null,Location:new(archive)),new WorkerLimits(),null,default);
-            Assert.Equal(new[]{"one.txt","two.txt"},created.Entries.Select(e=>e.Name).OrderBy(n=>n).ToArray());
+            string[] expected=selectedOnly?["one.txt","two.txt"]:["leave.txt","one.txt","two.txt"];
+            Assert.Equal(expected,created.Entries.Select(e=>e.Name).OrderBy(n=>n).ToArray());
         }
         finally {window.Close();Directory.Delete(root,true);}
     }
@@ -107,7 +124,7 @@ public sealed class ExtractionUiTests
         finally {window.Close();Directory.Delete(root,true);}
     }
     [AvaloniaFact]
-    public async Task ExtractionMenuHasOnlySelectedAndAllAndRecursionCannotWidenTheSelection()
+    public async Task ArchiveMenusShareTheToolbarCommandsAndRecursionCannotWidenTheSelection()
     {
         string root=Path.Combine(Path.GetTempPath(),"garbro-extract-ui-"+Guid.NewGuid());Directory.CreateDirectory(root);
         var window=new MainWindow();window.Show();
@@ -117,9 +134,34 @@ public sealed class ExtractionUiTests
             await window.LoadArchiveAsync(root);
             var files=await VisibleFiles(window,3);
             foreach(var item in files.Items.OfType<BrowserEntry>().Where(e=>e.Name!="leave.xfl"))files.SelectedItems.Add(item);
-            var process=window.GetVisualDescendants().OfType<Button>().Single(c=>c.Name=="MenuProcess").ContextMenu;
-            Assert.Equal(2,process.Items.Count);Assert.DoesNotContain("Recursive",ShortcutCatalog.Defaults.Keys);
-            var extract=window.GetVisualDescendants().OfType<Button>().Single(c=>c.Name=="ExtractSelected");
+            var buttons=window.GetVisualDescendants().OfType<Button>().ToArray();
+            var process=buttons.Single(c=>c.Name=="MenuProcess").ContextMenu;
+            Assert.Equal(4,process.Items.Count);Assert.DoesNotContain("Recursive",ShortcutCatalog.Defaults.Keys);
+            foreach(string command in new[]{"ExtractSelected","ExtractAll","PackSelected","PackAll"})
+            {
+                var button=buttons.Single(c=>c.Name==command);
+                foreach(var menu in new[]{process,files.ContextMenu})
+                {
+                    var item=menu.Items.OfType<MenuItem>().Single(c=>c.Command==button.Command);
+                    Assert.Same(((PathIcon)button.Content).Data,((PathIcon)item.Icon).Data);
+                }
+            }
+            if(Environment.GetEnvironmentVariable("GARBRO_PACKING_SCREENSHOTS") is { Length: > 0 } snapshots)
+            {
+                Directory.CreateDirectory(snapshots);
+                double width=window.Width,minWidth=window.MinWidth;
+                window.MinWidth=360;
+                foreach(int size in new[]{1180,400})
+                {
+                    window.Width=size;
+                    await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);
+                    using var frame=window.DesktopHost.CaptureRenderedFrame();
+                    frame.Save(Path.Combine(snapshots,$"archive-toolbar-{size}.png"),new PngBitmapEncoderOptions());
+                }
+                window.Width=width;
+                window.MinWidth=minWidth;
+            }
+            var extract=buttons.Single(c=>c.Name=="ExtractSelected");
             extract.Command.Execute(null);
             var dialog=Assert.Single(window.DesktopHost.OwnedWindows);
             Assert.Equal(root,Dialogs.PathValue(dialog.GetVisualDescendants().OfType<TextBox>().Single(c=>c.Name=="OutputDirectoryPath")));

@@ -34,6 +34,7 @@ public sealed class DeskCommand(Func<Task> execute, Func<bool> enabled, bool con
 
 public sealed partial class MainWindow
 {
+    static readonly string[] ArchiveCommands = { "ExtractSelected", "ExtractAll", "PackSelected", "PackAll" };
     (KeyGesture Gesture, string Command)[] shortcutMap = Array.Empty<(KeyGesture, string)>();
     Dictionary<string, string[]> effectiveShortcuts;
     void ApplyShortcutBindings()
@@ -69,7 +70,8 @@ public sealed partial class MainWindow
             Register(section, () => ShowSettings(section));
         Register("ExtractAll", () => ExtractPicker(false), () => !busy && !loading && !choosingOperation && listing != null);
         Register("ExtractSelected", () => ExtractPicker(true), () => !busy && !loading && !choosingOperation && listing != null && files.SelectedItems.Count > 0);
-        Register("Create", CreateArchive, () => !busy && !loading && !choosingOperation && listing?.Physical == true);
+        Register("PackSelected", () => CreateArchive(true), () => !busy && !loading && !choosingOperation && listing?.Physical == true && files.SelectedItems.Count > 0);
+        Register("PackAll", () => CreateArchive(false), () => !busy && !loading && !choosingOperation && listing?.Physical == true && listing.Entries.Length > 0);
         Register("Convert", ConvertSelected, () => !busy && !loading && !choosingOperation && listing != null && files.SelectedItems.Cast<BrowserEntry>().Any(e => !e.IsDirectory));
         Register("OpenSelected", OpenSelected, () => !busy && listing != null);
         Register("SelectAll", () =>
@@ -133,11 +135,11 @@ public sealed partial class MainWindow
         menu.Children.Clear();
         ContextMenu GroupMenu(params string[] keys)
         { var popup = new ContextMenu(); foreach (string key in keys) popup.Items.Add(Item(key)); return popup; }
-        var file = GroupMenu("NewTab", "CloseTab", "Open", "OpenFolder", "Create", "Convert");
+        var file = GroupMenu("NewTab", "CloseTab", "Open", "OpenFolder", "Convert");
         var recent = Group("Recent"); foreach (string filename in Settings.Recent)
         { var item = new MenuItem { Header = UiPlatform.Storage.DisplayPath(filename), Icon = MaterialIcons.Create("Recent") }; item.Click += async (_, _) => await Guard(() => LoadInputsAsync(new[] { filename })); recent.Items.Add(item); }
         file.Items.Add(recent); if (!UiPlatform.IsMobile) file.Items.Add(Item("Exit"));
-        var process = GroupMenu("ExtractSelected", "ExtractAll");
+        var process = GroupMenu(ArchiveCommands);
         var selection = BuildContextMenu(true);
         var view = GroupMenu("Back", "Forward", "Parent", "Refresh", "FitWindow");
         var fit = Item("FitImage"); fit.ToggleType = MenuItemToggleType.CheckBox; fit.IsChecked = Settings.FitImage; view.Items.Add(fit);
@@ -163,7 +165,9 @@ public sealed partial class MainWindow
     ContextMenu BuildContextMenu(bool selectionOnly = false)
     {
         var context = new ContextMenu();
-        foreach (string key in selectionOnly ? new[] { "SelectAll", "Mask", "CopyNames", "Explore", "Trash" } : new[] { "OpenSelected", "ExtractSelected", "ExtractAll", "Create", "Convert", "SelectAll", "Mask", "CopyNames", "Explore", "Trash", "Refresh" }) context.Items.Add(Item(key));
+        string[] selectionCommands = { "SelectAll", "Mask", "CopyNames", "Explore", "Trash" };
+        string[] keys = selectionOnly ? selectionCommands : ["OpenSelected", .. ArchiveCommands, "Convert", .. selectionCommands, "Refresh"];
+        foreach (string key in keys) context.Items.Add(Item(key));
         var type = Group("AssignType"); foreach (var pair in new[] { ("Automatic", ""), ("Images", "image"), ("Audio", "audio"), ("Video", "video"), ("Scripts", "script"), ("Binary", "binary") })
         {
             var item = Group(pair.Item1); item.Click += async (_, _) =>
@@ -317,12 +321,13 @@ public sealed partial class MainWindow
         finally {if(ReferenceEquals(active,operation))active=null;SetBusy(false);}
         if(report?.Errors.Length>0)await Dialogs.ExtractionErrors(this,Text,report.Errors);
     }
-    async Task CreateArchive()
+    async Task CreateArchive(bool selectedOnly)
     {
-        var source=listing.Location;int ticket=navigationGeneration;
-        string[] inputs=files.SelectedItems.Cast<BrowserEntry>().Select(e=>e.Name).ToArray();
-        bool selectedOnly=inputs.Length>0;
-        if(inputs.Length==0)inputs=listing.Entries.Select(e=>e.Name).ToArray();
+        var source = listing.Location;
+        int ticket = navigationGeneration;
+        var entries = selectedOnly ? files.SelectedItems.Cast<BrowserEntry>() : listing.Entries;
+        string[] inputs = entries.Select(e => e.Name).ToArray();
+        if (inputs.Length == 0) return;
         var choice=await ChooseOperation(async()=>
         {
             catalog??=await Request<ResourceFormatInfo[]>(new("resource-catalog",null));
