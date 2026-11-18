@@ -33,7 +33,7 @@ public static class LightweightResources
     {
         value = null;
         var location = request.Location;
-        if (location == null || location.Chain.Length != 0 || !Directory.Exists(location.RootPath)) return false;
+        if (location == null || location.InputFormatId != null || location.Chain.Length != 0 || !Directory.Exists(location.RootPath)) return false;
         if (request.Operation == "resource-list")
         {
             var entries = new DirectoryInfo(location.RootPath).EnumerateFileSystemInfos().Select(f =>
@@ -41,7 +41,8 @@ public static class LightweightResources
             BrowserEntry NewEntry(FileSystemInfo f) {cancellation.ThrowIfCancellationRequested();return new(f.Name,f.Name,f is DirectoryInfo ? "directory" : Type(f.Name),f is FileInfo file ? file.Length : 0,f is DirectoryInfo);}
             value = new BrowserListing(location, "directory", true, entries); return true;
         }
-        if (request.Operation != "resource-preview" || request.ForcedType is not (null or "binary") || !(request.PreviewMode == "hex" || request.ForcedType == "binary" || IsTextName(request.Entry))) return false;
+        if (request.Operation != "resource-preview" || request.PreviewMode is not ("auto" or "hex") ||
+            request.ForcedType is not (null or "binary") || !(request.PreviewMode == "hex" || request.ForcedType == "binary" || IsTextName(request.Entry))) return false;
         string root = Path.GetFullPath(location.RootPath), path = Path.GetFullPath(Path.Combine(root, request.Entry));
         string relative = Path.GetRelativePath(root, path);
         if (Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar)) throw new IOException("Resource leaves its input directory.");
@@ -57,11 +58,10 @@ public static class LightweightResources
         if (input.CanSeek) input.Position = offset;
         else
         {
-            if (offset == 0) input = new PrefixReadStream(header.AsMemory(0, headerLength).ToArray(), input);
+            if (offset <= headerLength) input = new PrefixReadStream(header.AsMemory((int)offset, headerLength - (int)offset).ToArray(), input);
             else
             {
                 long left = offset - headerLength;
-                if (left < 0) throw new ArgumentOutOfRangeException(nameof(offset));
                 byte[] skip = new byte[81920];
                 while (left > 0) { int n = input.Read(skip, 0, (int)Math.Min(left, skip.Length)); if (n == 0) throw new ArgumentOutOfRangeException(nameof(offset)); left -= n; }
             }
@@ -102,6 +102,27 @@ public static class LightweightResources
         }
         return new("binary",name,result.ToString(),Offset:offset,More:more);
     }
+    internal static ResourcePreview ReadUtf8Page(Stream input, string name, long offset)
+    {
+        if (offset < 0 || offset > input.Length) throw new ArgumentOutOfRangeException(nameof(offset));
+        long next = Math.Min(offset + 65536, input.Length);
+        long Boundary(long position)
+        {
+            while (position > 0 && position < input.Length)
+            {
+                input.Position = position;
+                if ((input.ReadByte() & 0xc0) != 0x80) break;
+                position--;
+            }
+            return position;
+        }
+        long start = Boundary(offset), end = Boundary(next);
+        var buffer = new byte[checked((int)(end - start))];
+        input.Position = start;
+        input.ReadExactly(buffer);
+        return new("text", name, new UTF8Encoding(false, true).GetString(buffer), Offset: offset, More: next < input.Length);
+    }
+
     sealed class PrefixReadStream(byte[] prefix, Stream tail) : Stream
     {
         int position;

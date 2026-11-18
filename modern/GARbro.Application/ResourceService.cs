@@ -24,6 +24,7 @@ public sealed class ResourceSession : IDisposable
     internal bool Retained;
     public ResourceLocation Location { get; internal set; }
     public ArcFile Archive { get; }
+    internal ImageFormat InputImageFormat { get; }
     public bool Physical => physical;
     public bool Synthetic => Archive?.Tag == "DAT/BOGUS";
     internal void SetScriptOptionsLocation(string name = null) => scoped?.SetLocation(physical && name != null ? new ResourceLocation(PhysicalPath(name)) : Location);
@@ -34,6 +35,12 @@ public sealed class ResourceSession : IDisposable
         Location = location with { RootPath = Path.GetFullPath(location.RootPath) };
         if (Location.Chain.Length > 64) throw new InvalidDataException("Archive nesting exceeds 64 levels.");
         physical = System.IO.Directory.Exists(Location.RootPath);
+        var inputFormat = Location.InputFormatId == null ? null :
+            FormatCatalog.Instance.Formats.FirstOrDefault(f => FormatIdentity.Of(f) == Location.InputFormatId);
+        if (Location.InputFormatId != null && (physical || inputFormat is not (ArchiveFormat or ImageFormat)))
+            throw new ArgumentException("Invalid input decoder.");
+        InputImageFormat = inputFormat as ImageFormat;
+        if (InputImageFormat != null && Location.Chain.Length != 0) throw new UnknownFormatException();
         if (!physical && Location.Fingerprint != null && ArchiveFingerprint.Read(Location.RootPath) != Location.Fingerprint)
             throw new IOException("Archive changed; reopen it before continuing.");
         string root = physical ? Location.RootPath : Path.GetDirectoryName(Location.RootPath);
@@ -52,13 +59,28 @@ public sealed class ResourceSession : IDisposable
                     if(new FileInfo(Location.RootPath).Length>uint.MaxValue)throw new InvalidDataException("Resource exceeds the size limit.");
                     return new GameRes.Formats.WrapSingleFileArchive(new ArcView(Location.RootPath),Path.GetFileName(Location.RootPath));
                 }
-                if(allowPlainFile && Location.Chain.Length==0 && (forcePlainFile || MediaInfo.IsAudioName(Location.RootPath) || MediaInfo.IsVideoName(Location.RootPath)))standalone=PlainFile();
+                if (InputImageFormat != null)
+                {
+                    using var input = BinaryStream.FromFile(Location.RootPath);
+                    if (InputImageFormat.ReadMetaData(input) == null) throw new InvalidFormatException();
+                    standalone = PlainFile();
+                    standalone.Dir.Single().Type = "image";
+                }
+                if(inputFormat == null && allowPlainFile && Location.Chain.Length==0 && (forcePlainFile || MediaInfo.IsAudioName(Location.RootPath) || MediaInfo.IsVideoName(Location.RootPath)))standalone=PlainFile();
                 for (int depth = 0; standalone==null && depth <= Location.Chain.Length; depth++)
                 {
                     var current = Location with { Archives = Location.Chain.Take(depth).ToArray(), Directory = "" };
                     scoped?.SetLocation(current);
-                    try {VFS.FullPath = new[] { current.RootPath }.Concat(current.Chain).Append("").ToArray();}
-                    catch(UnknownFormatException)when(depth==0 && scope.MissingOptions==null && FormatCatalog.Instance.LastError is not ResourceParametersRequiredException)
+                    try
+                    {
+                        if (depth == 0 && inputFormat is ArchiveFormat archiveFormat)
+                        {
+                            FormatCatalog.Instance.LastError = null;
+                            VFS.ChDir(VFS.FindFile(current.RootPath), archiveFormat);
+                        }
+                        else VFS.FullPath = new[] { current.RootPath }.Concat(current.Chain).Append("").ToArray();
+                    }
+                    catch(UnknownFormatException)when(inputFormat==null && depth==0 && scope.MissingOptions==null && FormatCatalog.Instance.LastError is not ResourceParametersRequiredException)
                     {
                         if (!allowPlainFile || Location.Chain.Length != 0) throw;
                         VFS.FullPath=new[]{root};VFS.Flush();
@@ -72,8 +94,7 @@ public sealed class ResourceSession : IDisposable
         }
         catch
         {
-            VFS.PreserveNestedArchives = previousNestedMode;
-            standalone?.Dispose();scope.Dispose();
+            Dispose();
             if (scope.MissingOptions != null) throw scope.MissingOptions;
             throw;
         }
@@ -105,9 +126,10 @@ public sealed class ResourceSession : IDisposable
                 string directory = prefix + rest[..slash];
                 if (dirs.Add(directory)) entries.Add(new(directory, rest[..slash], "directory", 0, true));
             }
-            else entries.Add(new(entry.Name, rest, LightweightResources.Type(entry.Name, entry.Type ?? ""), entry.Size, false, id));
+            else entries.Add(new(entry.Name, rest, InputImageFormat != null ? "image" : LightweightResources.Type(entry.Name, entry.Type ?? ""), entry.Size, false, id));
         }
-        return new(Location with { Fingerprint = ArchiveFingerprint.Read(Location.RootPath) }, Synthetic ? "media" : Archive.Tag, false, entries.ToArray(), FormatIdentity.Of(Archive.Format));
+        return new(Location with { Fingerprint = ArchiveFingerprint.Read(Location.RootPath) }, Synthetic ? "media" : Archive.Tag,
+            false, entries.ToArray(), FormatIdentity.Of((IResource)InputImageFormat ?? Archive.Format));
     }
 
     public Stream OpenEntry(string name)
@@ -119,6 +141,14 @@ public sealed class ResourceSession : IDisposable
     {
         index ??= Archive.Dir.GroupBy(e => e.Name, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.ToArray(), StringComparer.Ordinal);
         return index.TryGetValue(name, out var entries) ? entries.Single() : throw new FileNotFoundException("Resource does not exist.", name);
+    }
+    internal ImageData ReadSpecifiedImage(IBinaryStream input, long maxPixels)
+    {
+        var info = InputImageFormat.ReadMetaData(input) ?? throw new InvalidFormatException();
+        if (info.Width == 0 || info.Height == 0 || (ulong)info.Width * info.Height > (ulong)maxPixels)
+            throw new InvalidDataException("Image dimensions exceed the pixel limit.");
+        input.Position = 0;
+        return InputImageFormat.Read(input, info);
     }
     public string PhysicalPath(string name)
     {
@@ -134,7 +164,7 @@ public sealed class ResourceSession : IDisposable
         if (Retained) return;
         try
         {
-            VFS.FullPath = new[] { physical ? Location.RootPath : Path.GetDirectoryName(Location.RootPath) };
+            VFS.FullPath = new[] { scope.RestoreDirectory };
             VFS.Flush();
         }
         finally { standalone?.Dispose(); VFS.PreserveNestedArchives = previousNestedMode; scope.Dispose(); }
@@ -193,10 +223,16 @@ public static partial class ResourceService
         string forcedType = null, long offset = 0, IOptionsProvider options = null, string previewMode = "auto", string previewEncoding = null, string output = null, int width = 0, int height = 0)
     {
         using var session = BrowserDecoderSession.Open(location, options);
-        if (previewMode == "hex" || forcedType == null && ScriptOutputFormats.UsesBinaryPreview(name))
+        if (previewMode == "script") return PreviewScript(session, name, offset);
+        if (previewMode == "hex" || session.InputImageFormat == null && forcedType == null && ScriptOutputFormats.UsesBinaryPreview(name))
         {
             using var input = session.OpenEntry(name);
             return LightweightResources.ReadPage(input, name, offset, true, previewEncoding ?? context.TextEncoding);
+        }
+        if (session.InputImageFormat != null && forcedType != "binary")
+        {
+            using var input = session.Archive.OpenBinaryEntry(session.Find(name));
+            return ImagePreview(session.ReadSpecifiedImage(input, 25000000), name, output, width, height);
         }
         if (!session.Physical && (forcedType == "image" || forcedType == null && session.Find(name).Type == "image"))
         {
@@ -275,6 +311,34 @@ public static partial class ResourceService
             return LightweightResources.ReadPage(file, name, offset, forcedType == "binary", previewEncoding ?? context.TextEncoding, forcedType == "script");
         }
         finally { System.IO.Directory.Delete(scratch, true); }
+    }
+
+    static ResourcePreview PreviewScript(ResourceSession session, string name, long offset)
+    {
+        const long limit = 64L << 20;
+        string format = ScriptConversionFormat(session, name, new(ConvertScripts: true))
+            ?? throw new NotSupportedException("This script cannot be decompiled.");
+        string source = session.Physical ? session.PhysicalPath(name) : session.Location.RootPath;
+        string identity = WorkerProtocol.Serialize(new { session.Location, name, format, Fingerprint = ArchiveFingerprint.Read(source) });
+        string scratch = WorkerTemporaryFiles.CreateDirectory(Path.GetTempPath());
+        try
+        {
+            string path = BrowserDecoderSession.ScriptArtifact(identity, scratch, output =>
+            {
+                string input = Path.Combine(scratch, "source" + Path.GetExtension(name));
+                using (var sourceStream = session.OpenEntry(name))
+                using (var file = File.Create(input))
+                    CopyBounded(sourceStream, file, limit);
+                using var target = File.Create(output);
+                using var bounded = new BoundedOutput(target, limit);
+                session.SetScriptOptionsLocation(name);
+                try { ScriptTools.Convert(input, name, bounded, format, limit, default); }
+                finally { session.SetScriptOptionsLocation(); }
+            });
+            using var result = File.OpenRead(path);
+            return LightweightResources.ReadUtf8Page(result, name, offset);
+        }
+        finally { Directory.Delete(scratch, true); }
     }
 
     static ResourcePreview ImagePreview(ImageData image, string name, string output, int width, int height)

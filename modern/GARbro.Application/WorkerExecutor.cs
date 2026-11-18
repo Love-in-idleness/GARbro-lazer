@@ -24,6 +24,8 @@ public static class WorkerExecutor
                     // override, and describes defaults rather than applied values.
                     if (request.Operation is "resource-catalog" or "resource-validate-schemes")
                         context = context with { FormatSettings = null };
+                    if (request.Operation == "resource-validate-schemes")
+                        context = context with { SchemesFile = null, OptionsByFormat = null };
                     BrowserDecoderSession.Apply(context);
                     double initialization=measurement.Elapsed.TotalMilliseconds;measurement.Restart();
                     var provider=new ScopedOptionsProvider(request);
@@ -33,19 +35,7 @@ public static class WorkerExecutor
                     {
                         case "resource-warm":value=GameRes.FormatCatalog.Instance.RegisteredExtensions.ToDictionary(e=>e,e=>GameRes.FormatCatalog.Instance.GetTypeFromName("file."+e),StringComparer.OrdinalIgnoreCase);break;
                         case "resource-catalog": value=ResourceService.Catalog();break;
-                        case "resource-validate-schemes":
-                            using(var file=File.OpenRead(request.Path))
-                            using(var gzip=new System.IO.Compression.GZipStream(file,System.IO.Compression.CompressionMode.Decompress))
-                            using(var bounded=new MemoryStream())
-                            {
-                                byte[] buffer=new byte[81920];int n;
-                                while((n=gzip.Read(buffer))>0)
-                                {if(bounded.Length>(64L<<20)-n)throw new InvalidDataException("Format database exceeds the size limit.");bounded.Write(buffer,0,n);}
-                                bounded.Position=0;
-                                var report=GameRes.FormatCatalog.Instance.DeserializePortableSchemeJson(bounded);
-                                if(report.Failed.Count>0)throw new InvalidDataException("Format database contains incompatible schemes.");
-                            }
-                            value=true;break;
+                        case "resource-validate-schemes": value = ArchiveService.LoadSchemes(request.Path); break;
                         case "resource-list":value=ResourceService.List(request.Location,provider);break;
                         case "resource-preview":value=ResourceService.Preview(request.Location,request.Entry,request.Context??new(),request.ForcedType,request.Offset,provider,request.PreviewMode,request.PreviewEncoding,request.Output,request.PreviewWidth,request.PreviewHeight);break;
                         case "resource-audio":value=ResourceService.PrepareAudio(request.Location,request.Entry,request.Output,provider);break;
@@ -64,7 +54,9 @@ public static class WorkerExecutor
                             {
                                 var target=request.FormatId=="MEDIA"?ResourceService.MediaConversionTarget(resource,request.Entry,request.Output,request.ResourceOptions??new()):(request.FormatId,request.Output);
                                 if(target.Item1==null){value=new ResourceConversion(null,0,false);break;}
-                                var converted=ResourceService.ConvertFile(resource,request.Entry,target.Item2,target.Item1,request.Overwrite,maxBytes:request.Extraction?.MaxEntryBytes ?? (2L << 30));
+                                var converted=ResourceService.ConvertFile(resource,request.Entry,target.Item2,target.Item1,request.Overwrite,
+                                    maxBytes:request.Extraction?.MaxEntryBytes ?? (2L << 30),
+                                    adjustImageOffset:request.ResourceOptions?.AdjustImageOffset == true);
                                 if(converted.Written && request.ResourceOptions?.DiscardOriginalMedia==false)
                                     ResourceService.CopyOriginalMedia(resource,request.Entry,converted.Path,request.Overwrite);
                                 value=converted;

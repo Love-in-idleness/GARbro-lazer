@@ -23,7 +23,7 @@ public sealed partial class MainWindow
         public event PropertyChangedEventHandler PropertyChanged;
         public string Header { get; private set; }
         public string Tooltip { get; private set; }
-        public string Focused, Input, Query="", Options="", Encoding="auto", ContextKey;
+        public string Focused, Input, InputFormatId, Query="", Options="", Encoding="auto", ContextKey;
         public bool InputComplete;
         public long PreviewOffset;
         public Vector Scroll;
@@ -119,14 +119,12 @@ public sealed partial class MainWindow
             files.Selection.Clear();files.ItemsSource=Array.Empty<BrowserEntry>();files.IsEnabled=false;
             path.Text=LocationText(listing?.Location);
             search.Text=tab.Query;options.Text=tab.Options;RefreshSchemeButton();
-            changingEncoding=true;
-            previewEncoding.SelectedItem=previewEncoding.Items.OfType<UiChoice>().FirstOrDefault(c=>c.Value==tab.Encoding);
-            changingEncoding=false;
+            UpdatePreviewEncodings(tab.Encoding, listing?.Entries.FirstOrDefault(e => e.Name == tab.Focused));
         }
         finally {updatingRows=false;}
         BuildFolders();UpdateTabHeaders();UpdateCommands();status.Text=Text["Welcome"];
         if(listing==null)path.Focus();
-        if(tab.Input!=null && !tab.InputComplete){await LoadInput(tab.Input);return;}
+        if(tab.Input!=null && !tab.InputComplete){await LoadInput(tab.Input,tab.InputFormatId);return;}
         if(listing!=null && tab.ContextKey!=WorkerProtocol.Serialize(Settings.Context))
         {
             await LoadLocationAsync(listing.Location with {Fingerprint=null},false,true);

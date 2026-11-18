@@ -46,7 +46,8 @@ public sealed record ResourceSource(string Id, string DisplayName, string LocalP
 /// <summary>External identifiers remain outside the path-based decoding engine.</summary>
 public interface IStorageAccess
 {
-    Task<ResourceSource[]> PickInputsAsync(bool folders, CancellationToken cancellation = default);
+    Task<ResourceSource[]> PickInputsAsync(bool folders, CancellationToken cancellation = default,
+        bool allowMultiple = true, string title = null, string[] patterns = null);
     Task<ResourceSource> PickOutputAsync(bool folder, string suggestedName = null, CancellationToken cancellation = default);
     Task<ResourceSource> RestoreAsync(string id, CancellationToken cancellation = default);
     Task PrepareAsync(ResourceSource source, CancellationToken cancellation = default);

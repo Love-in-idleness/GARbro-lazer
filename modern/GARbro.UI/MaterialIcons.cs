@@ -14,7 +14,8 @@ public static class MaterialIcons
     static readonly Dictionary<string, Geometry> geometries = new();
     static string Name(string key) => key switch
     {
-        "File" or "OpenFolder" or "OpenSelected" => "folder_open", "Open" => "draft", "Folders" => "folder", "Process" => "inventory_2",
+        "File" or "OpenFolder" or "OpenSelected" or "OpenWithFormat" or "OpenSelectedWithFormat" => "folder_open",
+        "Open" => "draft", "Folders" => "folder", "Process" => "inventory_2",
         "Selection" or "Mask" or "AssignType" => "checklist", "View" => "view_sidebar",
         "FolderPanel" => "folder", "BrowsePanel" => "description", "PreviewPanel" => "image",
         "Settings" => "settings", "Shortcuts" => "tune", "General" or "Formats" => "tune", "Appearance" => "palette", "Decoding" => "text_fields", "Help" => "help", "Back" => "arrow_back", "Forward" => "arrow_forward",
@@ -26,7 +27,7 @@ public static class MaterialIcons
         "FitWindow" or "FitImage" => "fit_screen", "Images" => "image", "Audio" => "music_note", "Video" => "movie", "Search" => "search",
         "Recent" => "history", "About" => "info", "Language" => "translate", "Theme" => "dark_mode", "Color" => "palette",
         "Encoding" or "Scripts" => "text_fields", "Save" => "save", "Play" => "play_arrow", "Pause" => "pause", "Stop" => "stop",
-        "PreviousPage" => "skip_previous", "NextPage" => "skip_next", "Feedback" => "bug_report", "Manual" => "menu_book",
+        "PreviousPage" => "skip_previous", "NextPage" or "JumpToOffset" => "skip_next", "Feedback" => "bug_report", "Manual" => "menu_book",
         "Updates" or "DatabaseUpdate" => "system_update_alt", "License" => "gavel", "ExportLogs" => "download",
         "Troubleshoot" => "warning", "Binary" or "Text" or "Other" => "description", _ => "more_horiz"
     };

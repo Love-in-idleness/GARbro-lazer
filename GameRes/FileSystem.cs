@@ -576,6 +576,11 @@ namespace GameRes
 
         public void ChDir (Entry entry)
         {
+            ChDir (entry, null);
+        }
+
+        public void ChDir (Entry entry, ArchiveFormat format)
+        {
             if (entry is SubDirEntry)
             {
                 if (Count > 1 && ".." == entry.Name && string.IsNullOrEmpty (Top.CurrentDirectory))
@@ -592,7 +597,7 @@ namespace GameRes
                 }
                 return;
             }
-            if (entry.Name == LastVisitedPath && null != LastVisitedArc)
+            if (format == null && entry.Name == LastVisitedPath && null != LastVisitedArc)
             {
                 Push (LastVisitedPath, LastVisitedArc);
                 var fs = LastVisitedArc as ArchiveFileSystem;
@@ -601,7 +606,7 @@ namespace GameRes
                 return;
             }
             Flush();
-            var arc = ArcFile.TryOpen (entry);
+            var arc = ArcFile.TryOpen (entry, format);
             if (null == arc)
             {
                 if (FormatCatalog.Instance.LastError is OperationCanceledException)
@@ -801,6 +806,11 @@ namespace GameRes
         public static void ChDir (Entry entry)
         {
             m_vfs.ChDir (entry);
+        }
+
+        public static void ChDir (Entry entry, ArchiveFormat format)
+        {
+            m_vfs.ChDir (entry, format);
         }
 
         public static void ChDir (string path)

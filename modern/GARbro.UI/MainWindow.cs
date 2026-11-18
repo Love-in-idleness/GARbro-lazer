@@ -44,6 +44,7 @@ public sealed partial class MainWindow : AppWindow
     readonly ComboBox previewEncoding = new() { Name = "PreviewEncoding", ItemsSource = new[] { "auto", "gbk", "shift_jis", "utf-8", "utf-16", "gb18030", "big5" }, SelectedIndex = 0, MinWidth = 115 };
     readonly Grid browser = new() { ColumnDefinitions = new("180,*,350"), ColumnSpacing = 14 };
     readonly TextBox text = new() { IsReadOnly = true, AcceptsReturn = true, FontFamily = FontFamily.Parse("monospace") };
+    readonly CheckBox wrap = new() { IsVisible = false };
     readonly TextBlock previewInfo = new() { TextWrapping = TextWrapping.Wrap, MaxHeight = 100 }, status = new() { TextTrimming = TextTrimming.CharacterEllipsis };
     readonly TextBlock emptyTitle = new() { FontSize = 20, FontWeight = FontWeight.SemiBold, TextAlignment = TextAlignment.Center }, emptyBody = new() { TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, MaxWidth = 360, Classes = { "muted" } };
     readonly StackPanel fileEmpty = new() { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Spacing = 12, Margin = new Thickness(16) };
@@ -51,7 +52,8 @@ public sealed partial class MainWindow : AppWindow
     readonly TextBlock previewPrompt = new() { TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Classes = { "muted" } };
     readonly ProgressBar progress = new() { Minimum = 0, Maximum = 1, Height = 4 };
     readonly StackPanel audioControls = new() { Spacing = 8, IsVisible = false };
-    readonly StackPanel pageControls = new() { Orientation = Orientation.Horizontal, Spacing = 6, IsVisible = false };
+    readonly WrapPanel pageControls = new() { Orientation = Orientation.Horizontal, ItemSpacing = 6, LineSpacing = 6, IsVisible = false };
+    Button jumpToOffset;
     readonly Slider position = new() { Minimum = 0, Maximum = 1 }, volume = new() { Minimum = 0, Maximum = 1, Value = 1 };
     readonly TextBlock playbackInfo = new();
     readonly Expander advanced = new();
@@ -173,7 +175,7 @@ public sealed partial class MainWindow : AppWindow
         fileEmpty.Children.Add(emptyActions); Grid.SetRow(fileEmpty, 1); list.Children.Add(fileEmpty); Grid.SetColumn(list, 1); browser.Children.Add(list);
         var previewPanel = new Grid { RowDefinitions = new("Auto,Auto,*"), RowSpacing = 8 };
         previewPanel.Classes.Add("surface"); previewPanel.Children.Add(Label("Preview")); Grid.SetRow(previewInfo, 1); previewPanel.Children.Add(previewInfo);
-        var content = new Grid(); imageScroll.Content = image; content.Children.Add(imageScroll); content.Children.Add(text); previewPrompt.Bind(TextBlock.TextProperty, Bind("SelectPreview")); content.Children.Add(previewPrompt);
+        var content = new Grid { ClipToBounds = true }; imageScroll.Content = image; content.Children.Add(imageScroll); content.Children.Add(text); previewPrompt.Bind(TextBlock.TextProperty, Bind("SelectPreview")); content.Children.Add(previewPrompt);
         BuildPlayback(); DockPanel.SetDock(audioControls, Dock.Bottom);
         var previewStack = new DockPanel(); DockPanel.SetDock(pageControls, Dock.Bottom); previewStack.Children.Add(pageControls); previewStack.Children.Add(content);
         previewStack.Children.Insert(0, audioControls);
@@ -197,17 +199,21 @@ public sealed partial class MainWindow : AppWindow
             ArrangeBrowser();
         };
         footer.Children.Add(progress); footer.Children.Add(status); Grid.SetRow(footer, 4); layout.Children.Add(footer); Content = layout;
-        pageControls.Children.Add(Button("PreviousPage"));
-        pageControls.Children.Add(Button("NextPage"));
-        pageControls.Children.Add(Button("Copy"));
+        foreach (string key in new[] { "PreviousPage", "NextPage", "Copy" })
+        {
+            var button = IconButton(key);
+            button.Name = key;
+            pageControls.Children.Add(button);
+        }
+        jumpToOffset = Button("JumpToOffset"); jumpToOffset.IsVisible = false; pageControls.Children.Add(jumpToOffset);
         var encodingRow=new Grid {RowDefinitions=new("Auto,Auto"),RowSpacing=4};
         var encodingLabel=Label("PreviewEncoding");encodingLabel.FontSize=12;encodingLabel.TextWrapping=TextWrapping.Wrap;
         encodingRow.Children.Add(encodingLabel);Grid.SetRow(previewEncoding,1);previewEncoding.HorizontalAlignment=HorizontalAlignment.Stretch;encodingRow.Children.Add(previewEncoding);encodingControls.Children.Add(encodingRow);
-        var wrap = new CheckBox { IsChecked = Settings.WrapText }; wrap.Bind(ContentControl.ContentProperty, Bind("Wrap"));
-        wrap.IsCheckedChanged += (_, _) => { Settings.WrapText = wrap.IsChecked == true; text.TextWrapping = Settings.WrapText ? TextWrapping.Wrap : TextWrapping.NoWrap; };
+        wrap.IsChecked = Settings.WrapText; wrap.Bind(ContentControl.ContentProperty, Bind("Wrap"));
+        wrap.IsCheckedChanged += (_, _) => { Settings.WrapText = wrap.IsChecked == true; ApplyPreviewWrap(); };
         encodingControls.Children.Add(wrap); DockPanel.SetDock(encodingControls, Dock.Bottom); previewStack.Children.Insert(0, encodingControls);
         previewEncoding.SelectionChanged += async (_, _) => { if (!changingEncoding && previewEntry != null) await ShowPreviewPage(0); };
-        text.PropertyChanged += (_, e) => { if (e.Property == IsVisibleProperty) wrap.IsVisible = text.IsVisible; };
+        text.PropertyChanged += (_, e) => { if (e.Property == IsVisibleProperty) ApplyPreviewWrap(); };
         search.PropertyChanged += (_, e) =>
         {
             if (e.Property == TextBox.TextProperty && !updatingRows) RefreshFiles(100);
@@ -303,7 +309,8 @@ public sealed partial class MainWindow : AppWindow
         request = request with { Context = (request.Context ?? Settings.Context) with { OptionsByFormat = new(profile) },
             OptionsJson = catalogOperation ? null : creationOperation?request.OptionsJson:request.OptionsJson ?? (string.IsNullOrWhiteSpace(options.Text) ? null : options.Text),
             Scheme = catalogOperation ? null : creationOperation ? request.Scheme : request.Scheme ?? "none",
-            OptionsFormatId = listing?.Location.RootPath == root ? listing.ProviderId : request.OptionsFormatId };
+            OptionsFormatId = request.Location?.Chain.Length == 0 && request.Location.InputFormatId != null ? request.Location.InputFormatId :
+                listing?.Location.RootPath == root ? listing.ProviderId : request.OptionsFormatId };
         while (true)
         {
             try { return await UiPlatform.Worker.ExecuteAsync<T>(request, Settings.Limits, updates, cancellation); }
@@ -330,7 +337,8 @@ public sealed partial class MainWindow : AppWindow
     public void SaveState() { try { store.Save(Settings); } catch (IOException error) { DesktopServices.Log(error); } }
     public bool HandleBack() { if (Bounds.Width < 1000 && compactPanel != "BrowsePanel") { compactPanel = "BrowsePanel"; ArrangeBrowser(); return true; } if (historyIndex <= 0 || busy) return false; commands["Back"].Execute(null); return true; }
     public Task LoadArchiveAsync(string path) => LoadInputsAsync(new[] { path });
-    public async Task LoadInputsAsync(IEnumerable<string> inputs)
+    public Task LoadInputsAsync(IEnumerable<string> inputs) => LoadInputsAsync(inputs, null);
+    async Task LoadInputsAsync(IEnumerable<string> inputs, string inputFormatId)
     {
         ObjectDisposedException.ThrowIf(isClosed, this);
         await WaitForBrowsingAsync();
@@ -340,10 +348,10 @@ public sealed partial class MainWindow : AppWindow
             if(source==null || isClosed)continue;
             string full=Path.GetFullPath(source.LocalPath);
             var comparer=OperatingSystem.IsWindows()?StringComparer.OrdinalIgnoreCase:StringComparer.Ordinal;
-            var existing=openTabs.FirstOrDefault(t=>comparer.Equals(t.Input,full));
+            var existing=openTabs.FirstOrDefault(t=>comparer.Equals(t.Input,full) && t.InputFormatId == inputFormatId);
             if(existing!=null){await SelectTab(existing);if(existing.InputComplete)continue;}
             else if(currentTab.Input!=null || listing!=null)await NewTab();
-            await LoadInput(full);
+            await LoadInput(full, inputFormatId);
         }
         BuildMenus();SaveState();
     }
@@ -355,16 +363,16 @@ public sealed partial class MainWindow : AppWindow
     }
     static string LocationText(ResourceLocation location) =>
         location == null ? "" : (location with { RootPath = UiPlatform.Storage.DisplayPath(location.RootPath) }).DisplayPath;
-    async Task LoadInput(string full)
+    async Task LoadInput(string full, string inputFormatId = null)
     {
-        var tab=currentTab;tab.Input=full;tab.InputComplete=false;UpdateTabHeaders();
+        var tab=currentTab;tab.Input=full;tab.InputFormatId=inputFormatId;tab.InputComplete=false;UpdateTabHeaders();
         try
         {
-            if(File.Exists(full) && LightweightResources.IsOrdinaryName(full))
+            if(inputFormatId == null && File.Exists(full) && LightweightResources.IsOrdinaryName(full))
                 await LoadLocationAsync(new(Path.GetDirectoryName(full)), selectFile: Path.GetFileName(full));
-            else await LoadLocationAsync(new(full));
+            else await LoadLocationAsync(new(full, InputFormatId: inputFormatId));
         }
-        catch(WorkerOperationException e)when(e.RemoteType=="UnknownFormatException" && File.Exists(full))
+        catch(WorkerOperationException e)when(inputFormatId == null && e.RemoteType=="UnknownFormatException" && File.Exists(full))
         {
             await LoadLocationAsync(new(Path.GetDirectoryName(full)), selectFile: Path.GetFileName(full));
         }
@@ -389,7 +397,8 @@ public sealed partial class MainWindow : AppWindow
             var opened = await Request<BrowserListing>(new("resource-list", null, Location: location, Refresh: refresh), operation.Token);
             operation.Token.ThrowIfCancellationRequested(); if (isClosed || ticket != navigationGeneration) return;
             bool sameLocation = CurrentLocation is { } previous && previous.RootPath == opened.Location.RootPath
-                && previous.Directory == opened.Location.Directory && previous.Chain.SequenceEqual(opened.Location.Chain);
+                && previous.Directory == opened.Location.Directory && previous.InputFormatId == opened.Location.InputFormatId
+                && previous.Chain.SequenceEqual(opened.Location.Chain);
             string previousFile = currentTab.Focused;
             if (!sameLocation || selectFile != null)
             {
@@ -413,6 +422,8 @@ public sealed partial class MainWindow : AppWindow
                 history.Add(listing.Location); historyIndex = history.Count - 1;
             }
             UpdateListingStatus();
+            if (!sameLocation && selectFile == null && opened.Tag == "media" && location.InputFormatId != null)
+                selectFile = opened.Entries.Single().Name;
             if (selectFile != null && files.Items.OfType<BrowserEntry>().FirstOrDefault(e => e.Name == selectFile) is { } entry)
             {
                 files.SelectedItem = entry;
@@ -515,9 +526,10 @@ public sealed partial class MainWindow : AppWindow
     async Task PreviewSelection(bool resetEncoding = true,long offset = 0)
     {
         if (updatingRows) return;
+        string code = resetEncoding ? "auto" : (previewEncoding.SelectedItem as UiChoice)?.Value;
         ClearPreview();
-        if(resetEncoding){changingEncoding=true; previewEncoding.SelectedIndex=0; changingEncoding=false;}
         if (files.SelectedItem is not BrowserEntry { IsDirectory: false } entry || listing == null) return;
+        UpdatePreviewEncodings(code, entry);
         previewPrompt.IsVisible = false; previewInfo.Text = Text["Preparing"];
         previewEntry = entry; encodingControls.IsVisible = true;
         currentTab.Selection=files.SelectedItems.Cast<BrowserEntry>().Select(e=>e.Name).ToArray();UpdateTabHeaders();
@@ -531,7 +543,7 @@ public sealed partial class MainWindow : AppWindow
         text.Text = previewInfo.Text = "";
         UpdateCommands();
     }
-    async Task ShowPreviewPage(long offset, bool debounce = false)
+    async Task ShowPreviewPage(long offset, bool debounce = false, bool keepPageOnError = false, bool forceHex = false)
     {
         if (previewEntry == null || listing == null) return;
         previewCancellation?.Cancel(); using var cancel = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token); previewCancellation = cancel;
@@ -541,7 +553,7 @@ public sealed partial class MainWindow : AppWindow
         {
             StopAudio();
             var location=listing.Location; var entry=previewEntry;
-            string code=(previewEncoding.SelectedItem as UiChoice)?.Value??"auto";
+            string code=forceHex ? "hex" : (previewEncoding.SelectedItem as UiChoice)?.Value??"auto";
             string forced=typeOverrides.GetValueOrDefault(entry.Name);
             string sourcePath=listing.Physical?Path.Combine(location.RootPath,entry.Name):location.RootPath;
             var fingerprint=await Task.Run(()=>ArchiveFingerprint.Read(sourcePath),cancel.Token);
@@ -558,7 +570,7 @@ public sealed partial class MainWindow : AppWindow
                 try
                 {
                     result=await Request<ResourcePreview>(new("resource-preview",null,Location:location,Entry:entry.Name,ForcedType:forced,Offset:offset,
-                        PreviewMode:code=="hex"?"hex":"auto",PreviewEncoding:code is "hex" or "auto"?null:code,Output:output,
+                        PreviewMode:code is "hex" or "script"?code:"auto",PreviewEncoding:code is "hex" or "auto" or "script"?null:code,Output:output,
                         PreviewWidth:Settings.FitImage?Math.Max(320,(int)imageScroll.Bounds.Width*2):0,
                         PreviewHeight:Settings.FitImage?Math.Max(320,(int)imageScroll.Bounds.Height*2):0),cancel.Token);
                     if(result.Pixels is { } pixels)
@@ -576,12 +588,30 @@ public sealed partial class MainWindow : AppWindow
             preview=result;previewPrompt.IsVisible=false;bitmap?.Dispose();bitmap=prepared;image.Source=bitmap;
             imageScroll.IsVisible=result.Kind is "image" or "video";audioControls.IsVisible=result.Kind is "audio" or "video";
             text.IsVisible=result.Kind is "text" or "binary";pageControls.IsVisible=text.IsVisible;
+            jumpToOffset.IsVisible = result.Kind == "binary";
+            if (forceHex) UpdatePreviewEncodings("hex", entry);
             previewInfo.Text=result.Kind is "text" or "binary"?result.Title:result.Text;
             text.Text = result.Text;
+            ApplyPreviewWrap();
             UpdateCommands();
         }
         catch (OperationCanceledException) when (cancel.IsCancellationRequested) { }
-        catch (Exception e) { if (ticket == generation) { previewPrompt.IsVisible = false; previewInfo.Text = Text["Error"] + ": " + Text.ErrorMessage(e.Message); } }
+        catch (Exception e)
+        {
+            if (ticket == generation)
+            {
+                if (!keepPageOnError)
+                {
+                    preview = null;
+                    image.Source = null; bitmap?.Dispose(); bitmap = null;
+                    imageScroll.IsVisible = audioControls.IsVisible = text.IsVisible = pageControls.IsVisible = false;
+                }
+                previewPrompt.IsVisible = false;
+                string message = forceHex && (e is WorkerOperationException { RemoteType: "ArgumentOutOfRangeException" } or ArgumentOutOfRangeException)
+                    ? Text["HexOffsetOutOfRange"] : Text.ErrorMessage(e.Message);
+                previewInfo.Text = Text["Error"] + ": " + message;
+            }
+        }
         finally { if (ReferenceEquals(previewCancellation, cancel)) previewCancellation = null; UpdateCommands(); }
     }
     void ApplySettings(bool save = true)
@@ -591,18 +621,38 @@ public sealed partial class MainWindow : AppWindow
         RefreshSchemeButton();
         if (languageChanged || !previewEncoding.Items.OfType<UiChoice>().Any())
         {
-            string code = (previewEncoding.SelectedItem as UiChoice)?.Value ?? "auto";
-            var choices = new[] { "auto", "hex", "gbk", "shift_jis", "utf-8", "utf-16", "gb18030", "big5" }.Select(c => new UiChoice(c, c == "auto" ? Text["Automatic"] : c == "hex" ? Text["HexPreview"] : c)).ToArray();
-            changingEncoding=true; previewEncoding.ItemsSource = choices; previewEncoding.SelectedItem = choices.FirstOrDefault(c => c.Value == code) ?? choices[0]; changingEncoding=false;
+            UpdatePreviewEncodings((previewEncoding.SelectedItem as UiChoice)?.Value, previewEntry);
         }
         MaterialTheme.Apply(Settings);
         menu.IsVisible = true; toolbar.IsVisible = Settings.ToolbarVisible; footer.IsVisible = Settings.StatusVisible;
-        image.Stretch = Settings.FitImage ? Stretch.Uniform : Stretch.None; text.TextWrapping = Settings.WrapText ? TextWrapping.Wrap : TextWrapping.NoWrap;
+        image.Stretch = Settings.FitImage ? Stretch.Uniform : Stretch.None;
+        wrap.IsChecked = Settings.WrapText; ApplyPreviewWrap();
         imageScroll.HorizontalScrollBarVisibility = imageScroll.VerticalScrollBarVisibility = Settings.FitImage ?
             Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled : Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
         if (languageChanged && !busy && !loading) UpdateListingStatus();
         ApplyShortcutBindings(); if (save) store.Save(Settings); BuildMenus(); files.ContextMenu = BuildContextMenu();
         RefreshFiles(); BuildFolders(); UpdateTabHeaders();
+    }
+    void ApplyPreviewWrap()
+    {
+        bool hex = preview?.Kind == "binary";
+        bool wrapText = !hex && Settings.WrapText;
+        wrap.IsVisible = text.IsVisible && !hex;
+        text.TextWrapping = wrapText ? TextWrapping.Wrap : TextWrapping.NoWrap;
+        ScrollViewer.SetHorizontalScrollBarVisibility(text, wrapText
+            ? Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled
+            : Avalonia.Controls.Primitives.ScrollBarVisibility.Auto);
+    }
+    void UpdatePreviewEncodings(string code, BrowserEntry entry)
+    {
+        var choices = new List<UiChoice> { new("auto", Text["Automatic"]), new("hex", Text["HexPreview"]) };
+        if (entry is { IsDirectory: false } && !(listing?.Tag == "media" && listing.Location.InputFormatId != null) &&
+            (ScriptOutputFormats.ForInput(entry.Name) != null || ScriptOutputFormats.NeedsSignature(entry.Name)))
+            choices.Add(new("script", Text["DecompiledPreview"]));
+        choices.AddRange(new[] { "gbk", "shift_jis", "utf-8", "utf-16", "gb18030", "big5" }.Select(value => new UiChoice(value, value)));
+        changingEncoding = true;
+        try { previewEncoding.ItemsSource = choices; previewEncoding.SelectedItem = choices.FirstOrDefault(choice => choice.Value == code) ?? choices[0]; }
+        finally { changingEncoding = false; }
     }
     void SetBusy(bool value)
     {

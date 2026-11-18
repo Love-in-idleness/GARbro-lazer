@@ -55,6 +55,9 @@ public sealed partial class MainWindow
     {
         bool CanUseListing() => !busy && !loading && !choosingOperation && listing != null;
         Register("Open", OpenPicker); Register("OpenFolder", FolderPicker);
+        Register("OpenWithFormat", () => OpenWithFormat(false), () => !busy && !choosingOperation);
+        Register("OpenSelectedWithFormat", () => OpenWithFormat(true),
+            () => CanUseListing() && listing.Physical && files.SelectedItems.Count == 1 && files.SelectedItem is BrowserEntry { IsDirectory: false });
         Register("NewTab",NewTab,()=>!busy && !choosingOperation);
         Register("CloseTab",()=>CloseTab(currentTab),()=>!busy && !choosingOperation);
         Register("NextTab",()=>SwitchTab(1),()=>!busy && !choosingOperation && openTabs.Count>1);
@@ -117,6 +120,7 @@ public sealed partial class MainWindow
         Register("NextPage", () => ShowPreviewPage(preview.Offset + 65536),
             () => !busy && previewCancellation == null && preview?.More == true && pageControls.IsVisible);
         Register("Copy", async () => { if (Clipboard != null) await Clipboard.SetTextAsync(text.Text ?? ""); }, () => text.IsVisible);
+        Register("JumpToOffset", JumpToOffset, () => !busy && !choosingOperation && previewCancellation == null && preview?.Kind == "binary");
         Register("Wrap", () => { Settings.WrapText = !Settings.WrapText; ApplySettings(); return Task.CompletedTask; });
         ApplyShortcutBindings();
     }
@@ -135,7 +139,7 @@ public sealed partial class MainWindow
         menu.Children.Clear();
         ContextMenu GroupMenu(params string[] keys)
         { var popup = new ContextMenu(); foreach (string key in keys) popup.Items.Add(Item(key)); return popup; }
-        var file = GroupMenu("NewTab", "CloseTab", "Open", "OpenFolder", "Convert");
+        var file = GroupMenu("NewTab", "CloseTab", "Open", "OpenWithFormat", "OpenFolder", "Convert");
         var recent = Group("Recent"); foreach (string filename in Settings.Recent)
         { var item = new MenuItem { Header = UiPlatform.Storage.DisplayPath(filename), Icon = MaterialIcons.Create("Recent") }; item.Click += async (_, _) => await Guard(() => LoadInputsAsync(new[] { filename })); recent.Items.Add(item); }
         file.Items.Add(recent); if (!UiPlatform.IsMobile) file.Items.Add(Item("Exit"));
@@ -166,7 +170,7 @@ public sealed partial class MainWindow
     {
         var context = new ContextMenu();
         string[] selectionCommands = { "SelectAll", "Mask", "CopyNames", "Explore", "Trash" };
-        string[] keys = selectionOnly ? selectionCommands : ["OpenSelected", .. ArchiveCommands, "Convert", .. selectionCommands, "Refresh"];
+        string[] keys = selectionOnly ? selectionCommands : ["OpenSelected", "OpenSelectedWithFormat", .. ArchiveCommands, "Convert", .. selectionCommands, "Refresh"];
         foreach (string key in keys) context.Items.Add(Item(key));
         var type = Group("AssignType"); foreach (var pair in new[] { ("Automatic", ""), ("Images", "image"), ("Audio", "audio"), ("Video", "video"), ("Scripts", "script"), ("Binary", "binary") })
         {
@@ -185,6 +189,43 @@ public sealed partial class MainWindow
     async Task FolderPicker()
     {
         var selected = await UiPlatform.Storage.PickInputsAsync(true); if (selected.Length > 0) await LoadInputsAsync(selected.Select(f => f.Id));
+    }
+    async Task OpenWithFormat(bool selectedOnly)
+    {
+        string input = selectedOnly ? Path.Combine(listing.Location.RootPath, ((BrowserEntry)files.SelectedItem).Name) : null;
+        string filename = input == null ? null : Path.GetFileName(UiPlatform.Storage.DisplayPath(input));
+        var origin = currentTab;
+        int ticket = navigationGeneration;
+        var format = await ChooseOperation(async () =>
+        {
+            if (input == null)
+            {
+                var picked = await UiPlatform.Storage.PickInputsAsync(false, lifetime.Token, allowMultiple: false, title: Text["OpenWithFormat"]);
+                if (picked.Length == 0) return null;
+                var source = picked.Single();
+                input = source.Id; filename = source.DisplayName;
+            }
+            catalog ??= await Request<ResourceFormatInfo[]>(new("resource-catalog", null), lifetime.Token);
+            if (ticket != navigationGeneration || isClosed) return null;
+            return await Dialogs.InputFormat(this, Text, catalog, filename);
+        });
+        if (format == null || ticket != navigationGeneration || isClosed) return;
+        try { await LoadInputsAsync([input], format.Id); }
+        catch (IOException error)
+        {
+            DesktopServices.Log(error);
+            if (isClosed || currentTab != origin && (currentTab.InputFormatId != format.Id || currentTab.InputComplete)) return;
+            footer.IsVisible = true; status.Classes.Add("error");
+            status.Text = Text.Format("OpenWithFormatFailed", format.Tag, Text.ErrorMessage(error.Message));
+        }
+    }
+
+    async Task JumpToOffset()
+    {
+        int ticket = generation;
+        long? offset = await Dialogs.JumpToOffset(this, Text, preview.Offset);
+        if (offset == null || ticket != generation || isClosed) return;
+        await ShowPreviewPage(offset.Value, keepPageOnError: true, forceHex: true);
     }
     async Task NavigateHistory(int delta)
     {
@@ -229,7 +270,36 @@ public sealed partial class MainWindow
             string target = selected?.LocalPath; if (target != null) { DesktopServices.ExportLogs(target, Settings); await UiPlatform.Storage.CommitAsync(target, OverwritePolicy.Fail); status.Text = Text.Format("Exported", UiPlatform.Storage.DisplayPath(target)); } return;
         }
         catalog ??= await Request<ResourceFormatInfo[]>(new("resource-catalog", null));
+        string database = Settings.SchemesFile;
         await new HelpWindow(Text, Settings, catalog, page, store).ShowDialog(this);
+        if (database != Settings.SchemesFile && !isClosed)
+        {
+            catalog = null;
+            previewCache.Clear();
+            catalog = await Request<ResourceFormatInfo[]>(new("resource-catalog", null), lifetime.Token);
+            bool needsScheme = RemoveUnavailableSchemes();
+            if (listing != null) await LoadLocationAsync(listing.Location with { Fingerprint = null }, false, true);
+            if (needsScheme && !isClosed) status.Text = Text["SchemeSelectionNeedsUpdate"];
+        }
+    }
+    bool RemoveUnavailableSchemes()
+    {
+        var names = catalog.Where(format => format.Schemes != null).ToDictionary(format => format.Id, format => format.Schemes);
+        bool removed = false;
+        foreach (var profile in sessionOptions.Values)
+        foreach (var (key, value) in profile.ToArray())
+        {
+            int separator = key.LastIndexOf("::", StringComparison.Ordinal);
+            string id = separator < 0 ? key : key[(separator + 2)..];
+            string name = SchemeName(value);
+            if (name is "" or "none" || !names.TryGetValue(id, out var choices) || choices.Contains(name)) continue;
+            var parameters = (JsonObject)JsonNode.Parse(value);
+            parameters.Remove("$scheme");
+            if (parameters.Count == 0) profile.Remove(key);
+            else profile[key] = parameters.ToJsonString();
+            removed = true;
+        }
+        return removed;
     }
     sealed record ExtractionSource(ResourceLocation Location,string[] Selection,Dictionary<string,string> Overrides,bool Physical,string Tag);
     bool choosingOperation;
@@ -438,7 +508,8 @@ public sealed partial class MainWindow
                     string target=ExtractionPath.Resolve(choice.Output,ExtractionScope.RelativeName(source.Directory,entry.Name));
                     var result=await Request<ResourceConversion>(new("resource-convert",null,Location:source,Entry:entry.Name,Output:target,FormatId:"MEDIA",Overwrite:choice.Overwrite,
                         ResourceOptions:new(ImageFormat:choice.FormatId,AudioFormat:choice.AudioFormat,VideoFormat:choice.VideoFormat,
-                            TypeOverrides:overrides,DiscardOriginalMedia:choice.DiscardOriginalMedia,ConvertScripts:choice.ConvertScripts,ScriptFormat:choice.ScriptFormat)),operation.Token);
+                            TypeOverrides:overrides,DiscardOriginalMedia:choice.DiscardOriginalMedia,ConvertScripts:choice.ConvertScripts,ScriptFormat:choice.ScriptFormat,
+                            AdjustImageOffset:choice.AdjustImageOffset)),operation.Token);
                     if(result.Path!=null && result.Written)done++;else skipped++;
                 }
                 catch(WorkerOperationException e){failures.Add(entry.DisplayName+": "+e.Message);DesktopServices.Log(e);}

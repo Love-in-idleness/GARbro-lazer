@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Layout;
@@ -49,28 +50,51 @@ public sealed class HelpWindow : AppWindow
         var license = new TabItem { Header = text["License"], Content = Reader(text["LegalNotice"] + "\n\n" + DesktopServices.ReadResource("LICENSE") + "\n\n" + DesktopServices.ReadResource("third-party.md")) }; tabs.Items.Add(license);
         var diagnostics = new TabItem { Header = text["Troubleshoot"], Content = Reader("GARbro " + DesktopServices.Version + "\n" + RuntimeInformation.OSDescription + "\n" + RuntimeInformation.FrameworkDescription + "\n" + RuntimeInformation.ProcessArchitecture + "\n\n" + DesktopServices.ReadResource("troubleshoot." + text.Language + ".md")) }; tabs.Items.Add(diagnostics);
         var updates = new StackPanel { Spacing = 12, Margin = new Avalonia.Thickness(12) }; var message = new TextBlock { TextWrapping = TextWrapping.Wrap }; updates.Children.Add(message);
-        var check = new Button { Content = text["Updates"] }; var database = new Button { Content = text["DatabaseUpdate"] }; updates.Children.Add(check); updates.Children.Add(database);
-        async Task Check(bool updateDatabase)
+        var check = new Button { Content = text["Updates"] }; var database = new Button { Content = text["DatabaseUpdate"] };
+        var import = new Button { Content = text["ImportSchemes"], Name = "ImportSchemes" };
+        updates.Children.Add(check); updates.Children.Add(database); updates.Children.Add(import);
+        var cancellation = new CancellationTokenSource();
+        Closed += (_, _) => { cancellation.Cancel(); cancellation.Dispose(); };
+        var token = cancellation.Token;
+        async Task RunUpdate(Func<Task> run)
         {
-            check.IsEnabled = database.IsEnabled = false; message.Text = text["Working"];
-            try
-            {
-                var release = await UpdateService.CheckAsync();
-                if (updateDatabase)
-                {
-                    settings.SchemesFile = await UpdateService.UpdateDatabaseAsync(release, settings);
-                    (store ?? new SettingsStore()).Save(settings); message.Text = text["DatabaseUpdated"];
-                }
-                else
-                {
-                    message.Text = UpdateService.IsNewer(release.Version, DesktopServices.Version) ? text.Format("UpdateAvailable", release.Version) : text["UpdateNone"];
-                    var download = new Button { Content = release.Version }; download.Click += (_, _) => DesktopServices.OpenUrl(release.Url); updates.Children.Add(download);
-                }
-            }
+            check.IsEnabled = database.IsEnabled = import.IsEnabled = false; message.Text = text["Working"];
+            try { await run(); }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { }
             catch (Exception error) { message.Text = text["Error"] + ": " + text.ErrorMessage(error.Message); DesktopServices.Log(error); }
-            finally { check.IsEnabled = database.IsEnabled = true; }
+            finally { check.IsEnabled = database.IsEnabled = import.IsEnabled = true; }
         }
-        check.Click += async (_, _) => await Check(false); database.Click += async (_, _) => await Check(true);
+        void Activate((string Path, GameRes.SchemeImportReport Report) candidate)
+        {
+            token.ThrowIfCancellationRequested();
+            var report = candidate.Report;
+            message.Text = text.Format("SchemeImportReport", report.Version, report.Applied.Length, report.Unported.Length, report.Failed.Count);
+            if (candidate.Path == null)
+            {
+                message.Text += "\n" + text["Error.Format database contains incompatible schemes."] + " " + string.Join(", ", report.Failed.Keys);
+                return;
+            }
+            string previous = settings.SchemesFile;
+            settings.SchemesFile = candidate.Path;
+            try { (store ?? new SettingsStore()).Save(settings); message.Text += "\n" + text["DatabaseUpdated"]; }
+            catch { settings.SchemesFile = previous; throw; }
+        }
+        check.Click += async (_, _) => await RunUpdate(async () =>
+        {
+            var release = await UpdateService.CheckAsync(token);
+            token.ThrowIfCancellationRequested();
+            message.Text = UpdateService.IsNewer(release.Version, DesktopServices.Version) ? text.Format("UpdateAvailable", release.Version) : text["UpdateNone"];
+            var download = new Button { Content = release.Version }; download.Click += (_, _) => DesktopServices.OpenUrl(release.Url); updates.Children.Add(download);
+        });
+        database.Click += async (_, _) => await RunUpdate(async () => Activate(await UpdateService.UpdateDatabaseAsync(await UpdateService.CheckAsync(token), settings, token)));
+        import.Click += async (_, _) => await RunUpdate(async () =>
+        {
+            var selection = await UiPlatform.Storage.PickInputsAsync(false, token, allowMultiple: false, title: text["ImportSchemes"], patterns: ["*.json", "*.json.gz"]);
+            if (selection.Length == 0) { message.Text = ""; return; }
+            var source = selection.Single();
+            await UiPlatform.Storage.PrepareAsync(source, token);
+            Activate(await UpdateService.ImportDatabaseAsync(source.LocalPath, settings, token));
+        });
         var updateTab = new TabItem { Header = text["Updates"], Content = updates }; tabs.Items.Add(updateTab);
         tabs.SelectedItem = page switch { "About" => aboutTab, "License" => license, "Troubleshoot" => diagnostics, "Updates" => updateTab, _ => manual };
         var root = new DockPanel(); var close = new Button { Content = text["Close"], Margin = new Avalonia.Thickness(12), HorizontalAlignment = HorizontalAlignment.Right }; close.Click += (_, _) => Close(); DockPanel.SetDock(close, Dock.Bottom); root.Children.Add(close); root.Children.Add(Dialogs.ResponsivePages(tabs)); Content = root;

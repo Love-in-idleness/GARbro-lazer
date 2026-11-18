@@ -8,15 +8,17 @@ using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Data;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Platform.Storage;
 using GARbro.Application;
+using GARbro.Domain;
 
 namespace GARbro.Desktop;
 
 public sealed record ExtractionChoice(string Output, ResourceExtractionOptions Options, OverwritePolicy Overwrite);
 public sealed record CreationChoice(string Output, string FormatId, string OptionsJson, OverwritePolicy Overwrite, ArchivePackingOptions PackingOptions = null);
-public sealed record ConversionChoice(string Output, string FormatId, OverwritePolicy Overwrite, bool DiscardOriginalMedia, string AudioFormat = null, string VideoFormat = null, bool ConvertScripts = false, string ScriptFormat = null);
+public sealed record ConversionChoice(string Output, string FormatId, OverwritePolicy Overwrite, bool DiscardOriginalMedia, string AudioFormat = null, string VideoFormat = null, bool ConvertScripts = false, string ScriptFormat = null, bool AdjustImageOffset = false);
 
 public static class Dialogs
 {
@@ -77,6 +79,53 @@ public static class Dialogs
         picker.List.SelectionChanged += (_, _) => apply.IsEnabled = picker.Choice != null;
         window.Content = Frame(window, body, apply, Button(text, "Cancel", () => window.Close()));
         return window.ShowDialog<UiChoice>(owner);
+    }
+    internal static Task<ResourceFormatInfo> InputFormat(AppWindow owner, DesktopText text, ResourceFormatInfo[] catalog, string filename)
+    {
+        var window = Window(text, "OpenWithFormat", 650, 515);
+        var body = Panel();
+        body.Children.Add(new TextBlock { Text = filename, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        var groups = new[] { new UiChoice("archive", text["Archives"]), new UiChoice("image", text["Images"]) };
+        var category = new ComboBox { Name = "InputFormatKind", ItemsSource = groups, DisplayMemberBinding = new Binding(nameof(UiChoice.Label)), SelectedIndex = 0 };
+        var search = new TextBox { Name = "InputFormatSearch", PlaceholderText = text["Search"] };
+        var list = new ListBox { Name = "InputFormatList", Height = 240 };
+        var apply = Button(text, "Confirm", () =>
+        {
+            if (list.SelectedItem is UiChoice selected) window.Close(catalog.First(f => f.Id == selected.Value));
+        });
+        void Refresh()
+        {
+            string type = ((UiChoice)category.SelectedItem).Value;
+            list.ItemsSource = catalog.Where(f => f.Type == type)
+                .Select(f => new UiChoice(f.Id, f.Tag + " · " + f.Description + " · " + string.Join(", ", f.Extensions)))
+                .Where(f => f.Label.Contains(search.Text ?? "", StringComparison.OrdinalIgnoreCase)).ToArray();
+            apply.IsEnabled = list.SelectedItem != null;
+        }
+        list.DisplayMemberBinding = new Binding(nameof(UiChoice.Label));
+        list.SelectionChanged += (_, _) => apply.IsEnabled = list.SelectedItem != null;
+        category.SelectionChanged += (_, _) => Refresh();
+        search.TextChanged += (_, _) => Refresh();
+        body.Children.Add(category); body.Children.Add(search); body.Children.Add(list);
+        Refresh();
+        window.Content = Frame(window, body, apply, Button(text, "Cancel", () => window.Close()));
+        return window.ShowDialog<ResourceFormatInfo>(owner);
+    }
+
+    internal static Task<long?> JumpToOffset(AppWindow owner, DesktopText text, long current)
+    {
+        var window = Window(text, "JumpToOffset", 440, 245);
+        var body = Panel();
+        var input = new TextBox { Name = "HexOffset", Text = current.ToString("X", CultureInfo.InvariantCulture) };
+        var error = new TextBlock { TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+        void Jump()
+        {
+            if (PreviewOffset.ParseHex(input.Text) is long offset) window.Close(offset);
+            else error.Text = text["InvalidHexOffset"];
+        }
+        input.KeyDown += (_, e) => { if (e.Key == Key.Enter) { e.Handled = true; Jump(); } };
+        body.Children.Add(Label(text, "HexOffsetHint")); body.Children.Add(input); body.Children.Add(error);
+        window.Content = Frame(window, body, Button(text, "Confirm", Jump), Button(text, "Cancel", () => window.Close()));
+        return window.ShowDialog<long?>(owner);
     }
     static StackPanel Output(AppWindow owner, DesktopText text, string initial, out TextBox path)
     {
@@ -201,7 +250,7 @@ public static class Dialogs
         var window=Window(text,"Convert",offerScripts?940:780,offerScripts?620:580);var body=Panel();
         if(selectedCount>0)body.Children.Add(new TextBlock {Text=text.Format("ConversionSelectionScope",selectedCount),TextWrapping=Avalonia.Media.TextWrapping.Wrap,Classes={"muted"}});
         body.Children.Add(Output(owner,text,initial,out var path));
-        var conversion=new MediaConversionPanel(text,formats,true,offerScripts);body.Children.Add(conversion);
+        var conversion=new MediaConversionPanel(text,formats,true,offerScripts,offerImageOffset:true);body.Children.Add(conversion);
         var discard=new CheckBox {Content=new TextBlock {Text=text[offerScripts?"DiscardOriginalCopies":"DiscardOriginalMedia"],TextWrapping=Avalonia.Media.TextWrapping.Wrap},IsChecked=true};body.Children.Add(discard);
         conversion.Changed+=()=>discard.IsEnabled=conversion.HasConversion;
         body.Children.Add(new TextBlock {Text=text["SourceMediaPreserved"],TextWrapping=Avalonia.Media.TextWrapping.Wrap,Classes={"muted"}});
@@ -210,7 +259,8 @@ public static class Dialogs
         {
             if(!Path.IsPathFullyQualified(PathValue(path)??"")){error.Text=text["SelectOutput"];return;}
             if(!conversion.HasConversion){error.Text=text["SelectConversionFormat"];return;}
-            window.Close(new ConversionChoice(PathValue(path),conversion.ImageFormat,(OverwritePolicy)overwrite.SelectedIndex,discard.IsChecked==true,conversion.AudioFormat,conversion.VideoFormat,conversion.ConvertScripts,conversion.ScriptFormat));
+            window.Close(new ConversionChoice(PathValue(path),conversion.ImageFormat,(OverwritePolicy)overwrite.SelectedIndex,discard.IsChecked==true,
+                conversion.AudioFormat,conversion.VideoFormat,conversion.ConvertScripts,conversion.ScriptFormat,conversion.AdjustImageOffset));
         }),Button(text,"Cancel",()=>window.Close()));
         return await window.ShowDialog<ConversionChoice>(owner);
     }

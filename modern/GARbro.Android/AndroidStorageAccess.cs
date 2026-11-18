@@ -49,12 +49,14 @@ public sealed class AndroidStorageAccess : IStorageAccess
     {
         string temporary = registry + ".tmp"; File.WriteAllText(temporary, JsonSerializer.Serialize(mappings.Values.ToArray())); File.Move(temporary, registry, true);
     }
-    public async Task<ResourceSource[]> PickInputsAsync(bool folders, CancellationToken cancellation = default)
+    public async Task<ResourceSource[]> PickInputsAsync(bool folders, CancellationToken cancellation = default,
+        bool allowMultiple = true, string title = null, string[] patterns = null)
     {
         var intent = new Intent(folders ? Intent.ActionOpenDocumentTree : Intent.ActionOpenDocument);
-        if (!folders) { intent.SetType("*/*"); intent.AddCategory(Intent.CategoryOpenable); intent.PutExtra(Intent.ExtraAllowMultiple, true); }
+        if (!folders) { intent.SetType("*/*"); intent.AddCategory(Intent.CategoryOpenable); intent.PutExtra(Intent.ExtraAllowMultiple, allowMultiple); }
+        if (title != null) intent.PutExtra(Intent.ExtraTitle, title);
         intent.AddFlags(ActivityFlags.GrantReadUriPermission | ActivityFlags.GrantPersistableUriPermission | ActivityFlags.GrantPrefixUriPermission);
-        var result = await MainActivity.Current.PickAsync(intent); if (result == null) return Array.Empty<ResourceSource>();
+        var result = await MainActivity.Current.PickAsync(intent); cancellation.ThrowIfCancellationRequested(); if (result == null) return Array.Empty<ResourceSource>();
         var uris = new List<Uri>();
         if (result.ClipData is { } clip) for (int i = 0; i < clip.ItemCount; i++) uris.Add(clip.GetItemAt(i).Uri);
         else if (result.Data != null) uris.Add(result.Data);

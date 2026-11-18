@@ -14,6 +14,7 @@ public static class BrowserDecoderSession
     [ThreadStatic] static ForwardOptions forward;
     [ThreadStatic] static Dictionary<string,(string Path,long Bytes)> materialized;
     [ThreadStatic] static long materializedBytes;
+    [ThreadStatic] static string scriptDirectory, scriptKey;
     const long FileCacheLimit=512L<<20;
     public static void Enable() => enabled = true;
     public static void Apply(DecoderContext context)
@@ -27,11 +28,11 @@ public static class BrowserDecoderSession
         // Retaining that scope would lock the directory on Windows.
         if (!enabled || Directory.Exists(location.RootPath))
         {
-            if(enabled)Release();
+            if(enabled && current != null)Release();
             return new(location,options);
         }
         var file = new FileInfo(location.RootPath);
-        string next = WorkerProtocol.Serialize(new { location.RootPath, Chain=location.Chain, Length=file.Exists?file.Length:0, Written=file.Exists?file.LastWriteTimeUtc.Ticks:0 });
+        string next = WorkerProtocol.Serialize(new { location.RootPath, location.InputFormatId, Chain=location.Chain, Length=file.Exists?file.Length:0, Written=file.Exists?file.LastWriteTimeUtc.Ticks:0 });
         if (key != next)
         {
             Release(); forward = new(); forward.Target = options;
@@ -74,8 +75,38 @@ public static class BrowserDecoderSession
         catch {File.Delete(path);throw;}
     }
 
+    internal static string ScriptArtifact(string identity, string scratch, Action<string> write)
+    {
+        const string filename = "script-preview.utf8";
+        if (!enabled)
+        {
+            string transient = Path.Combine(scratch, filename);
+            write(transient);
+            return transient;
+        }
+        if (scriptKey != identity || scriptDirectory == null || !File.Exists(Path.Combine(scriptDirectory, filename)))
+        {
+            ReleaseScript();
+            scriptDirectory = WorkerTemporaryFiles.CreateDirectory(Path.GetTempPath());
+            try { write(Path.Combine(scriptDirectory, filename)); scriptKey = identity; }
+            catch { ReleaseScript(); throw; }
+        }
+        return Path.Combine(scriptDirectory, filename);
+    }
+
+    static void ReleaseScript()
+    {
+        if (scriptDirectory != null)
+        {
+            try { Directory.Delete(scriptDirectory, true); } catch (IOException) { }
+            scriptDirectory = null;
+        }
+        scriptKey = null;
+    }
+
     static void Release()
     {
+        ReleaseScript();
         if(current!=null) {current.Retained=false;current.Dispose();current=null;}
         if(directory!=null) {try {Directory.Delete(directory,true);}catch(IOException){}directory=null;}
         materialized=null;materializedBytes=0;key=null;

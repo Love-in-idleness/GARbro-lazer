@@ -116,9 +116,9 @@ public static partial class ResourceService
                 foreach(var entry in entries)
                 {
                     string forced = Forced(entry) ? options.TypeOverrides[OverrideKey(entry)] : null;
-                    string script = forced is null or "script" ? ScriptConversionFormat(session, entry.Name, options) : null;
+                    string script = session.InputImageFormat == null && (forced is null or "script") ? ScriptConversionFormat(session, entry.Name, options) : null;
                     if (script != null) scripts.Add(entry, script);
-                    entry.Type = script != null || forced == null && options.ConvertScripts && ScriptOutputFormats.ForInput(entry.Name) != null
+                    entry.Type = script != null || session.InputImageFormat == null && forced == null && options.ConvertScripts && ScriptOutputFormats.ForInput(entry.Name) != null
                         ? "script" : MediaKind(session, entry.Name, forced);
                 }
                 if(session.Synthetic && (task.FromDirectory || options.Recursive) && entries.Any(e=>!Forced(e) && e.Type is not ("audio" or "video" or "image" or "script") && FormatCatalog.Instance.GetTypeFromName(e.Name)=="archive" && Path.GetExtension(e.Name).ToLowerInvariant() is not (".dat" or ".bin")))
@@ -257,6 +257,7 @@ public static partial class ResourceService
     public static string MediaKind(ResourceSession session,string name,string forced=null)
     {
         if(forced!=null)return forced=="binary"?"":forced;
+        if (session.InputImageFormat != null) return "image";
         string declared=session.Physical?FormatCatalog.Instance.GetTypeFromName(name):session.Find(name).Type;
         if(MediaInfo.IsAudioName(name))return "audio";
         if(MediaInfo.IsVideoName(name))return "video";
@@ -294,7 +295,7 @@ public static partial class ResourceService
     public static (string Format,string Output) MediaConversionTarget(ResourceSession session,string name,string output,ResourceExtractionOptions options)
     {
         string forcedType=options.TypeOverrides?.GetValueOrDefault(name);
-        if (forcedType is null or "script")
+        if (session.InputImageFormat == null && (forcedType is null or "script"))
         {
             string script = ScriptConversionFormat(session, name, options);
             if (script != null) return (script, ScriptConversionPath(output, script));
@@ -370,8 +371,9 @@ public static partial class ResourceService
                 }
                 else
                 {
-                    using var decoder = !session.Physical ? session.Archive.OpenImage(session.Find(name)) : null;
-                    var image = decoder?.Image ?? ImageFormat.Read(input) ?? throw new UnknownFormatException();
+                    using var decoder = !session.Physical && session.InputImageFormat == null ? session.Archive.OpenImage(session.Find(name)) : null;
+                    var image = session.InputImageFormat != null ? session.ReadSpecifiedImage(input, 100000000) :
+                        decoder?.Image ?? ImageFormat.Read(input) ?? throw new UnknownFormatException();
                     if (adjustImageOffset) image = AdjustOffset(image);
                     var format = ResolveImageOutput(formatId);
                     format.Write(bounded, image);

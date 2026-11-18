@@ -10,7 +10,8 @@ using GameRes;
 
 namespace GARbro.Application;
 
-public sealed record ResourceLocation(string RootPath, string[] Archives = null, string Directory = "", ArchiveFingerprint Fingerprint = null)
+public sealed record ResourceLocation(string RootPath, string[] Archives = null, string Directory = "", ArchiveFingerprint Fingerprint = null,
+    string InputFormatId = null)
 {
     public string[] Chain => Archives ?? Array.Empty<string>();
     public string DisplayPath => RootPath + string.Concat(Chain.Select(p => " → " + p)) + (string.IsNullOrEmpty(Directory) ? "" : " → " + Directory);

@@ -147,8 +147,20 @@ namespace GARbro.Application
         static SchemeImportReport ReadSchemesFile(string path)
         {
             using var raw = File.OpenRead(path);
-            using Stream input = path.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) ? new System.IO.Compression.GZipStream(raw, System.IO.Compression.CompressionMode.Decompress, true) : raw;
-            return FormatCatalog.Instance.DeserializePortableSchemeJson(input);
+            const long limit = 64L << 20;
+            if (!path.EndsWith(".gz", StringComparison.OrdinalIgnoreCase))
+            {
+                if (raw.Length > limit) throw new InvalidDataException("Format database exceeds the size limit.");
+                return FormatCatalog.Instance.DeserializePortableSchemeJson(raw);
+            }
+            if (raw.Length > 32L << 20) throw new InvalidDataException("Format database exceeds the size limit.");
+            using var gzip = new System.IO.Compression.GZipStream(raw, System.IO.Compression.CompressionMode.Decompress);
+            using var bounded = new MemoryStream();
+            try { ResourceService.CopyBounded(gzip, bounded, limit); }
+            catch (InvalidDataException e) when (e.Message == "Resource exceeds the size limit.")
+            { throw new InvalidDataException("Format database exceeds the size limit.", e); }
+            bounded.Position = 0;
+            return FormatCatalog.Instance.DeserializePortableSchemeJson(bounded);
         }
 
         public static ArchiveSession Open(string path, string formatTag = null, IOptionsProvider options = null)
@@ -344,6 +356,7 @@ namespace GARbro.Application
             readonly string previous;
             readonly IOptionsProvider provider;
             public MissingOptionsException MissingOptions { get; private set; }
+            internal string RestoreDirectory => Directory.Exists(previous) ? previous : Path.GetTempPath();
 
             public DecoderScope(string directory, IOptionsProvider provider)
             {
@@ -372,7 +385,7 @@ namespace GARbro.Application
             public void Dispose()
             {
                 FormatCatalog.Instance.ParametersRequest -= Request;
-                Directory.SetCurrentDirectory(previous);
+                Directory.SetCurrentDirectory(RestoreDirectory);
             }
         }
     }

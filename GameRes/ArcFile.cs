@@ -73,13 +73,19 @@ namespace GameRes
 
         public static ArcFile TryOpen (Entry entry)
         {
+            return TryOpen (entry, null);
+        }
+
+        public static ArcFile TryOpen (Entry entry, ArchiveFormat format)
+        {
             if (entry.Size < 4)
                 return null;
             var file = VFS.OpenView (entry);
             try
             {
                 uint signature = file.View.ReadUInt32 (0);
-                foreach (var impl in FormatCatalog.Instance.FindFormats<ArchiveFormat> (entry.Name, signature))
+                var formats = format == null ? FormatCatalog.Instance.FindFormats<ArchiveFormat> (entry.Name, signature) : new[] { format };
+                foreach (var impl in formats)
                 {
                     try
                     {

@@ -10,11 +10,18 @@ namespace GARbro.Desktop;
 
 public sealed class DesktopStorageAccess : IStorageAccess
 {
-    public async Task<ResourceSource[]> PickInputsAsync(bool folders, CancellationToken cancellation = default)
+    public async Task<ResourceSource[]> PickInputsAsync(bool folders, CancellationToken cancellation = default,
+        bool allowMultiple = true, string title = null, string[] patterns = null)
     {
         var storage = UiPlatform.ActivePage.StorageProvider;
-        var items = folders ? (await storage.OpenFolderPickerAsync(new() { AllowMultiple = true, Title = UiPlatform.CurrentText["OpenFolder"] })).Cast<IStorageItem>() :
-            await storage.OpenFilePickerAsync(new() { AllowMultiple = true, Title = UiPlatform.CurrentText["Open"] });
+        var items = folders ? (await storage.OpenFolderPickerAsync(new() { AllowMultiple = allowMultiple, Title = title ?? UiPlatform.CurrentText["OpenFolder"] })).Cast<IStorageItem>() :
+            await storage.OpenFilePickerAsync(new()
+            {
+                AllowMultiple = allowMultiple,
+                Title = title ?? UiPlatform.CurrentText["Open"],
+                FileTypeFilter = patterns == null ? null : [new FilePickerFileType(title) { Patterns = patterns }]
+            });
+        cancellation.ThrowIfCancellationRequested();
         return items.Select(i => i.TryGetLocalPath()).Where(p => p != null).Select(Source).ToArray();
     }
     public async Task<ResourceSource> PickOutputAsync(bool folder, string suggestedName = null, CancellationToken cancellation = default)

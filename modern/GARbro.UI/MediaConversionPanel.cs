@@ -15,15 +15,17 @@ public sealed class MediaConversionPanel : StackPanel
 {
     readonly ComboBox image,audio,video;
     readonly ComboBox scriptOutput;
+    readonly CheckBox offset;
     public event Action Changed;
     static string Value(ComboBox selector) => (selector?.SelectedItem as UiChoice)?.Value is {Length:>0} value?value:null;
     public string ImageFormat => Value(image);
     public string AudioFormat => Value(audio);
     public string VideoFormat => Value(video);
     public bool ConvertScripts => Value(scriptOutput)!=null;
+    public bool AdjustImageOffset => offset?.IsEnabled == true && offset.IsChecked == true;
     public string ScriptFormat => Value(scriptOutput) is {} value && value!="EXPORT"?value:null;
     public bool HasConversion => ImageFormat!=null || AudioFormat!=null || VideoFormat!=null || ConvertScripts;
-    public MediaConversionPanel(DesktopText text,ResourceFormatInfo[] imageFormats=null,bool batch=false,bool offerScripts=false)
+    public MediaConversionPanel(DesktopText text,ResourceFormatInfo[] imageFormats=null,bool batch=false,bool offerScripts=false,bool offerImageOffset=false)
     {
         Spacing=10;var columns=new Grid {ColumnDefinitions=new(offerScripts?"*,*,*,*":"*,*,*"),ColumnSpacing=12,RowSpacing=8};Children.Add(columns);Grid.SetIsSharedSizeScope(columns,true);
         ComboBox Selector(string name,string label,UiChoice[] choices,int initial)
@@ -58,6 +60,12 @@ public sealed class MediaConversionPanel : StackPanel
             columns.RowDefinitions=new(string.Join(",",Enumerable.Repeat("Auto",(count+perRow-1)/perRow)));
             for(int i=0;i<count;i++){Grid.SetColumn(columns.Children[i],i%perRow);Grid.SetRow(columns.Children[i],i/perRow);}
         };
+        if (offerImageOffset)
+        {
+            offset = new CheckBox { Name = "AdjustImageOffset", Content = Dialogs.Label(text, "AdjustOffset"), IsEnabled = ImageFormat != null };
+            Changed += () => offset.IsEnabled = ImageFormat != null;
+            Children.Add(offset);
+        }
         Children.Add(new TextBlock {Text=text["MediaConversionHint"],TextWrapping=TextWrapping.Wrap,Classes={"muted"}});
         if(offerScripts)Children.Add(new TextBlock {Text=text["ScriptConverterHint"],TextWrapping=TextWrapping.Wrap,Classes={"muted"}});
     }

@@ -3,6 +3,15 @@ namespace GARbro.Domain
 open System
 open System.Globalization
 
+[<AbstractClass; Sealed>]
+type PreviewOffset private () =
+    static member ParseHex(input: string) =
+        let value = if isNull input then "" else input.Trim()
+        let digits = if value.StartsWith("0x", StringComparison.OrdinalIgnoreCase) then value.Substring(2) else value
+        match UInt64.TryParse(digits, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture) with
+        | true, offset when offset <= uint64 Int64.MaxValue -> Nullable(int64 offset)
+        | _ -> Nullable()
+
 [<Struct>]
 type BrowseRow =
     { Index: int; Name: string; Kind: string; Size: int64; Directory: bool }

@@ -13,9 +13,9 @@ public static class ShortcutCatalog
     {
         string primary = OperatingSystem.IsMacOS() ? "Meta" : "Ctrl";
         var result = new Dictionary<string, string[]>(StringComparer.Ordinal);
-        foreach (string key in new[] { "Open", "OpenFolder", "NewTab", "CloseTab", "NextTab", "PreviousTab", "Exit", "Cancel", "Back", "Forward", "Parent", "Refresh", "Settings", "General", "Appearance", "Decoding", "Formats", "Shortcuts",
+        foreach (string key in new[] { "Open", "OpenFolder", "OpenWithFormat", "OpenSelectedWithFormat", "NewTab", "CloseTab", "NextTab", "PreviousTab", "Exit", "Cancel", "Back", "Forward", "Parent", "Refresh", "Settings", "General", "Appearance", "Decoding", "Formats", "Shortcuts",
             "ExtractAll", "ExtractSelected", "PackAll", "PackSelected", "Convert", "OpenSelected", "SelectAll", "CopyNames", "Mask", "Explore", "Trash", "FitWindow", "Toolbar", "Statusbar", "FitImage",
-            "Feedback", "Manual", "Troubleshoot", "Updates", "License", "ExportLogs", "About", "FocusMenu", "NextSelection", "SortName", "SortType", "SortSize", "SortNone", "Play", "Pause", "Stop", "NextPage", "PreviousPage", "Copy", "Wrap" }) result[key] = Array.Empty<string>();
+            "Feedback", "Manual", "Troubleshoot", "Updates", "License", "ExportLogs", "About", "FocusMenu", "NextSelection", "SortName", "SortType", "SortSize", "SortNone", "Play", "Pause", "Stop", "NextPage", "PreviousPage", "JumpToOffset", "Copy", "Wrap" }) result[key] = Array.Empty<string>();
         void Bind(string command, params string[] values) => result[command] = values;
         Bind("NewTab",primary+"+T");Bind("CloseTab",primary+"+W");Bind("NextTab","Ctrl+Tab");Bind("PreviousTab","Ctrl+Shift+Tab");
         Bind("Open", primary + "+O"); Bind("Settings", primary + "+P"); Bind("Exit", primary + "+Q");

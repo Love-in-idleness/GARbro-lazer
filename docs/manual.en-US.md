@@ -161,3 +161,11 @@ Use a separate output folder. Source files stay unchanged; failed compilation pr
 Android 12 or later is required. Choose the ARM64 APK for most phones and tablets, or x64 for an x86 emulator. Install through Android's package installer; use the system file/folder picker to grant access. GARbro uses the same tabbed interface and background decoder service. Video/audio preview uses Android's system player. Built-in script processing is available on Android; FFmpeg-based media conversion is unavailable. CI APKs are development builds, not an F-Droid/IzzyOnDroid release; temporary-key builds cannot update an installation signed with a different key.
 
 Desktop version 1.1.2 requires .NET 11. Store and Flatpak include their runtime; other desktop packages require the matching .NET 11 Runtime to be installed.
+
+## Choose an input format and preview resources
+
+Use **Open with format…** in the File menu or in the context menu for one disk file. Search archive or image readers by name, format tag or extension. The selection stays with the tab, so you can open the same file with automatic detection in another tab. Nested archives use automatic detection.
+
+Select **Decompiled text** in the preview selector to page through and copy supported scripts. In HEX, use **Jump to offset…** and paste a hexadecimal address from the start of a line, with or without `0x`. After choosing an image output format in batch conversion (F6), you can apply the image offset to the canvas.
+
+Under **Help → Check for updates**, use **Import local scheme database…** to load a SchemeTool `.json` or `.json.gz` export offline. The validated external database is applied over the bundled database. A failed import keeps the current database active.
