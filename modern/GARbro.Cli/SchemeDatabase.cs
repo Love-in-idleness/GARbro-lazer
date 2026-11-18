@@ -26,7 +26,11 @@ internal static class SchemeDatabase
             throw new InvalidDataException("Invalid saved scheme database.");
         return Path.Combine(DirectoryPath, file);
     }
-    public static void Reset() => File.Delete(ActiveFile);
+    public static void Reset()
+    {
+        try { File.Delete(ActiveFile); }
+        catch (DirectoryNotFoundException) { }
+    }
 
     public static SchemeImportReport Install(string source, CancellationToken cancellation)
     {

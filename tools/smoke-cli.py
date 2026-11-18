@@ -29,6 +29,7 @@ assert len(formats)==1248
 assert any(f['tag']=='XP3'for f in formats)
 assert any(f['tag']=='DL1'and f['assembly']=='ArcLegacy.Portable'for f in formats)
 assert any(f['tag']=='DAT/IGS'and f['assembly']=='ArcExtra.Portable'for f in formats)
+assert run('schemes','--reset')['reset']
 schemes=run('schemes',CLI.parent/'GameData/Formats.json.gz','--check')
 scheme_manifest=json.loads((CLI.parent/'GameData/schemes.json').read_text())
 assert scheme_manifest==json.loads((ROOT/'modern/GameData/schemes.json').read_text())

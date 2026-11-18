@@ -1,1 +1,1 @@
-1.1.4: safe CLI extraction, script options, local scheme databases and resource previews
+1.1.4: safe CLI extraction, script options, local scheme import and reset, and resource previews
