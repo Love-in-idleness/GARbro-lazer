@@ -26,7 +26,8 @@ assert any(f['tag']=='DL1'and f['assembly']=='ArcLegacy.Portable'for f in format
 assert any(f['tag']=='DAT/IGS'and f['assembly']=='ArcExtra.Portable'for f in formats)
 schemes=run('schemes',CLI.parent/'GameData/Formats.json.gz')
 scheme_manifest=json.loads((CLI.parent/'GameData/schemes.json').read_text())
-assert schemes['version']==scheme_manifest['version']==150 and not schemes['failed'] and not schemes['unported'],schemes
+assert scheme_manifest==json.loads((ROOT/'modern/GameData/schemes.json').read_text())
+assert schemes['version']==scheme_manifest['version'] and not schemes['failed'] and not schemes['unported'],schemes
 assert sorted(schemes['applied'])==scheme_manifest['applied'],schemes
 assert run('probe',FIX/'standard.xp3','--scheme','none')[0]['format']=='XP3'
 assert run('probe',FIX/'raw565.lim')[0]['format']=='LIM'

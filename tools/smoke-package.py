@@ -75,8 +75,10 @@ with tempfile.TemporaryDirectory(prefix='garbro-package-')as folder:
     assert len(list(package.rglob('Formats.json.gz')))==1,'Only one format database is needed'
     schemes=json.loads(gzip.decompress(database.read_bytes()))
     metadata=json.loads(database.with_name('schemes.json').read_text())
+    expected_metadata=json.loads((ROOT/'modern/GameData/schemes.json').read_text())
+    assert metadata==expected_metadata,'Package format database metadata differs from source'
     assert list((desktop/'GameData').glob('*.lst.gz')) and not list((desktop/'GameData').glob('*.lst'))
-    assert schemes['Version']==metadata['version']==150 and schemes['PortableSchemaVersion']==2
+    assert schemes['Version']==metadata['version'] and schemes['PortableSchemaVersion']==metadata['portable_schema']
     assert sorted(schemes['SchemeMap'])==metadata['applied']
     assert hashlib.sha256(gzip.decompress(database.read_bytes())).hexdigest()==metadata['json_sha256']
     assert json.loads((package/'dependencies.json').read_text())
