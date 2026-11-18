@@ -10,7 +10,7 @@ using GARbro.Application;
 using GameRes;
 using GARbro.Domain;
 
-internal static class Program
+internal static partial class Program
 {
     static ResourceText text = new();
     static string SelectLanguage(ref string[] args)
@@ -87,6 +87,19 @@ internal static class Program
 
     static void ShowHelp(string command)=>Console.WriteLine(text[string.IsNullOrEmpty(command)?"Cli.Help":"Cli.Help."+command]);
 
+    static string FormatId(FormatInfo format) => format == null ? null : format.Assembly + ":" + format.Class;
+
+    static FormatInfo InputReader(string selector, string requiredType)
+    {
+        if (selector == null) return null;
+        var matches = ArchiveService.Formats().Where(f => f.Type is "archive" or "image")
+            .Where(f => requiredType == null || f.Type == requiredType)
+            .Where(f => FormatId(f) == selector || f.Tag.Equals(selector, StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (matches.Length == 0) throw new ArgumentException("Unknown input format: " + selector);
+        if (matches.Length > 1) throw new ArgumentException("Ambiguous input format. Use assembly:class from formats --json: " + selector);
+        return matches[0];
+    }
+
     static async Task<int> RunCore(string[] args)
     {
         bool json = JsonRequested(args);
@@ -107,7 +120,7 @@ internal static class Program
             bool recursive=invocation.Flags.Contains("--recursive"),nested=invocation.Flags.Contains("--nested");
             string Get(string key, string fallback = null) => values.TryGetValue(key, out var value) ? value : fallback;
             long Number(string key, long fallback) => values.TryGetValue(key, out var value) ? long.Parse(value, CultureInfo.InvariantCulture) : fallback;
-            string output = Get("-o", Get("--output"));
+            string output = Get("--output");
             int maxDepth=checked((int)Number("--max-depth",8));
             long maxEntry=Number("--max-entry",2L<<30),maxTotal=Number("--max-total",16L<<30),maxPixels=Number("--max-pixels",100000000);
             double maxRatio=double.Parse(Get("--max-ratio","10000"),CultureInfo.InvariantCulture);
@@ -121,41 +134,58 @@ internal static class Program
                 _ => throw new ArgumentException("Invalid overwrite policy.")};
             if (values.ContainsKey("--timeout"))
                 cancel.CancelAfter(TimeSpan.FromSeconds(double.Parse(Get("--timeout"),CultureInfo.InvariantCulture)));
-            if (Get("--schemes")is string schemes)
-            {
-                var imported = ArchiveService.LoadSchemes(schemes);
-                if (imported.Failed.Count > 0)
-                    throw new InvalidDataException("Cannot import schemes for: " + string.Join(", ", imported.Failed.Keys));
-            }
-
-            var provider = new JsonOptionsProvider(Get("--options")is string config ? File.ReadAllText(config) : null, Get("--scheme"));
-            if(Get("--encoding") is string encoding) new DecoderContext(encoding,Language:text.Language).Apply();
             if (command == "formats")
             {
-                if(Get("--type") is string type && type is not ("archive" or "image" or "audio" or "script"))throw new ArgumentException("Invalid resource type: "+type);
-                var formats = ArchiveService.Formats().Where(f => Get("--type") == null || f.Type == Get("--type")).ToArray();
-                if (json)
-                    Emit(formats);
-                else
-                    foreach (var format in formats)
-                        Console.WriteLine($"{format.Type}\t{format.Tag}\t{format.Description}");
+                string type = Get("--type");
+                if (type is not (null or "archive" or "image" or "audio" or "script" or "video"))
+                    throw new ArgumentException("Invalid resource type: " + type);
+                var formats = type == "video" ? MediaOutputFormats.Video.Select(tag =>
+                    new FormatInfo(tag, "video", tag == "MKV" ? text["VideoMkv"] : "MP4 (MPEG-4/AAC)", true, null, null)).ToArray() :
+                    ArchiveService.Formats().Where(format => type == null || type == format.Type).ToArray();
+                if (json) Emit(formats);
+                else foreach (var format in formats) Console.WriteLine($"{format.Type}\t{format.Tag}\t{format.Description}");
                 return 0;
             }
 
             if (command == "schemes")
             {
+                if (invocation.Flags.Contains("--reset"))
+                {
+                    SchemeDatabase.Reset();
+                    if (json) Emit(new { reset = true });
+                    else Console.WriteLine(text["Cli.SchemesReset"]);
+                    return 0;
+                }
                 if (files.Count != 1)
                     throw new ArgumentException("schemes requires one exported JSON file.");
-                var report = ArchiveService.LoadSchemes(files[0]);
-                if (json)
-                    Emit(report);
+                bool check = invocation.Flags.Contains("--check");
+                var report = check ? ArchiveService.LoadSchemes(files[0]) : SchemeDatabase.Install(files[0], cancel.Token);
+                if (json) Emit(report);
                 else
+                {
                     Console.WriteLine(text.Format("Cli.Applied", report.Applied.Length, report.Unported.Length, report.Failed.Count));
+                    if (!check && report.Failed.Count == 0) Console.WriteLine(text["Cli.SchemesSaved"]);
+                }
                 return report.Failed.Count == 0 ? 0 : 3;
             }
 
-            if (files.Count == 0)
-                throw new ArgumentException("At least one input file is required.");
+            if (files.Count == 0) throw new ArgumentException("At least one input file is required.");
+            if ((Get("--schemes") ?? SchemeDatabase.Active()) is string schemes)
+            {
+                var report = ArchiveService.LoadSchemes(schemes);
+                if (report.Failed.Count > 0)
+                    throw new InvalidDataException("Cannot import schemes for: " + string.Join(", ", report.Failed.Keys));
+            }
+            string optionsJson = Get("--options") is string config ? File.ReadAllText(config) : null;
+            var provider = new JsonOptionsProvider(optionsJson, Get("--scheme"));
+            if (Get("--encoding") is string encoding) new DecoderContext(encoding, Language: text.Language).Apply();
+            string scriptFormat = Get("--script-format")?.Trim().ToUpperInvariant();
+            bool convertScripts = scriptFormat != null;
+            if (scriptFormat == "EXPORT") scriptFormat = null;
+            if (scriptFormat is not (null or "RB") && !ScriptOutputFormats.Recompile.Contains(scriptFormat))
+                throw new ArgumentException("Unsupported script output format.");
+            bool discardOriginal = invocation.Flags.Contains("--discard-original-media");
+            bool adjustOffset = invocation.Flags.Contains("--adjust-offset");
             if (command == "create")
             {
                 if (output == null) throw new ArgumentException("create requires -o ARCHIVE.");
@@ -165,101 +195,72 @@ internal static class Program
                 var comparer=OperatingSystem.IsWindows()?StringComparer.OrdinalIgnoreCase:StringComparer.Ordinal;
                 string[] selection=paths.Where((path,index)=>directories[index] && comparer.Equals(Path.TrimEndingDirectorySeparator(path),source)).Any()
                     ?null:paths.Select(path=>Path.GetRelativePath(source,path)).ToArray();
-                var media=new ArchivePackingOptions(Get("--image-format"),Get("--audio-format"),Get("--video-format"),invocation.Flags.Contains("--discard-original-media"));
+                var media = new ArchivePackingOptions(Get("--image-format"), Get("--audio-format"), Get("--video-format"), discardOriginal, convertScripts, scriptFormat);
                 var decoder=new ScopedOptionsProvider(new("resource-pack",source,Context:new DecoderContext(Get("--encoding","auto"),Language:text.Language)));
-                var result=ResourceService.PackArchive(source,selection,output,Get("--format"),media,Get("--options")is string file?File.ReadAllText(file):null,
+                var result=ResourceService.PackArchive(source,selection,output,Get("--format"),media,optionsJson,
                     Get("--scheme"),overwrite,new ExtractionLimits(maxEntry,maxTotal),decoder,cancellation:cancel.Token);
                 if(json)Emit(new {output=result.Output,format=result.Format,written=result.Written,entries=result.Entries,converted=result.Converted,bytes=result.Bytes});
                 else Console.WriteLine(result.Written?text.Format("PackingCompleted",result.Entries,result.Converted)+" · "+result.Output:text["PackingSkipped"]+" · "+result.Output);
                 return 0;
             }
-            if(command=="extract" && output==null)throw new ArgumentException("extract requires -o DIRECTORY.");
+            if (command == "extract")
+            {
+                if (output == null) throw new ArgumentException("extract requires -o DIRECTORY.");
+                var format = InputReader(Get("--format"), "archive");
+                var options = new ResourceExtractionOptions(Recursive: nested, MaxDepth: maxDepth,
+                    ImageFormat: Get("--image-format"), AudioFormat: Get("--audio-format"), VideoFormat: Get("--video-format"),
+                    RecurseDirectories: recursive, DiscardChildArchives: invocation.Flags.Contains("--discard-child-archives"),
+                    DiscardOriginalMedia: discardOriginal, AdjustImageOffset: adjustOffset, ConvertScripts: convertScripts, ScriptFormat: scriptFormat);
+                return Extract(files, output, FormatId(format), options, new(maxEntry, maxTotal, maxRatio), overwrite, provider, json, cancel.Token);
+            }
             if (command == "convert")
             {
                 if (files.Count != 1 || output == null)
                     throw new ArgumentException("convert requires one input and an output file.");
-                var target=MediaOutputFormats.Normalize(Get("--to",ScriptOutputFormats.FromOutputName(output) ?? Path.GetExtension(output).TrimStart('.')));
-                string input=Path.GetFullPath(files[0]);output=Path.GetFullPath(output);
-                string entry=Get("--entry");
-                bool script=ScriptOutputFormats.Supports(target);
-                if(entry!=null && !script)
-                    throw new ArgumentException("--entry is only supported for script conversion.");
-                if(input.Equals(output,OperatingSystem.IsWindows()?StringComparison.OrdinalIgnoreCase:StringComparison.Ordinal))
+                var target = MediaOutputFormats.Normalize(Get("--to", ScriptOutputFormats.FromOutputName(output) ?? Path.GetExtension(output).TrimStart('.')));
+                string input = Path.GetFullPath(files[0]); output = Path.GetFullPath(output);
+                string entry = Get("--entry");
+                bool image = !ScriptOutputFormats.Supports(target) && target != "AUDIO" &&
+                    !MediaOutputFormats.Audio.Contains(target) && !MediaOutputFormats.Video.Contains(target);
+                var format = InputReader(Get("--format"), entry != null ? "archive" : "image");
+                if (adjustOffset && !image) throw new ArgumentException("Image offsets require an image output format.");
+                if (input.Equals(output, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
                     throw new IOException("Cannot replace a source document. Choose another destination.");
-                if (script || target == "AUDIO" || MediaOutputFormats.Audio.Contains(target) || MediaOutputFormats.Video.Contains(target))
+                if (image) ResourceService.ResolveImageOutput(target);
+                string writtenPath;
+                bool written;
+                if (entry != null || !image)
                 {
-                    if(Get("--format")!=null)throw new ArgumentException("Forced input formats are only supported for image conversion.");
-                    using var resource=new ResourceSession(new(entry==null?Path.GetDirectoryName(input):input),provider);
-                    var result=ResourceService.ConvertFile(resource,entry??Path.GetFileName(input),output,target,overwrite,maxEntry,cancellation:cancel.Token);
-                    if (json)
-                        Emit(new { input = files[0], output=result.Path, format=target });
-                    else
-                        Console.WriteLine(result.Path);
+                    if (entry == null && format != null) throw new ArgumentException("Forced input formats are only supported for image conversion.");
+                    using var resource = new ResourceSession(new(entry == null ? Path.GetDirectoryName(input) : input, InputFormatId: FormatId(format)), provider);
+                    var result = ResourceService.ConvertFile(resource, entry ?? Path.GetFileName(input), output, target, overwrite,
+                        maxEntry, adjustImageOffset: adjustOffset, cancellation: cancel.Token, maxPixels: maxPixels);
+                    writtenPath = result.Path; written = result.Written;
+                    if (json) Emit(new { input = files[0], output = writtenPath, format = target, written });
                 }
                 else
                 {
-                    ResourceService.ResolveImageOutput(target);
-                    var image = ArchiveService.ReadImage(files[0], Get("--format"), maxPixels,provider);
-                    ArchiveService.WriteImage(image, output, target, overwrite,maxEntry);
-                    if (json)
-                        Emit(new { input = files[0], output, width = image.Width, height = image.Height, image.OffsetX, image.OffsetY });
-                    else
-                        Console.WriteLine(output);
+                    var data = ArchiveService.ReadImage(input, FormatId(format), maxPixels, provider);
+                    if (adjustOffset) data = ResourceService.AdjustOffset(data, maxPixels);
+                    writtenPath = output; written = ArchiveService.WriteImage(data, output, target, overwrite, maxEntry);
+                    if (json) Emit(new { input = files[0], output, width = data.Width, height = data.Height, data.OffsetX, data.OffsetY, written });
                 }
-
+                if (!json) Console.WriteLine(written ? writtenPath : text.Format("Cli.ConversionSkipped", writtenPath));
                 return 0;
             }
 
-            if(command=="extract" && (nested || values.ContainsKey("--image-format") || values.ContainsKey("--audio-format") || values.ContainsKey("--video-format")))
-            {
-                if(output==null)throw new ArgumentException("extract requires -o DIRECTORY.");
-                if(Get("--format")!=null)throw new ArgumentException("Forced input formats cannot be combined with nested or media extraction.");
-                var reports=new List<ResourceJobReport>();
-                long remaining=maxTotal;
-                int entriesRemaining=262144;
-                var extraction=new ResourceExtractionOptions(Recursive:nested,MaxDepth:maxDepth,
-                    ImageFormat:Get("--image-format"),AudioFormat:Get("--audio-format"),VideoFormat:Get("--video-format"),RecurseDirectories:recursive,
-                    DiscardChildArchives:invocation.Flags.Contains("--discard-child-archives"),DiscardOriginalMedia:invocation.Flags.Contains("--discard-original-media"));
-                string Destination(string source)=>files.Count==1 && !nested?output:Path.Combine(output,Path.GetFileName(Path.GetFullPath(source).TrimEnd(Path.DirectorySeparatorChar))+(Directory.Exists(source)?"":".unpacked"));
-                var destinations=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach(string source in files)
-                {
-                    if(Directory.Exists(source)&&!recursive)throw new ArgumentException("A directory input requires --recursive.");
-                    string destination=Destination(source);
-                    if(!destinations.Add(Path.GetFullPath(destination)))throw new IOException("Input roots have the same destination: "+destination);
-                }
-                foreach(string source in files)
-                {
-                    cancel.Token.ThrowIfCancellationRequested();
-                    if(entriesRemaining<=0)throw new InvalidDataException("Recursive extraction has too many entries.");
-                    string root=Destination(source);
-                    var report=ResourceService.Extract(new ResourceLocation(Path.GetFullPath(source)),root,
-                        extraction,new ExtractionLimits(maxEntry,remaining,maxRatio,entriesRemaining),
-                        overwrite,null,provider,null);
-                    remaining-=report.Bytes;entriesRemaining-=report.Entries;reports.Add(report);
-                    if(!json)
-                    {
-                        Console.WriteLine(report.Files.Length==0 && report.Errors.Length==0?text["NoExtractableFiles"]:text.Format("Cli.NestedResult",source,report.Files.Length,report.Errors.Length,root));
-                        foreach(string failure in report.Errors)Console.Error.WriteLine(text.ErrorMessage(failure));
-                    }
-                }
-                if(json)Emit(reports);
-                return reports.Any(r=>r.Errors.Length>0)?3:0;
-            }
+            var reader = InputReader(Get("--format"), command == "list" ? "archive" : null);
             var inputs = new List<string>();
-            var discovered=new Dictionary<string,string>(StringComparer.Ordinal);
+            var discovered = new HashSet<string>(StringComparer.Ordinal);
             foreach (var file in files)
             {
                 if (Directory.Exists(file))
                 {
                     if (!recursive)
                         throw new ArgumentException("A directory input requires --recursive.");
-                    string sourceRoot=Path.GetFullPath(file),outputRoot=output==null?null:Path.GetFullPath(output);
-                    foreach(string found in Directory.EnumerateFiles(file,"*",new EnumerationOptions {RecurseSubdirectories=true,MaxRecursionDepth=maxDepth,AttributesToSkip=FileAttributes.ReparsePoint}).OrderBy(x=>x,StringComparer.Ordinal))
+                        foreach(string found in Directory.EnumerateFiles(file,"*",new EnumerationOptions {RecurseSubdirectories=true,MaxRecursionDepth=maxDepth,AttributesToSkip=FileAttributes.ReparsePoint}).OrderBy(x=>x,StringComparer.Ordinal))
                     {
-                        if(outputRoot!=null && outputRoot!=sourceRoot && Path.GetFullPath(found).StartsWith(outputRoot+Path.DirectorySeparatorChar,OperatingSystem.IsWindows()?StringComparison.OrdinalIgnoreCase:StringComparison.Ordinal))continue;
-                        string relative=Path.GetRelativePath(sourceRoot,Path.GetFullPath(found));
-                        discovered[found]=files.Count==1?relative:Path.Combine(new DirectoryInfo(sourceRoot).Name,relative);
+                        discovered.Add(found);
                         inputs.Add(found);
                     }
                 }
@@ -270,85 +271,48 @@ internal static class Program
             if (inputs.Count == 0)
                 throw new ArgumentException("No input files were found.");
             var results = new List<object>();
-            var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var limits = new ExtractionLimits(maxEntry,maxTotal,maxRatio);
-            long remainingBytes=maxTotal;int remainingEntries=limits.MaxEntries;
-            ArchiveSession OpenOrSkip(string file)
+            void ProbeMedia(string file, string formatId = null)
             {
-                try {return ArchiveService.Open(file,Get("--format"),provider);}
-                catch(UnknownFormatException)when(discovered.ContainsKey(file))
-                {if(!json)Console.Error.WriteLine(text.Format("Cli.SkippedUnrecognized",file));return null;}
+                var details = ArchiveService.ProbeResource(file, provider, formatId);
+                results.Add(details);
+                if (!json) Console.WriteLine(JsonSerializer.Serialize(details, Json));
             }
             foreach (var file in inputs)
             {
                 cancel.Token.ThrowIfCancellationRequested();
-                if (command == "probe")
+                try
                 {
-                    if(GARbro.Media.MediaInfo.IsVideoName(file))
+                    if (command == "probe" && (reader?.Type == "image" ||
+                        reader == null && GARbro.Media.MediaInfo.IsVideoName(file)))
                     {
-                        var video=ArchiveService.ProbeResource(file,provider);results.Add(video);
-                        if(!json)Console.WriteLine(JsonSerializer.Serialize(video,Json));
+                        ProbeMedia(file, FormatId(reader));
                         continue;
                     }
-                    try
+
+                    ArchiveSession archive;
+                    try { archive = ArchiveService.Open(file, FormatId(reader), provider); }
+                    catch (UnknownFormatException) when (command == "probe" && reader == null)
                     {
-                        using var probe = ArchiveService.Open(file, Get("--format"), provider);
-                        var result = new
-                        {
-                            input = file,
-                            type = "archive",
-                            format = probe.Tag,
-                            count = probe.Entries.Count
-                        };
-                        results.Add(result);
-                        if (!json)
-                            Console.WriteLine(text.Format("Cli.ProbeResult", file, probe.Tag, probe.Entries.Count));
+                        ProbeMedia(file);
+                        continue;
                     }
-                    catch (UnknownFormatException)
+                    using (archive)
                     {
-                        try
+                        if (command == "probe")
                         {
-                            var result=ArchiveService.ProbeResource(file,provider);results.Add(result);
-                            if(!json)Console.WriteLine(JsonSerializer.Serialize(result,Json));
+                            results.Add(new { input = file, type = "archive", format = archive.Tag, count = archive.Entries.Count });
+                            if (!json) Console.WriteLine(text.Format("Cli.ProbeResult", file, archive.Tag, archive.Entries.Count));
                         }
-                        catch(UnknownFormatException)when(discovered.ContainsKey(file))
-                        {if(!json)Console.Error.WriteLine(text.Format("Cli.SkippedUnrecognized",file));}
+                        else
+                        {
+                            results.Add(new { input = file, format = archive.Tag, entries = archive.Entries });
+                            if (!json) foreach (var entry in archive.Entries) Console.WriteLine($"{entry.Size, 12}\t{entry.Name}");
+                        }
                     }
-
-                    continue;
                 }
-
-                using var archive=OpenOrSkip(file);
-                if(archive==null)continue;
-                switch (command)
+                catch (UnknownFormatException) when (discovered.Contains(file))
                 {
-                    case "probe":
-                        results.Add(new { input = file, type = "archive", format = archive.Tag, count = archive.Entries.Count });
-                        if (!json)
-                            Console.WriteLine(text.Format("Cli.ProbeResult", file, archive.Tag, archive.Entries.Count));
-                        break;
-                    case "list":
-                        results.Add(new { input = file, format = archive.Tag, entries = archive.Entries });
-                        if (!json)
-                            foreach (var entry in archive.Entries)
-                                Console.WriteLine($"{entry.Size, 12}\t{entry.Name}");
-                        break;
-                    case "extract":
-                        if (output == null)
-                            throw new ArgumentException("extract requires -o DIRECTORY.");
-                        var root=discovered.TryGetValue(file,out string relativeOutput)?ExtractionPath.Resolve(output,relativeOutput+".unpacked"):
-                            inputs.Count==1?output:Path.Combine(output,Path.GetFileName(file));
-                        if (!roots.Add(Path.GetFullPath(root)))
-                            throw new IOException("Batch output directories collide: " + root);
-                        if(remainingEntries<archive.Entries.Count)throw new InvalidDataException("Recursive extraction has too many entries.");
-                        var extracted = await archive.ExtractAsync(root, overwrite, limits with {MaxTotalBytes=remainingBytes,MaxEntries=remainingEntries}, cancellation: cancel.Token);
-                        remainingBytes-=extracted.Where(f=>f.Status=="extracted").Sum(f=>f.Size);remainingEntries-=archive.Entries.Count;
-                        results.Add(new { input = file, format = archive.Tag, output = root, files = extracted });
-                        if (!json)
-                            Console.WriteLine(text.Format("Cli.ExtractResult", file, extracted.Count, root));
-                        break;
-                    default:
-                        throw new ArgumentException("Unknown command: " + command);
+                    if (!json) Console.Error.WriteLine(text.Format("Cli.SkippedUnrecognized", file));
                 }
             }
 

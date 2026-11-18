@@ -17,8 +17,8 @@ type CliInvocation =
 type CliArguments private () =
     static member Parse(args: string[]) : CliInvocation =
         let commands = set [ "formats"; "schemes"; "probe"; "list"; "extract"; "convert"; "create" ]
-        let flags = set [ "--json"; "--recursive"; "--nested"; "--discard-child-archives"; "--discard-original-media"; "--help"; "-h"; "--version" ]
-        let options = set [ "--output"; "--format"; "--type"; "--to"; "--entry"; "--overwrite"; "--options"; "--scheme"; "--schemes"; "--max-depth"; "--max-entry"; "--max-total"; "--max-ratio"; "--timeout"; "--max-memory"; "--max-pixels"; "--encoding"; "--image-format"; "--audio-format"; "--video-format" ]
+        let flags = set [ "--json"; "--recursive"; "--nested"; "--discard-child-archives"; "--discard-original-media"; "--adjust-offset"; "--check"; "--reset"; "--help"; "-h"; "--version" ]
+        let options = set [ "--output"; "--format"; "--type"; "--to"; "--entry"; "--overwrite"; "--options"; "--scheme"; "--schemes"; "--max-depth"; "--max-entry"; "--max-total"; "--max-ratio"; "--timeout"; "--max-memory"; "--max-pixels"; "--encoding"; "--image-format"; "--audio-format"; "--video-format"; "--script-format" ]
         let values = Dictionary<string,string>(StringComparer.Ordinal)
         let enabled = HashSet<string>(StringComparer.Ordinal)
         let inputs = ResizeArray<string>()
@@ -71,18 +71,22 @@ type CliArguments private () =
             let allowed =
                 match command with
                 | "formats" -> set [ "--type" ]
-                | "schemes" -> Set.empty
+                | "schemes" -> set [ "--check"; "--reset" ]
                 | "probe" | "list" -> Set.union decoder disk
-                | "convert" -> Set.union decoder (set [ "--output"; "--to"; "--entry"; "--overwrite"; "--max-entry"; "--max-pixels" ])
-                | "create" -> Set.union decoder (set [ "--output"; "--overwrite"; "--max-entry"; "--max-total"; "--image-format"; "--audio-format"; "--video-format"; "--discard-original-media" ])
-                | "extract" -> Set.unionMany [ decoder; disk; set [ "--output"; "--overwrite"; "--nested"; "--max-entry"; "--max-total"; "--max-ratio"; "--image-format"; "--audio-format"; "--video-format"; "--discard-child-archives"; "--discard-original-media" ] ]
+                | "convert" -> Set.union decoder (set [ "--output"; "--to"; "--entry"; "--overwrite"; "--max-entry"; "--max-pixels"; "--adjust-offset" ])
+                | "create" -> Set.union decoder (set [ "--output"; "--overwrite"; "--max-entry"; "--max-total"; "--image-format"; "--audio-format"; "--video-format"; "--script-format"; "--discard-original-media" ])
+                | "extract" -> Set.unionMany [ decoder; disk; set [ "--output"; "--overwrite"; "--nested"; "--max-entry"; "--max-total"; "--max-ratio"; "--image-format"; "--audio-format"; "--video-format"; "--script-format"; "--adjust-offset"; "--discard-child-archives"; "--discard-original-media" ] ]
                 | _ -> Set.empty
             for key in Seq.append values.Keys enabled do
                 if not (globals.Contains key || allowed.Contains key) then
                     raise (ArgumentException("Option is not supported by this command: " + key))
             if enabled.Contains "--discard-child-archives" && not (enabled.Contains "--nested") then
                 raise (ArgumentException("Discarding child archives requires --nested."))
-            if enabled.Contains "--discard-original-media" && not (values.ContainsKey "--image-format" || values.ContainsKey "--audio-format" || values.ContainsKey "--video-format") then
+            if enabled.Contains "--discard-original-media" && not (values.ContainsKey "--image-format" || values.ContainsKey "--audio-format" || values.ContainsKey "--video-format" || values.ContainsKey "--script-format") then
                 raise (ArgumentException("Discarding originals requires a conversion format."))
+            if command = "extract" && enabled.Contains "--adjust-offset" && not (values.ContainsKey "--image-format") then
+                raise (ArgumentException("Applying image offsets during extraction requires --image-format."))
+            if command = "schemes" && enabled.Contains "--reset" && (inputs.Count > 0 || enabled.Contains "--check") then
+                raise (ArgumentException("Use schemes --reset without a file or --check."))
             if command = "formats" && inputs.Count <> 0 then raise (ArgumentException("formats does not accept input files."))
         { Command = command; Inputs = inputs.ToArray(); Values = values; Flags = enabled |> Seq.toArray; Help = help }

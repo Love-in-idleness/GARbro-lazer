@@ -116,7 +116,11 @@ garbro create "assets" -o "data.zip" --image-format webp --audio-format wav --di
 garbro create "assets" -o "data.xp3" --format XP3 --scheme none
 ```
 
-`create --help` 列出归档参数、编码、覆盖策略和资源限制。单目录以其内容为根，多输入保留相对于共同父目录的路径。只提供已有可写归档格式。游戏能否读取转换后的媒体取决于引擎支持，不会自动修改脚本中的资源引用。使用命令行时，先用 `garbro convert` 回编脚本，再封包。
+`create --help` 列出归档参数、编码、覆盖策略和资源限制。单目录以其内容为根，多输入保留相对于共同父目录的路径。只提供已有可写归档格式。游戏能否读取转换后的媒体取决于引擎支持，不会自动修改脚本中的资源引用。CLI 封包时可用 `garbro create --script-format GSC` 回编 TSC，或用 `--script-format EXPORT` 导出可编辑脚本。`garbro extract` 也支持导出选项。
+
+CLI 运行 `garbro schemes FILE` 会保存方案库，供后续命令使用。用 `garbro schemes FILE --check` 仅校验，`garbro schemes --reset` 恢复内置方案库，或在其他命令上加 `--schemes FILE` 临时指定。
+
+`garbro extract scene.xfl --format XFL --nested --script-format EXPORT -o output` 用 XFL 读取外层归档并提取到 `output`。如需在转换时应用图像偏移，可在提取或 `garbro convert` 中加 `--adjust-offset`。单个归档的条目直接写入 `-o` 指定的目录，启用转换时也一样。
 
 ## 脚本回编（1.1.2）
 

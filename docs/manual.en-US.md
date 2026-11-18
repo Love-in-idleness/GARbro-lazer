@@ -137,7 +137,11 @@ garbro create "assets" -o "data.zip" --image-format webp --audio-format wav --di
 garbro create "assets" -o "data.xp3" --format XP3 --scheme none
 ```
 
-`create --help` lists writer parameters, encoding, overwrite and resource limits. A single input folder contributes its contents; multiple inputs retain paths relative to their common parent. Only existing writable archive formats are offered. Converted media may require matching game-engine support; script references are not updated. When using the CLI, run `garbro convert` to recompile scripts before packing.
+`create --help` lists writer parameters, encoding, overwrite and resource limits. A single input folder contributes its contents; multiple inputs retain paths relative to their common parent. Only existing writable archive formats are offered. Converted media may require matching game-engine support; script references are not updated. For CLI packing, use `garbro create --script-format GSC` to recompile TSC files, or choose `--script-format EXPORT` to export editable scripts. The export option also works with `garbro extract`.
+
+The CLI saves `garbro schemes FILE` for later commands. Use `garbro schemes FILE --check` to validate, `garbro schemes --reset` to restore the bundled database, or `--schemes FILE` on another command for a one-time override.
+
+`garbro extract scene.xfl --format XFL --nested --script-format EXPORT -o output` opens the outer archive with the XFL reader and extracts into `output`. Add `--adjust-offset` when converting extracted images, or use it with `garbro convert`. Single-archive extraction places members directly in `-o` even when conversion is enabled.
 
 ## Script recompilation (1.1.2)
 

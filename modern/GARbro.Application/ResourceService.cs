@@ -369,13 +369,14 @@ public static partial class ResourceService
         return new("image",name,info,Pixels:new(output,pixels.Length,w,h));
     }
 
-    internal static long CopyBounded(Stream source, Stream target, long limit)
+    internal static long CopyBounded(Stream source, Stream target, long limit, System.Threading.CancellationToken cancellation = default)
     {
         byte[] buffer = new byte[81920];
         long total = 0;
         int read;
         while ((read = source.Read(buffer)) != 0)
         {
+            cancellation.ThrowIfCancellationRequested();
             total = checked(total + read);
             if (total > limit) throw new InvalidDataException("Resource exceeds the size limit.");
             target.Write(buffer, 0, read);

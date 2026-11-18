@@ -111,7 +111,11 @@ garbro create "assets" -o "data.zip" --image-format webp --audio-format wav --di
 garbro create "assets" -o "data.xp3" --format XP3 --scheme none
 ```
 
-`create --help` で書き込み設定、文字コード、上書き方針、制限を確認できます。単一フォルダーではその内容を、複数入力では共通の親からの相対パスを使用します。既存の書き込み形式のみ対応します。変換後のメディアをゲームで読めるかはエンジン次第で、スクリプトの参照は変更しません。CLI では、格納する前に `garbro convert` でスクリプトを再コンパイルしてください。
+`create --help` で書き込み設定、文字コード、上書き方針、制限を確認できます。単一フォルダーではその内容を、複数入力では共通の親からの相対パスを使用します。既存の書き込み形式のみ対応します。変換後のメディアをゲームで読めるかはエンジン次第で、スクリプトの参照は変更しません。CLI で格納するときは `garbro create --script-format GSC` で TSC を再コンパイルし、`--script-format EXPORT` で編集用のスクリプトを書き出せます。書き出しは `garbro extract` でも使えます。
+
+CLI では `garbro schemes FILE` で読み込んだデータベースを次回以降も使用します。検証のみ行うには `garbro schemes FILE --check`、同梱データベースに戻すには `garbro schemes --reset`、コマンドごとに指定するには `--schemes FILE` を使います。
+
+`garbro extract scene.xfl --format XFL --nested --script-format EXPORT -o output` は外側のアーカイブを XFL 形式で開き、`output` に抽出します。画像変換時にオフセットを適用するには、抽出または `garbro convert` に `--adjust-offset` を指定します。単一アーカイブの項目は変換時も `-o` のディレクトリに直接出力されます。
 
 ## スクリプトの再コンパイル（1.1.2）
 

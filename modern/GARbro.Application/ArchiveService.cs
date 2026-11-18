@@ -178,7 +178,8 @@ namespace GARbro.Application
                 }
                 else
                 {
-                    var format = FormatCatalog.Instance.ArcFormats.SingleOrDefault(f => f.Tag.Equals(formatTag, StringComparison.OrdinalIgnoreCase)) ?? throw new ArgumentException("Unknown archive format: " + formatTag);
+                    var format = FormatCatalog.Instance.ArcFormats.SingleOrDefault(f => FormatIdentity.Of(f) == formatTag ||
+                        f.Tag.Equals(formatTag, StringComparison.OrdinalIgnoreCase)) ?? throw new ArgumentException("Unknown archive format: " + formatTag);
                     var view = new ArcView(path);
                     try
                     {
@@ -204,10 +205,10 @@ namespace GARbro.Application
             }
         }
 
-        public static object ProbeResource(string path,IOptionsProvider options=null)
+        public static object ProbeResource(string path,IOptionsProvider options=null,string imageFormat=null)
         {
             path = Path.GetFullPath(path);
-            if(GARbro.Media.MediaInfo.IsVideoName(path))
+            if(imageFormat==null && GARbro.Media.MediaInfo.IsVideoName(path))
             {
                 var video=MediaTools.Probe(path);
                 return new {Input=path,Type="video",Format=video.VideoCodec,video.Width,video.Height,video.Duration,video.FrameRate,video.HasAudio,video.AudioCodec};
@@ -217,7 +218,13 @@ namespace GARbro.Application
             {
                 using var scope = new DecoderScope(Path.GetDirectoryName(path), options);
                 using var input = BinaryStream.FromFile(path);
-                var image = ImageFormat.FindFormat(input);
+                var image = imageFormat == null ? ImageFormat.FindFormat(input) : null;
+                if (imageFormat != null)
+                {
+                    var forced = FindImageReader(imageFormat);
+                    var metadata = forced.ReadMetaData(input) ?? throw new UnknownFormatException();
+                    return new { Input = path, Type = "image", Format = forced.Tag, metadata.Width, metadata.Height, BitsPerPixel = metadata.BPP };
+                }
                 if (image != null)
                     return new
                     {
@@ -314,7 +321,7 @@ namespace GARbro.Application
                 }
                 else
                 {
-                    format = ImageFormat.FindByTag(formatTag) ?? throw new ArgumentException("Unknown image format: " + formatTag);
+                    format = FindImageReader(formatTag);
                     info = format.ReadMetaData(input) ?? throw new InvalidFormatException();
                 }
 
@@ -325,7 +332,11 @@ namespace GARbro.Application
             }
         }
 
-        public static void WriteImage(ImageData image, string output, string formatTag = "PNG", OverwritePolicy overwrite = OverwritePolicy.Fail, long maxBytes = 2L << 30)
+        static ImageFormat FindImageReader(string format) =>
+            FormatCatalog.Instance.ImageFormats.FirstOrDefault(f => FormatIdentity.Of(f) == format || f.Tag.Equals(format, StringComparison.OrdinalIgnoreCase))
+            ?? throw new ArgumentException("Unknown image format: " + format);
+
+        public static bool WriteImage(ImageData image, string output, string formatTag = "PNG", OverwritePolicy overwrite = OverwritePolicy.Fail, long maxBytes = 2L << 30)
         {
             EnsureFormats();
             lock (Gate)
@@ -334,7 +345,7 @@ namespace GARbro.Application
                 output = Path.GetFullPath(output);
                 Directory.CreateDirectory(Path.GetDirectoryName(output));
                 if (File.Exists(output) && overwrite == OverwritePolicy.Skip)
-                    return;
+                    return false;
                 var temporary = WorkerTemporaryFiles.Create(Path.GetDirectoryName(output));
                 try
                 {
@@ -342,6 +353,7 @@ namespace GARbro.Application
                     using (var bounded = new ResourceService.BoundedOutput(stream,maxBytes))
                         encoder.Write(bounded, image);
                     File.Move(temporary, output, overwrite == OverwritePolicy.Replace);
+                    return true;
                 }
                 finally
                 {
@@ -423,8 +435,12 @@ namespace GARbro.Application
                 var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var plan = entries.Select(e => (Entry: e, Target: ExtractionPath.Resolve(root, e.Name))).ToArray();
                 foreach (var item in plan)
+                {
+                    if (item.Target.Equals(Path, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+                        throw new IOException("Extraction cannot replace its input archive.");
                     if (!seen.Add(item.Target))
                         throw new InvalidDataException("Colliding archive paths: " + item.Entry.Name);
+                }
                 Directory.CreateDirectory(root);
                 var result = new List<ExtractedFile>();
                 long total = 0;

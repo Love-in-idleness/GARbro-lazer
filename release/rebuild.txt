@@ -1,1 +1,1 @@
-1.1.3: searchable game schemes, source-folder output defaults and script conversion when packing
+1.1.4: safe CLI extraction, script options, local scheme databases and resource previews
