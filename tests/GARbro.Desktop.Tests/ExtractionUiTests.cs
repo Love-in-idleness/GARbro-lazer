@@ -21,10 +21,13 @@ public sealed class ExtractionUiTests
         try
         {
             var format=new ResourceFormatInfo("XFL","XFL","archive","test",new[]{"xfl"},true,Array.Empty<FormatSettingInfo>(),"null");
-            var pending=Dialogs.Creation(owner,text,new[]{format},Path.GetTempPath(),2,true);
+            var wcg=new ResourceFormatInfo("wcg-writer","WCG","image","test",new[]{"wcg"},true,null,null);
+            var tlg=new ResourceFormatInfo("tlg-reader","TLG","image","test",new[]{"tlg"},false,null,null);
+            var pending=Dialogs.Creation(owner,text,new[]{format,wcg,tlg},Path.GetTempPath(),2,true);
             var host=Assert.Single(owner.DesktopHost.OwnedWindows);var controls=host.GetVisualDescendants().ToArray();
             var discard=controls.OfType<CheckBox>().Single(c=>c.Name=="PackingDiscardOriginalMedia");Assert.False(discard.IsEnabled);Assert.False(discard.IsChecked==true);
-            foreach(var pair in new[]{("ImageOutputFormat","WEBP"),("AudioOutputFormat","WAV"),("VideoOutputFormat","MP4")})
+            Assert.DoesNotContain(controls.OfType<ComboBox>().Single(c=>c.Name=="ImageOutputFormat").Items.OfType<UiChoice>(),c=>c.Value==tlg.Id);
+            foreach(var pair in new[]{("ImageOutputFormat",wcg.Id),("AudioOutputFormat","WAV"),("VideoOutputFormat","MP4"),("ScriptOutputFormat","GSC")})
             {
                 var picker=controls.OfType<ComboBox>().Single(c=>c.Name==pair.Item1);Assert.Equal("",((UiChoice)picker.SelectedItem).Value);
                 picker.SelectedItem=picker.Items.OfType<UiChoice>().Single(c=>c.Value==pair.Item2);
@@ -33,7 +36,8 @@ public sealed class ExtractionUiTests
             Assert.Contains(controls.OfType<TextBlock>(),c=>c.Text?.Contains(text.Format("PackingSelectedScope",2))==true);
             Dialogs.SetPath(controls.OfType<TextBox>().Single(c=>c.Name=="ArchiveOutputPath"),Path.Combine(Path.GetTempPath(),"packing-ui.xfl"));
             controls.OfType<Button>().Single(c=>c.Content as string==text["Create"]).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            var choice=await pending;Assert.Equal("WEBP",choice.PackingOptions.ImageFormat);Assert.Equal("WAV",choice.PackingOptions.AudioFormat);Assert.Equal("MP4",choice.PackingOptions.VideoFormat);Assert.True(choice.PackingOptions.DiscardOriginalMedia);
+            var choice=await pending;Assert.Equal(wcg.Id,choice.PackingOptions.ImageFormat);Assert.Equal("WAV",choice.PackingOptions.AudioFormat);Assert.Equal("MP4",choice.PackingOptions.VideoFormat);Assert.True(choice.PackingOptions.DiscardOriginalMedia);
+            Assert.True(choice.PackingOptions.ConvertScripts);Assert.Equal("GSC",choice.PackingOptions.ScriptFormat);
         }
         finally {owner.Close();}
     }

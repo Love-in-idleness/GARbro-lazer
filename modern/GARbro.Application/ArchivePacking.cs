@@ -33,7 +33,8 @@ public static partial class ResourceService
         packing ??= new(); limits ??= new(); cancellation.ThrowIfCancellationRequested();
         ArgumentException.ThrowIfNullOrWhiteSpace(source); ArgumentException.ThrowIfNullOrWhiteSpace(output);
         if (limits.MaxEntryBytes < 0 || limits.MaxTotalBytes < 0 || limits.MaxEntries < 1) throw new ArgumentException("Invalid extraction limits.");
-        if (packing.DiscardOriginalMedia && packing.ImageFormat == null && packing.AudioFormat == null && packing.VideoFormat == null)
+        bool convert = packing.ImageFormat != null || packing.AudioFormat != null || packing.VideoFormat != null || packing.ConvertScripts;
+        if (packing.DiscardOriginalMedia && !convert)
             throw new ArgumentException("Discarding originals requires a conversion format.");
         if (packing.ImageFormat != null) ResolveImageOutput(packing.ImageFormat);
         if (packing.AudioFormat != null && !MediaOutputFormats.Audio.Contains(MediaOutputFormats.Normalize(packing.AudioFormat))) throw new ArgumentException("Unsupported media output format.");
@@ -114,8 +115,8 @@ public static partial class ResourceService
                 }
                 entries.Add(new Entry { Name = name, Size = checked((uint)length), Type = FormatCatalog.Instance.GetTypeFromName(name) });
             }
-            var media = new ResourceExtractionOptions(ImageFormat: packing.ImageFormat, AudioFormat: packing.AudioFormat, VideoFormat: packing.VideoFormat);
-            bool convert = packing.ImageFormat != null || packing.AudioFormat != null || packing.VideoFormat != null;
+            var conversion = new ResourceExtractionOptions(ImageFormat: packing.ImageFormat, AudioFormat: packing.AudioFormat,
+                VideoFormat: packing.VideoFormat, ConvertScripts: packing.ConvertScripts, ScriptFormat: packing.ScriptFormat);
             for (int index = 0; index < files.Count; index++)
             {
                 string file = files[index];
@@ -131,7 +132,7 @@ public static partial class ResourceService
                     using var session = new ResourceSession(new(Path.GetDirectoryName(file)), decoderOptions);
                     string name = Path.GetFileName(file);
                     string targetRoot = Directory.CreateDirectory(Path.Combine(stage, "convert", index.ToString(System.Globalization.CultureInfo.InvariantCulture))).FullName;
-                    var target = MediaConversionTarget(session, name, Path.Combine(targetRoot, name), media);
+                    var target = MediaConversionTarget(session, name, Path.Combine(targetRoot, name), conversion);
                     if (target.Format != null)
                     {
                         ResourceConversion result;
@@ -140,7 +141,7 @@ public static partial class ResourceService
                         { throw new IOException("Packing conversion failed: " + relative + " — " + error.Message, error); }
                         if (!result.Passthrough)
                         {
-                            Add(result.Path, Path.ChangeExtension(relative, Path.GetExtension(result.Path)));
+                            Add(result.Path, Path.Combine(Path.GetDirectoryName(relative), Path.GetFileName(result.Path)));
                             convertedCount++; original = !packing.DiscardOriginalMedia;
                         }
                         File.Delete(result.Path);

@@ -137,12 +137,14 @@ public static class Dialogs
         window.Content=Frame(window,body,Button(text,"Close",()=>window.Close()));return window.ShowDialog(owner);
     }
     static ComboBox FormatPicker(ResourceFormatInfo[] formats) => new() { ItemsSource = formats, DisplayMemberBinding = new Binding("Tag"), SelectedIndex = 0 };
-    public static async Task<CreationChoice> Creation(AppWindow owner, DesktopText text, ResourceFormatInfo[] formats, string source = null, int inputCount = 0, bool selectedOnly = false)
+    public static async Task<CreationChoice> Creation(AppWindow owner, DesktopText text, ResourceFormatInfo[] catalog, string source = null, int inputCount = 0, bool selectedOnly = false)
     {
-        var window = Window(text, "Create", 780, 760); var body = Panel();
+        var window = Window(text, "Create", 940, 760); var body = Panel();
+        var archives = catalog.Where(f => f.Type == "archive" && f.CanWrite).ToArray();
+        var images = catalog.Where(f => f.Type == "image" && f.CanWrite).ToArray();
         if (source != null)
             body.Children.Add(new TextBlock { Text = text.Format(selectedOnly ? "PackingSelectedScope" : "PackingAllScope", inputCount) + "\n" + source, TextWrapping = Avalonia.Media.TextWrapping.Wrap, Classes = { "muted" } });
-        body.Children.Add(Label(text, "Format")); var format = FormatPicker(formats);format.Name="ArchiveOutputFormat";body.Children.Add(format);
+        body.Children.Add(Label(text, "Format")); var format = FormatPicker(archives);format.Name="ArchiveOutputFormat";body.Children.Add(format);
         body.Children.Add(Label(text, "Filename")); var output = PathBox("");output.Name="ArchiveOutputPath";
         var browse = new Button { Content = text["Browse"] }; browse.Click += async (_, _) =>
         { var f = (ResourceFormatInfo)format.SelectedItem; var selected = await UiPlatform.Storage.PickOutputAsync(false, "archive." + f.Extensions.FirstOrDefault()); if (selected != null) SetPath(output, selected.LocalPath); }; body.Children.Add(PathRow(output,browse));
@@ -156,13 +158,22 @@ public static class Dialogs
             host.Content=form is null?Label(text,"NoCreationOptions"):form;
         }
         format.SelectionChanged += (_, _) => Change(); Change();
-        var media = new MediaConversionPanel(text); body.Children.Add(media);
+        var media = new MediaConversionPanel(text, images, offerScripts: true); body.Children.Add(media);
         var discard = new CheckBox { Name = "PackingDiscardOriginalMedia", IsEnabled = false, Content = Label(text, "PackingDiscardOriginalMedia") };
         media.Changed += () => { discard.IsEnabled = media.HasConversion; if (!discard.IsEnabled) discard.IsChecked = false; };
         body.Children.Add(discard); body.Children.Add(new TextBlock { Text = text["PackingConversionHint"], TextWrapping = Avalonia.Media.TextWrapping.Wrap, Classes = { "muted" } });
         body.Children.Add(Label(text, "Overwrite")); var overwrite = Overwrite(text); body.Children.Add(overwrite); var error = new TextBlock(); body.Children.Add(error);
         window.Content = Frame(window, body, Button(text, "Create", () =>
-        { try { if (!Path.IsPathFullyQualified(PathValue(output) ?? "")) throw new ArgumentException(text["Filename"]); window.Close(new CreationChoice(PathValue(output), ((ResourceFormatInfo)format.SelectedItem).Id, form?.Value(), (OverwritePolicy)overwrite.SelectedIndex, new(media.ImageFormat, media.AudioFormat, media.VideoFormat, discard.IsChecked == true))); } catch (Exception e) { error.Text = text["Error"] + ": " + text.ErrorMessage(e.Message); } }), Button(text, "Cancel", () => window.Close()));
+        {
+            try
+            {
+                if (!Path.IsPathFullyQualified(PathValue(output) ?? "")) throw new ArgumentException(text["Filename"]);
+                var packing = new ArchivePackingOptions(media.ImageFormat, media.AudioFormat, media.VideoFormat,
+                    discard.IsChecked == true, media.ConvertScripts, media.ScriptFormat);
+                window.Close(new CreationChoice(PathValue(output), ((ResourceFormatInfo)format.SelectedItem).Id, form?.Value(), (OverwritePolicy)overwrite.SelectedIndex, packing));
+            }
+            catch (Exception e) { error.Text = text["Error"] + ": " + text.ErrorMessage(e.Message); }
+        }), Button(text, "Cancel", () => window.Close()));
         return await window.ShowDialog<CreationChoice>(owner);
     }
     public static async Task<ConversionChoice> Conversion(AppWindow owner,DesktopText text,ResourceFormatInfo[] formats,string initial,int selectedCount=0,bool offerScripts=false)

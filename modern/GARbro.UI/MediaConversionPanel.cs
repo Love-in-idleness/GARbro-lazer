@@ -45,7 +45,7 @@ public sealed class MediaConversionPanel : StackPanel
         video=Selector("VideoOutputFormat","VideoFormat",new[]{original,new UiChoice("MP4","MP4 (MPEG-4/AAC)"),new UiChoice("MKV",text["VideoMkv"])},batch?1:0);
         if(offerScripts)
             scriptOutput=Selector("ScriptOutputFormat","ScriptOutputFormat",new[]{new UiChoice("",text["NoScriptConversion"]),new UiChoice("EXPORT",text["ScriptExport"]),new UiChoice("RB",text["ScriptRubyExport"])}
-                .Concat(ScriptOutputFormats.Recompile.Select(format=>new UiChoice(format,text["ScriptRecompile"]+" · "+format))).ToArray(),1);
+                .Concat(ScriptOutputFormats.Recompile.Select(format=>new UiChoice(format,text["ScriptRecompile"]+" · "+format))).ToArray(),batch?1:0);
         SizeChanged+=(_,_)=>
         {
             int count=columns.Children.Count;

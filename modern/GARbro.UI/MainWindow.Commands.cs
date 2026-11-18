@@ -270,7 +270,7 @@ public sealed partial class MainWindow
         {
             catalog??=await Request<ResourceFormatInfo[]>(new("resource-catalog",null));
             if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return (CreationChoice)null;}
-            return await Dialogs.Creation(this,Text,catalog.Where(f=>f.Type=="archive"&&f.CanWrite).ToArray(),source.RootPath,inputs.Length,selectedOnly);
+            return await Dialogs.Creation(this,Text,catalog,source.RootPath,inputs.Length,selectedOnly);
         });
         if(choice==null)return;
         if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return;}

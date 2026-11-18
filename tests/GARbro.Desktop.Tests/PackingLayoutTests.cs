@@ -28,10 +28,10 @@ public sealed class PackingLayoutTests
                 foreach(string theme in new[]{"light","dark"})
                 {
                     MaterialTheme.Apply(new AppSettings {Theme=theme,DynamicColors=false});var text=new DesktopText(language);
-                    var pending=Dialogs.Creation(owner,text,catalog.Where(f=>f.Type=="archive"&&f.CanWrite).ToArray(),"/Games/中文 Русский 日本語/assets",3,true);
+                    var pending=Dialogs.Creation(owner,text,catalog,"/Games/中文 Русский 日本語/assets",3,true);
                     var host=Assert.Single(owner.DesktopHost.OwnedWindows);
                     var controls=host.GetVisualDescendants().ToArray();var archives=controls.OfType<ComboBox>().Single(c=>c.Name=="ArchiveOutputFormat");archives.SelectedItem=archives.Items.OfType<ResourceFormatInfo>().Single(f=>f.Tag=="XP3");
-                    foreach(var pair in new[]{("ImageOutputFormat","WEBP"),("AudioOutputFormat","WAV"),("VideoOutputFormat","MP4")})
+                    foreach(var pair in new[]{("ImageOutputFormat",catalog.Single(f=>f.Tag=="WCG"&&f.Type=="image").Id),("AudioOutputFormat","WAV"),("VideoOutputFormat","MP4"),("ScriptOutputFormat","GSC")})
                     {
                         var picker=controls.OfType<ComboBox>().Single(c=>c.Name==pair.Item1);picker.SelectedItem=picker.Items.OfType<UiChoice>().Single(c=>c.Value==pair.Item2);
                     }

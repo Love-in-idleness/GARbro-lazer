@@ -43,6 +43,34 @@ public sealed class ArchivePackingTests
     }
 
     [Fact]
+    public async Task PacksWritableGameImagesAndRecompiledScripts()
+    {
+        string root=Path.Combine(Path.GetTempPath(),"garbro-pack-script-"+Guid.NewGuid());
+        string input=Directory.CreateDirectory(Path.Combine(root,"input")).FullName;
+        try
+        {
+            string script=Path.Combine(AppContext.BaseDirectory,"NativeScripts","modern.tsc");
+            File.Copy(script,Path.Combine(input,"scene.tsc"));
+            File.Copy(Fixture("colors-rgba.png"),Path.Combine(input,"image.png"));
+            File.WriteAllText(Path.Combine(input,"notes.txt"),"keep me");
+            string output=Path.Combine(root,"out.xfl");
+            var result=await Request<ArchivePackingResult>(new("resource-pack",input,Output:output,
+                PackingOptions:new(ImageFormat:"WCG",DiscardOriginalMedia:true,ConvertScripts:true,ScriptFormat:"GSC")));
+            Assert.True(result.Written);Assert.Equal(2,result.Converted);Assert.Equal(3,result.Entries);
+            string extracted=Path.Combine(root,"extracted");
+            var report=await Request<ResourceJobReport>(new("resource-extract",null,Location:new(output),Output:extracted));
+            Assert.Empty(report.Errors);
+            Assert.Equal(new[]{"image.wcg","notes.txt","scene.gsc"},Directory.GetFiles(extracted).Select(Path.GetFileName).OrderBy(n=>n).ToArray());
+            Assert.Equal(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory,"NativeScripts","modern.gsc")),File.ReadAllBytes(Path.Combine(extracted,"scene.gsc")));
+            var preview=await Request<ResourcePreview>(new("resource-preview",null,Location:new(output),Entry:"image.wcg"));
+            Assert.Equal("image",preview.Kind);
+            Assert.Equal(File.ReadAllBytes(script),File.ReadAllBytes(Path.Combine(input,"scene.tsc")));
+            Assert.Equal(File.ReadAllBytes(Fixture("colors-rgba.png")),File.ReadAllBytes(Path.Combine(input,"image.png")));
+        }
+        finally {Directory.Delete(root,true);}
+    }
+
+    [Fact]
     public async Task AutoAudioPassthroughIsPackedOnceAndSkipIsReportedTruthfully()
     {
         string root=Path.Combine(Path.GetTempPath(),"garbro-pack-auto-"+Guid.NewGuid());Directory.CreateDirectory(root);

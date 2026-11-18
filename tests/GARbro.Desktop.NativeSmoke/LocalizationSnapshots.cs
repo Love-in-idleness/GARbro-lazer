@@ -55,7 +55,7 @@ internal static class LocalizationSnapshots
                     var convertHost=page.DesktopHost.OwnedWindows.Single();
                     var image=convertHost.GetVisualDescendants().OfType<ComboBox>().Single(c=>c.Name=="ImageOutputFormat");image.SelectedItem=image.Items.OfType<UiChoice>().Single(c=>c.Value==catalog.Single(f=>f.Tag=="WEBP").Id);
                     await Ready();Capture(convertHost,Path.Combine(directory,$"conversion-{language}-{theme}.png"));convertHost.Close();await conversion;
-                    var creation=Dialogs.Creation(page,new DesktopText(language),catalog.Where(f=>f.Type=="archive"&&f.CanWrite).ToArray());await Ready();
+                    var creation=Dialogs.Creation(page,new DesktopText(language),catalog);await Ready();
                     var createHost=page.DesktopHost.OwnedWindows.Single();
                     var archive=createHost.GetVisualDescendants().OfType<ComboBox>().Single(c=>c.Name=="ArchiveOutputFormat");archive.SelectedItem=archive.Items.OfType<ResourceFormatInfo>().Single(f=>f.Tag=="XFL");
                     await Ready();Capture(createHost,Path.Combine(directory,$"creation-{language}-{theme}.png"));createHost.Close();await creation;

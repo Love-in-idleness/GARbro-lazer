@@ -85,7 +85,8 @@ public sealed record ResourceExtractionOptions(bool Recursive = false, int MaxDe
     bool? RecurseDirectories = null, bool ConvertScripts = false, string ScriptFormat = null);
 public sealed record ResourceJobReport(ExtractedFile[] Files, string[] Errors, long Bytes, int Entries = 0);
 public sealed record ResourceConversion(string Path, long Bytes, bool Written = true, bool Passthrough = false);
-public sealed record ArchivePackingOptions(string ImageFormat = null, string AudioFormat = null, string VideoFormat = null, bool DiscardOriginalMedia = false);
+public sealed record ArchivePackingOptions(string ImageFormat = null, string AudioFormat = null, string VideoFormat = null,
+    bool DiscardOriginalMedia = false, bool ConvertScripts = false, string ScriptFormat = null);
 public sealed record ArchivePackingResult(string Output, string Format, bool Written, int Entries, int Converted, long Bytes);
 public sealed class InvalidSchemeDatabaseException(string message) : IOException(message);
 
