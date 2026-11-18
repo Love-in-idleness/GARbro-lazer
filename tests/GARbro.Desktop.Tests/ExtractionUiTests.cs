@@ -51,7 +51,6 @@ public sealed class ExtractionUiTests
             foreach(string name in new[]{"one.txt","two.txt","leave.txt"})File.WriteAllText(Path.Combine(input,name),name);
             window.GetVisualDescendants().OfType<Expander>().Single(c=>c.Header as string==text["Advanced"]).IsExpanded=true;
             await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);
-            window.GetVisualDescendants().OfType<TextBox>().Single(c=>c.Name=="Scheme").Text="reader-only-scheme";
             window.GetVisualDescendants().OfType<TextBox>().Single(c=>c.Name=="Options").Text="{\"Password\":\"reader-only\"}";
             await window.LoadArchiveAsync(input);var list=await VisibleFiles(window,3);
             foreach(var entry in list.Items.OfType<BrowserEntry>().Where(e=>e.Name!="leave.txt"))list.SelectedItems.Add(entry);
@@ -70,6 +69,40 @@ public sealed class ExtractionUiTests
             Assert.True(File.Exists(archive),string.Join(" | ",window.GetVisualDescendants().OfType<TextBlock>().Select(c=>c.Text)));
             var created=await WorkerArchiveSession.RequestAsync<BrowserListing>(Path.Combine(AppContext.BaseDirectory,"GARbro.Worker.dll"),new("resource-list",null,Location:new(archive)),new WorkerLimits(),null,default);
             Assert.Equal(new[]{"one.txt","two.txt"},created.Entries.Select(e=>e.Name).OrderBy(n=>n).ToArray());
+        }
+        finally {window.Close();Directory.Delete(root,true);}
+    }
+    [AvaloniaFact]
+    public async Task SearchAndSelectGameSchemeReloadsTheCurrentArchive()
+    {
+        string root=Directory.CreateTempSubdirectory("garbro-scheme-picker-").FullName;
+        var store=new SettingsStore(Path.Combine(root,"settings.json"));store.Save(new AppSettings{Language="en-US"});
+        var window=new MainWindow(store);window.Show();var text=new DesktopText("en-US");
+        try
+        {
+            string path=Path.Combine(root,"sample.xp3");
+            File.Copy(Path.Combine(AppContext.BaseDirectory,"Fixtures","standard.xp3"),path);
+            await window.LoadArchiveAsync(path);
+            var previous=window.CurrentLocation;
+            window.GetVisualDescendants().OfType<Expander>().Single(c=>c.Header as string==text["Advanced"]).IsExpanded=true;
+            await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);
+            var opener=window.GetVisualDescendants().OfType<Button>().Single(c=>c.Name=="Scheme");
+            Assert.Contains(text["Automatic"],opener.Content?.ToString());
+            opener.Command.Execute(null);
+            for(int i=0;i<200 && !window.DesktopHost.OwnedWindows.Any();i++)await Task.Delay(25,TestContext.Current.CancellationToken);
+            var dialog=Assert.Single(window.DesktopHost.OwnedWindows);
+            const string title="Fate/hollow ataraxia";
+            dialog.GetVisualDescendants().OfType<TextBox>().Single(c=>c.Name=="GameSchemeSearch").Text="hollow ataraxia";
+            await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);
+            var list=dialog.GetVisualDescendants().OfType<ListBox>().Single(c=>c.Name=="GameSchemeList");
+            Assert.DoesNotContain(list.Items.OfType<UiChoice>(),c=>c.Value=="");
+            list.SelectedItem=list.Items.OfType<UiChoice>().Single(c=>c.Value==title);
+            dialog.GetVisualDescendants().OfType<Button>().Single(c=>c.Content as string==text["Confirm"]).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            for(int i=0;i<200 && ReferenceEquals(previous,window.CurrentLocation);i++)await Task.Delay(25,TestContext.Current.CancellationToken);
+            Assert.NotSame(previous,window.CurrentLocation);
+            Assert.Equal(path,window.CurrentLocation.RootPath);
+            Assert.Contains(title,opener.Content?.ToString());
+            await VisibleFiles(window,3);
         }
         finally {window.Close();Directory.Delete(root,true);}
     }

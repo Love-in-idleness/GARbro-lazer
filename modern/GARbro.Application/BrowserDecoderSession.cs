@@ -86,5 +86,6 @@ public static class BrowserDecoderSession
         public IOptionsProvider Target;
         public void SetLocation(ResourceLocation location) => (Target as ILocatedOptionsProvider)?.SetLocation(location);
         public ResourceOptions GetOptions(IResource format,string notice)=>Target.GetOptions(format,notice);
+        public ResourceOptions GetExplicitOptions(IResource format) => Target.GetExplicitOptions(format);
     }
 }

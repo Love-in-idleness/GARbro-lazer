@@ -17,7 +17,9 @@ public sealed class ScopedOptionsProvider : ILocatedOptionsProvider
     readonly string formatId;
     string locationKey;
     readonly string initialLocationKey;
-    public void SetLocation(ResourceLocation location) => locationKey = JsonSerializer.Serialize(new[] { string.IsNullOrEmpty(location.RootPath) ? "" : Path.GetFullPath(location.RootPath) }.Concat(location.Chain));
+    static string LocationKey(ResourceLocation location) => JsonSerializer.Serialize(new[] { string.IsNullOrEmpty(location.RootPath) ? "" : Path.GetFullPath(location.RootPath) }.Concat(location.Chain));
+    public static string FormatKey(ResourceLocation location, string formatId) => LocationKey(location) + "::" + formatId;
+    public void SetLocation(ResourceLocation location) => locationKey = LocationKey(location);
     public ScopedOptionsProvider(WorkerRequest request)
     {
         context = request.Context ?? new(); formatId = request.OptionsFormatId;
@@ -26,18 +28,20 @@ public sealed class ScopedOptionsProvider : ILocatedOptionsProvider
         if (request.Entry != null && Directory.Exists(location.RootPath)) location = new ResourceLocation(Path.GetFullPath(Path.Combine(location.RootPath, request.Entry)));
         SetLocation(location); initialLocationKey = locationKey;
     }
-    public ResourceOptions GetOptions(IResource format, string notice)
+    public ResourceOptions GetOptions(IResource format, string notice) => Resolve(format, notice, false);
+    public ResourceOptions GetExplicitOptions(IResource format) => Resolve(format, null, true);
+    ResourceOptions Resolve(IResource format, string notice, bool explicitOnly)
     {
         string id = FormatIdentity.Of(format);
         string key = locationKey + "::" + id;
         try
         {
-            if (context.OptionsByFormat?.TryGetValue(key, out string local) == true)
-                return new JsonOptionsProvider(local).GetOptions(format, notice);
-            if (context.OptionsByFormat?.TryGetValue(id, out string json) == true)
-                return new JsonOptionsProvider(json).GetOptions(format, notice);
-            if (locationKey == initialLocationKey && (formatId == null || formatId == id)) return fallback.GetOptions(format, notice);
-            return new JsonOptionsProvider().GetOptions(format, notice);
+            JsonOptionsProvider provider;
+            if (context.OptionsByFormat?.TryGetValue(key, out string json) == true || context.OptionsByFormat?.TryGetValue(id, out json) == true)
+                provider = new JsonOptionsProvider(json);
+            else
+                provider = locationKey == initialLocationKey && (formatId == null || formatId == id) ? fallback : new JsonOptionsProvider();
+            return explicitOnly ? provider.GetExplicitOptions(format) : provider.GetOptions(format, notice);
         }
         catch (JsonException error)
         {

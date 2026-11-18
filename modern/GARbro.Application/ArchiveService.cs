@@ -40,20 +40,25 @@ namespace GARbro.Application
     public interface IOptionsProvider
     {
         ResourceOptions GetOptions(IResource format, string notice);
+        ResourceOptions GetExplicitOptions(IResource format) => null;
     }
 
     public sealed class JsonOptionsProvider : IOptionsProvider
     {
         readonly JObject options;
         readonly string scheme;
+        readonly bool explicitScheme;
         public JsonOptionsProvider(string json = null, string scheme = null)
         {
             options = json == null ? null : JObject.Parse(json);
             this.scheme = scheme ?? options?["$scheme"]?.Value<string>();
+            explicitScheme = scheme is not (null or "none") || options?["$scheme"] != null;
             options?.Remove("$scheme");
             if (options != null && options.Descendants().OfType<JProperty>().Any(p => p.Name is "$type" or "$ref" or "$id"))
                 throw new ArgumentException("Resource options cannot contain type or reference metadata.");
         }
+
+        public ResourceOptions GetExplicitOptions(IResource format) => explicitScheme ? GetOptions(format, "") : null;
 
         public ResourceOptions GetOptions(IResource format, string notice)
         {
@@ -352,8 +357,8 @@ namespace GARbro.Application
             {
                 try
                 {
-                    args.Options = provider.GetOptions((IResource)source, args.Notice);
-                    args.InputResult = true;
+                    args.Options = args.ExplicitOnly ? provider.GetExplicitOptions((IResource)source) : provider.GetOptions((IResource)source, args.Notice);
+                    args.InputResult = args.Options != null;
                 }
                 catch (MissingOptionsException e)
                 {

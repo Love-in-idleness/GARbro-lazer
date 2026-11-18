@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -63,6 +64,7 @@ public sealed partial class MainWindow
         Register("Parent", NavigateParent, () => !busy && listing != null);
         Register("Refresh", () => CurrentLocation == null ? Task.CompletedTask : LoadLocationAsync(CurrentLocation with { Fingerprint = null }, false, true));
         Register("Settings", () => ShowSettings());
+        Register("ChangeGameScheme", ChangeGameScheme, () => !busy && !loading && !choosingOperation && listing?.ProviderId != null && !listing.Physical && listing.Tag != "media");
         foreach (string section in new[] { "General", "Appearance", "Decoding", "Formats", "Shortcuts" })
             Register(section, () => ShowSettings(section));
         Register("ExtractAll", () => ExtractPicker(false), () => !busy && !loading && !choosingOperation && listing != null);
@@ -223,6 +225,55 @@ public sealed partial class MainWindow
         choosingOperation=true;UpdateCommands();
         try {return await choose();}
         finally {choosingOperation=false;UpdateCommands();}
+    }
+    static string SchemeName(string json) => json == null ? "" :
+        (JsonNode.Parse(json) as JsonObject)?["$scheme"] is JsonValue value && value.TryGetValue<string>(out var name) ? name : "";
+
+    void RefreshSchemeButton()
+    {
+        var source = listing;
+        string name = source?.ProviderId == null ? "" : SchemeName(sessionOptions.GetValueOrDefault(source.Location.RootPath)
+            ?.GetValueOrDefault(ScopedOptionsProvider.FormatKey(source.Location, source.ProviderId)));
+        string label = SchemePicker.Label(Text, name);
+        scheme.Content = label + "…";
+        ToolTip.SetTip(scheme, label);
+        Avalonia.Automation.AutomationProperties.SetName(scheme, Text["Scheme"] + " · " + label);
+    }
+
+    async Task ChangeGameScheme()
+    {
+        var source = listing;
+        var location = source.Location;
+        int ticket = navigationGeneration;
+        var tab = currentTab;
+        string key = ScopedOptionsProvider.FormatKey(location, source.ProviderId);
+        if (!sessionOptions.TryGetValue(location.RootPath, out var profile)) sessionOptions[location.RootPath] = profile = new();
+        string previous = profile.GetValueOrDefault(key);
+        string selected = SchemeName(previous);
+        var choice = await ChooseOperation(async () =>
+        {
+            catalog ??= await Request<ResourceFormatInfo[]>(new("resource-catalog", null));
+            if (ticket != navigationGeneration || isClosed) return null;
+            var available = catalog.FirstOrDefault(f => f.Id == source.ProviderId)?.Schemes;
+            if (available is { Length: > 0 }) return await Dialogs.SelectScheme(this, Text, available, selected);
+            status.Text = Text["NoGameSchemes"];
+            return null;
+        });
+        if (choice == null || choice.Value == selected || ticket != navigationGeneration || isClosed) return;
+        var parameters = JsonNode.Parse(previous ?? (string.IsNullOrWhiteSpace(options.Text) ? "{}" : options.Text)) as JsonObject ?? new();
+        if (choice.Value.Length == 0) parameters.Remove("$scheme");
+        else parameters["$scheme"] = choice.Value;
+        if (parameters.Count == 0) profile.Remove(key);
+        else profile[key] = parameters.ToJsonString();
+        try { await LoadLocationAsync(location with { Fingerprint = null }, false, true); }
+        catch
+        {
+            if (previous == null) profile.Remove(key);
+            else profile[key] = previous;
+            RefreshSchemeButton();
+            throw;
+        }
+        if (ReferenceEquals(tab, currentTab) && ticket + 1 == navigationGeneration && !isClosed) await PreviewSelection();
     }
     ExtractionSource CaptureExtraction(bool selectedOnly)
     {

@@ -53,6 +53,11 @@ public sealed class SchemeTests
             var preview=await WorkerArchiveSession.RequestAsync<ResourcePreview>(WorkerMarker.AssemblyPath,
                 new("resource-preview",null,Location:new(archive),Entry:name,Scheme:"none"),new WorkerLimits(),null,default);
             Assert.Equal("image",preview.Kind);Assert.StartsWith("1 × 1",preview.Text);Assert.NotEmpty(preview.Image);
+            var location=new ResourceLocation(archive);
+            string key=ScopedOptionsProvider.FormatKey(location,FormatIdentity.Of(new Xp3Opener()));
+            var context=new DecoderContext(OptionsByFormat:new() { [key]="{\"$scheme\":\"none\"}" });
+            await Assert.ThrowsAsync<WorkerOperationException>(()=>WorkerArchiveSession.RequestAsync<ResourcePreview>(WorkerMarker.AssemblyPath,
+                new("resource-preview",null,Location:location,Entry:name,Context:context),new WorkerLimits(),null,default));
         }
         finally {Directory.Delete(root,true);}
     }

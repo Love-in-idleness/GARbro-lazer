@@ -23,7 +23,7 @@ public sealed partial class MainWindow
         public event PropertyChangedEventHandler PropertyChanged;
         public string Header { get; private set; }
         public string Tooltip { get; private set; }
-        public string Focused, Input, Query="", Scheme="none", Options="", Encoding="auto", ContextKey;
+        public string Focused, Input, Query="", Options="", Encoding="auto", ContextKey;
         public bool InputComplete;
         public long PreviewOffset;
         public Vector Scroll;
@@ -95,7 +95,7 @@ public sealed partial class MainWindow
     }
     void SaveTabView()
     {
-        currentTab.Query=search.Text??"";currentTab.Scheme=scheme.Text;currentTab.Options=options.Text;
+        currentTab.Query=search.Text??"";currentTab.Options=options.Text;
         currentTab.Encoding=(previewEncoding.SelectedItem as UiChoice)?.Value??"auto";
         currentTab.PreviewOffset=preview?.Offset??0;
         currentTab.Selection=files.SelectedItems.Cast<BrowserEntry>().Select(e=>e.Name).ToArray();
@@ -118,7 +118,7 @@ public sealed partial class MainWindow
         {
             files.Selection.Clear();files.ItemsSource=Array.Empty<BrowserEntry>();files.IsEnabled=false;
             path.Text=listing?.Location.DisplayPath??"";
-            search.Text=tab.Query;scheme.Text=tab.Scheme;options.Text=tab.Options;
+            search.Text=tab.Query;options.Text=tab.Options;RefreshSchemeButton();
             changingEncoding=true;
             previewEncoding.SelectedItem=previewEncoding.Items.OfType<UiChoice>().FirstOrDefault(c=>c.Value==tab.Encoding);
             changingEncoding=false;

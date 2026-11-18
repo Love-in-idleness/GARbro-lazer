@@ -221,6 +221,8 @@ namespace GameRes
         /// Archive-specific options set by InputWidget.
         /// </summary>
         public ResourceOptions Options { get; set; }
+
+        public bool ExplicitOnly { get; set; }
     }
 
     public class InvalidFormatException : FileFormatException

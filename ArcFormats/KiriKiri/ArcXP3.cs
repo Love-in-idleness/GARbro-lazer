@@ -446,6 +446,12 @@ NextEntry:
 
         ICrypt QueryCryptAlgorithm (ArcView file)
         {
+#if NET8_0_OR_GREATER
+            var request = new ParametersRequestEventArgs { ExplicitOnly = true };
+            FormatCatalog.Instance.InvokeParametersRequest (this, request);
+            if (request.Options is Xp3Options { Scheme: ICrypt selected })
+                return selected;
+#endif
             var alg = GuessCryptAlgorithm (file);
             if (null != alg)
                 return alg;

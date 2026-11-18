@@ -33,7 +33,7 @@ public sealed partial class MainWindow : AppWindow
     readonly StackPanel toolbar = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
     readonly StackPanel footer = new() { Spacing = 6 };
     readonly TextBox search = new() { Name = "Search", Width = 220 };
-    readonly TextBox scheme = new() { Name = "Scheme", Text = "none", Width = 250 };
+    readonly Button scheme = new() { Name = "Scheme", MaxWidth = 500 };
     readonly TextBox options = new() { Name = "Options", AcceptsReturn = true, MinHeight = 55, PlaceholderText = "{\"Password\": \"…\"}" };
     readonly TextBox path = new() { Name = "Location", HorizontalAlignment = HorizontalAlignment.Stretch };
     readonly ListBox folders = new() { Name = "Folders" };
@@ -120,8 +120,11 @@ public sealed partial class MainWindow : AppWindow
         var locationRow = new Grid { ColumnDefinitions = new("*,220"), RowDefinitions = new("Auto,Auto"), ColumnSpacing = 8, RowSpacing = 8 };
         locationRow.Children.Add(path); Grid.SetColumn(search, 1); locationRow.Children.Add(search); operations.Children.Add(locationRow);
         var advancedContent = new StackPanel { Spacing = 6 };
-        var keyRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
-        keyRow.Children.Add(Label("Scheme")); keyRow.Children.Add(scheme); advancedContent.Children.Add(keyRow); advancedContent.Children.Add(options);
+        var schemeLabel = Label("Scheme"); schemeLabel.VerticalAlignment = VerticalAlignment.Center;
+        scheme.Command = commands["ChangeGameScheme"];
+        var keyRow = new Grid { ColumnDefinitions = new("Auto,*"), ColumnSpacing = 12 };
+        keyRow.Children.Add(schemeLabel); Grid.SetColumn(scheme, 1); keyRow.Children.Add(scheme);
+        advancedContent.Children.Add(keyRow); advancedContent.Children.Add(options);
         advanced.Bind(Expander.HeaderProperty, Bind("Advanced")); advanced.Content = advancedContent; operations.Children.Add(advanced);
         Grid.SetRow(operations, 2); layout.Children.Add(operations);
         var folderPanel = new DockPanel(); var foldersLabel = Label("Folders"); DockPanel.SetDock(foldersLabel, Dock.Top);
@@ -283,7 +286,7 @@ public sealed partial class MainWindow : AppWindow
         bool creationOperation=request.Operation is "resource-create" or "resource-pack";
         request = request with { Context = (request.Context ?? Settings.Context) with { OptionsByFormat = new(profile) },
             OptionsJson = catalogOperation ? null : creationOperation?request.OptionsJson:request.OptionsJson ?? (string.IsNullOrWhiteSpace(options.Text) ? null : options.Text),
-            Scheme = catalogOperation ? null : creationOperation?request.Scheme:request.Scheme ?? (string.IsNullOrWhiteSpace(scheme.Text) ? null : scheme.Text),
+            Scheme = catalogOperation ? null : creationOperation ? request.Scheme : request.Scheme ?? "none",
             OptionsFormatId = listing?.Location.RootPath == root ? listing.ProviderId : request.OptionsFormatId };
         while (true)
         {
@@ -300,6 +303,7 @@ public sealed partial class MainWindow : AppWindow
                 var value = await Dialogs.Parameters(this, Text, e.OptionsJson ?? "{}", e.Message, catalog.FirstOrDefault(f => f.Id == e.FormatId)?.Schemes);
                 if (value == null) throw new OperationCanceledException();
                 profile[e.ContextKey ?? e.FormatId] = value;
+                RefreshSchemeButton();
                 request = request with { Context = request.Context with { OptionsByFormat = new(profile) },
                     CompletedPaths = (request.CompletedPaths ?? Array.Empty<string>()).Concat(e.CompletedPaths ?? Array.Empty<string>()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray() };
             }
@@ -371,7 +375,7 @@ public sealed partial class MainWindow : AppWindow
         {
             var opened = await Request<BrowserListing>(new("resource-list", null, Location: location, Refresh: refresh), operation.Token);
             operation.Token.ThrowIfCancellationRequested(); if (isClosed || ticket != navigationGeneration) return;
-            listing = opened; path.Text = UiPlatform.Storage.DisplayPath(listing.Location.RootPath) + string.Concat(listing.Location.Chain.Select(p => " → " + p)); Title = "GARbro — " + Path.GetFileName(location.RootPath.TrimEnd(Path.DirectorySeparatorChar));
+            listing = opened; RefreshSchemeButton(); path.Text = UiPlatform.Storage.DisplayPath(listing.Location.RootPath) + string.Concat(listing.Location.Chain.Select(p => " → " + p)); Title = "GARbro — " + Path.GetFileName(location.RootPath.TrimEnd(Path.DirectorySeparatorChar));
             ClearPreview(); previewCache.Clear(); typeOverrides.Clear(); currentTab.ContextKey=WorkerProtocol.Serialize(Settings.Context); await RefreshFilesAsync(); BuildFolders(); UpdateTabHeaders();
             operation.Token.ThrowIfCancellationRequested(); if (ticket != navigationGeneration) return;
             if (recordHistory)
@@ -500,7 +504,7 @@ public sealed partial class MainWindow : AppWindow
             string forced=typeOverrides.GetValueOrDefault(entry.Name);
             string sourcePath=listing.Physical?Path.Combine(location.RootPath,entry.Name):location.RootPath;
             var fingerprint=await Task.Run(()=>ArchiveFingerprint.Read(sourcePath),cancel.Token);
-            string cacheKey=WorkerProtocol.Serialize(new {location,entry.Name,fingerprint,code,forced,offset,Settings.Context,Settings.FitImage,OptionsJson=options.Text,Scheme=scheme.Text,Profile=sessionOptions.GetValueOrDefault(location.RootPath)});
+            string cacheKey=WorkerProtocol.Serialize(new {location,entry.Name,fingerprint,code,forced,offset,Settings.Context,Settings.FitImage,OptionsJson=options.Text,Profile=sessionOptions.GetValueOrDefault(location.RootPath)});
             ResourcePreview result;
             if(!previewCache.TryGet(cacheKey,out result))
             {
@@ -543,6 +547,7 @@ public sealed partial class MainWindow : AppWindow
     {
         bool languageChanged = Text.Language != Settings.EffectiveLanguage;
         Text.Change(Settings.EffectiveLanguage);
+        RefreshSchemeButton();
         if (languageChanged || !previewEncoding.Items.OfType<UiChoice>().Any())
         {
             string code = (previewEncoding.SelectedItem as UiChoice)?.Value ?? "auto";

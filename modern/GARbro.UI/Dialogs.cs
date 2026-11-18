@@ -66,6 +66,18 @@ public static class Dialogs
         window.Content = Frame(window, body, Button(text, "Save", () => { try { window.Close(form.Value()); } catch (Exception e) { error.Text = text["Error"] + ": " + text.ErrorMessage(e.Message); } }), Button(text, "Cancel", () => window.Close()));
         return await window.ShowDialog<string>(owner);
     }
+    internal static Task<UiChoice> SelectScheme(AppWindow owner, DesktopText text, string[] schemes, string selected)
+    {
+        var window = Window(text, "Scheme", 570, 420);
+        var body = Panel();
+        var picker = new SchemePicker(text, schemes, selected);
+        body.Children.Add(picker);
+        var apply = Button(text, "Confirm", () => window.Close(picker.Choice));
+        apply.IsEnabled = picker.Choice != null;
+        picker.List.SelectionChanged += (_, _) => apply.IsEnabled = picker.Choice != null;
+        window.Content = Frame(window, body, apply, Button(text, "Cancel", () => window.Close()));
+        return window.ShowDialog<UiChoice>(owner);
+    }
     static StackPanel Output(AppWindow owner, DesktopText text, string initial, out TextBox path)
     {
         var row = new StackPanel { Spacing = 6 }; row.Children.Add(Label(text, "Output"));
@@ -212,14 +224,21 @@ public sealed class ParameterForm : StackPanel
     {
         Spacing = 8;
         data = JsonNode.Parse(string.IsNullOrWhiteSpace(json) || json == "null" ? "{}" : json) as JsonObject ?? new();
-        Children.Add(Dialogs.Label(text, "Options"));
         if (schemes is { Length: > 0 })
         {
+            string initial = (data["$scheme"] ?? data["Scheme"]) is JsonValue value && value.TryGetValue<string>(out var found) ? found : null;
+            data.Remove("$scheme"); data.Remove("Scheme");
             Children.Add(Dialogs.Label(text, "Scheme"));
-            var selected = new ComboBox { ItemsSource = new[] { "" }.Concat(schemes).ToArray(), SelectedIndex = 0 };
-            Children.Add(selected);
-            apply.Add(() => { if (selected.SelectedItem is string name && name.Length > 0) data["$scheme"] = name; });
+            var picker = new SchemePicker(text, schemes, initial);
+            Children.Add(picker);
+            apply.Add(() =>
+            {
+                if (picker.Choice == null) throw new ArgumentException(text["SelectGameScheme"]);
+                if (picker.Choice.Value.Length == 0) data.Remove("$scheme");
+                else data["$scheme"] = picker.Choice.Value;
+            });
         }
+        if (data.Count > 0 || schemes is not { Length: > 0 }) Children.Add(Dialogs.Label(text, "Options"));
         foreach (var property in data.ToArray())
         {
             string name = property.Key; var value = property.Value;
@@ -239,7 +258,7 @@ public sealed class ParameterForm : StackPanel
                 apply.Add(() => data[name] = isString ? JsonValue.Create(box.Text ?? "") : JsonNode.Parse(box.Text ?? "null"));
             }
         }
-        if (data.Count == 0)
+        if (data.Count == 0 && schemes is not { Length: > 0 })
         {
             var box = new TextBox { Text = "{}", AcceptsReturn = true, MinHeight = 100 }; Children.Add(box);
             apply.Add(() => { var parsed = JsonNode.Parse(box.Text) as JsonObject ?? throw new ArgumentException("Expected a JSON object."); data.Clear(); foreach (var p in parsed) data[p.Key] = p.Value?.DeepClone(); });
