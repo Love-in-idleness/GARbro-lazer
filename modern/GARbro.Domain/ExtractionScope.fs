@@ -32,14 +32,18 @@ type MediaOutputFormats private () =
             | "JPG" -> "JPEG"
             | "TIF" -> "TIFF"
             | "AAC" -> "M4A"
+            | "AIF" -> "AIFF"
             | value -> value
-    static member Audio = [| "AUTO"; "WAV"; "FLAC"; "M4A" |]
+    static member Audio = [| "AUTO"; "WAV"; "FLAC"; "M4A"; "OGG"; "OPUS"; "AIFF" |]
     static member Video = [| "MP4"; "MKV" |]
     static member Extension(format: string) =
         match format with
         | "AUTO" | "AUDIO" | "WAV" -> "wav"
         | "FLAC" -> "flac"
         | "M4A" -> "m4a"
+        | "OGG" -> "ogg"
+        | "OPUS" -> "opus"
+        | "AIFF" -> "aiff"
         | "MP4" -> "mp4"
         | "MKV" -> "mkv"
         | _ -> raise (ArgumentException("Unsupported media output format."))

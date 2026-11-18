@@ -82,6 +82,56 @@ public sealed class ExtractionWorkflowTests
     }
 
     [Fact]
+    public async Task RecursiveExtractionExportsSelectedScriptsAndKeepsFailedOriginals()
+    {
+        string root=Directory.CreateTempSubdirectory("garbro-extract-scripts-").FullName;
+        try
+        {
+            byte[] valid=File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory,"NativeScripts","modern.gsc"));
+            byte[] invalid=new byte[]{0,1,2};
+            File.WriteAllBytes(Path.Combine(root,"scene.gsc"),valid);
+            File.WriteAllBytes(Path.Combine(root,"broken.asb"),invalid);
+            File.Copy(Fixture("colors-rgb.png"),Path.Combine(root,"image.png"));
+            ResourceService.PackArchive(root,new[]{"scene.gsc","broken.asb","image.png"},Path.Combine(root,"scr.xfl"),"XFL");
+            File.WriteAllBytes(Path.Combine(root,"sibling.gsc"),valid);
+            string archive=Path.Combine(root,"root.xfl");
+            ResourceService.PackArchive(root,new[]{"scr.xfl","sibling.gsc"},archive,"XFL");
+            string output=Path.Combine(root,"out");
+            var report=await Request<ResourceJobReport>(new("resource-extract",null,Location:new(archive),Output:output,
+                Selection:new[]{"scr.xfl"},ResourceOptions:new(Recursive:true,Types:new[]{"script"},DiscardOriginalMedia:true,ConvertScripts:true)));
+            Assert.Contains("broken.asb",Assert.Single(report.Errors));
+            string child=Path.Combine(output,"scr.xfl.unpacked");
+            Assert.Contains("日本語",File.ReadAllText(Path.Combine(child,"scene.tsc")));
+            Assert.Equal(invalid,File.ReadAllBytes(Path.Combine(child,"broken.asb")));
+            Assert.False(File.Exists(Path.Combine(child,"scene.gsc")));
+            Assert.False(File.Exists(Path.Combine(child,"image.png")));
+            Assert.False(File.Exists(Path.Combine(output,"sibling.tsc")));
+            Assert.Equal(valid,File.ReadAllBytes(Path.Combine(root,"scene.gsc")));
+        }
+        finally {Directory.Delete(root,true);}
+    }
+
+    [Fact]
+    public async Task ScriptExtractionKeepsBothVersionsWhenTheExtensionDoesNotChange()
+    {
+        string root=Directory.CreateTempSubdirectory("garbro-extract-utf8-").FullName;
+        try
+        {
+            byte[] input=new byte[]{0xff,0xfe,0x61,0,0x62,0};
+            File.WriteAllBytes(Path.Combine(root,"scene.ks"),input);
+            string archive=Path.Combine(root,"scr.xfl");
+            ResourceService.PackArchive(root,new[]{"scene.ks"},archive,"XFL");
+            string output=Path.Combine(root,"out");
+            var result=await Request<ResourceJobReport>(new("resource-extract",null,Location:new(archive),Output:output,
+                ResourceOptions:new(ConvertScripts:true)));
+            Assert.Empty(result.Errors);
+            Assert.Equal(input,File.ReadAllBytes(Path.Combine(output,"scene.ks")));
+            Assert.Equal(new byte[]{0x61,0x62},File.ReadAllBytes(Path.Combine(output,"scene.utf8.ks")));
+        }
+        finally {Directory.Delete(root,true);}
+    }
+
+    [Fact]
     public async Task UnrecognizedSelectedArchiveIsReportedInsteadOfCompletingWithZeroFiles()
     {
         string root=Path.Combine(Path.GetTempPath(),"garbro-bad-selection-"+Guid.NewGuid());Directory.CreateDirectory(root);
@@ -97,6 +147,9 @@ public sealed class ExtractionWorkflowTests
     [InlineData("WAV","wav")]
     [InlineData("FLAC","flac")]
     [InlineData("M4A","m4a")]
+    [InlineData("OGG","ogg")]
+    [InlineData("OPUS","opus")]
+    [InlineData("AIFF","aiff")]
     public async Task SelectedAudioFormatsAreRealDecodableOutputs(string format,string extension)
     {
         string root=Path.Combine(Path.GetTempPath(),"garbro-audio-format-"+Guid.NewGuid());Directory.CreateDirectory(root);

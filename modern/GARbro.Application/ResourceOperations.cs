@@ -110,21 +110,33 @@ public static partial class ResourceService
                 string OutName(Entry entry)=>ExtractionScope.RelativeName(task.Location.Directory,entry.Name);
                 string RawTarget(Entry entry)=>ExtractionPath.Resolve(task.Output,OutName(entry));
                 string SourceKey(Entry entry)=>task.Location.RootPath+"\0"+string.Join("\0",task.Location.Chain)+"\0"+entry.Name;
+                var scripts = new Dictionary<Entry, string>();
+                string sourcePath = Path.GetFullPath(task.Location.RootPath);
+                bool IsSourcePath(string path) => path.Equals(sourcePath, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
                 foreach(var entry in entries)
                 {
-                    if(Forced(entry)){entry.Type=options.TypeOverrides[OverrideKey(entry)];if(entry.Type=="binary")entry.Type="";continue;}
-                    entry.Type=MediaKind(session,entry.Name);
+                    string forced = Forced(entry) ? options.TypeOverrides[OverrideKey(entry)] : null;
+                    string script = forced is null or "script" ? ScriptConversionFormat(session, entry.Name, options) : null;
+                    if (script != null) scripts.Add(entry, script);
+                    entry.Type = script != null || forced == null && options.ConvertScripts && ScriptOutputFormats.ForInput(entry.Name) != null
+                        ? "script" : MediaKind(session, entry.Name, forced);
                 }
                 if(session.Synthetic && (task.FromDirectory || options.Recursive) && entries.Any(e=>!Forced(e) && e.Type is not ("audio" or "video" or "image" or "script") && FormatCatalog.Instance.GetTypeFromName(e.Name)=="archive" && Path.GetExtension(e.Name).ToLowerInvariant() is not (".dat" or ".bin")))
                     throw new InvalidDataException("The archive could not be recognized.");
-                string Conversion(Entry entry)=>entry.Type switch
+                (string Format, string Path) Conversion(Entry entry, string raw)
                 {
-                    "image"=>imageFormat,
-                    "audio"=>audioFormat,
-                    "video"=>videoFormat,
-                    _=>null
-                };
-                string Extension(Entry entry,string format)=>entry.Type=="image"?ResolveImageOutput(format).Extensions.FirstOrDefault()??"png":MediaOutputFormats.Extension(format);
+                    if (scripts.TryGetValue(entry, out string script))
+                    {
+                        string path = ScriptConversionPath(raw, script);
+                        if (path.Equals(raw, StringComparison.OrdinalIgnoreCase) && (!options.DiscardOriginalMedia || IsSourcePath(raw)))
+                            path = Path.ChangeExtension(raw, ".utf8" + Path.GetExtension(raw));
+                        return (script, path);
+                    }
+                    string format = entry.Type switch { "image" => imageFormat, "audio" => audioFormat, "video" => videoFormat, _ => null };
+                    if (format == null) return (null, null);
+                    string extension = entry.Type == "image" ? ResolveImageOutput(format).Extensions.FirstOrDefault() ?? "png" : MediaOutputFormats.Extension(format);
+                    return (format, Path.ChangeExtension(raw, extension));
+                }
                 var targets=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach(var entry in entries)
                 {
@@ -135,17 +147,18 @@ public static partial class ResourceService
                 var originalTargets=new HashSet<string>(targets,StringComparer.OrdinalIgnoreCase);
                 foreach(var entry in entries)
                 {
-                    string format=Conversion(entry);if(format==null || format=="AUTO")continue;
-                    string raw=RawTarget(entry),converted=Path.ChangeExtension(raw,Extension(entry,format));
+                    string raw=RawTarget(entry);
+                    var (format, converted) = Conversion(entry, raw);
+                    if(format is null or "AUTO" or "RGSS" || options.Types is {Length:>0} && !options.Types.Contains(entry.Type))continue;
                     if(!converted.Equals(raw,StringComparison.OrdinalIgnoreCase) && !targets.Add(converted))throw new IOException("Conversion output collides with another resource: "+converted);
                     Claim(converted,SourceKey(entry));
                 }
                 var children=new List<ExtractionNode>();
                 foreach(var entry in entries)
                 {
-                    bool archiveCandidate=!session.Synthetic && entry.Type!="video" && entry.Type!="audio" &&
+                    bool archiveCandidate=!session.Synthetic && entry.Type is not ("video" or "audio" or "script") &&
                         (entry.Type=="archive" || !Forced(entry) && FormatCatalog.Instance.GetTypeFromName(entry.Name)=="archive");
-                    if(options.Recursive && !session.Synthetic && !Forced(entry) && !archiveCandidate && entry.Type is not ("audio" or "video") && entry.Size>=4)
+                    if(options.Recursive && !session.Synthetic && !Forced(entry) && !archiveCandidate && entry.Type is not ("audio" or "video" or "script") && entry.Size>=4)
                     {
                         using var signature=session.Archive.OpenBinaryEntry(entry);
                         archiveCandidate=signature.Signature!=0 && FormatCatalog.Instance.ArcFormats.Any(f=>f.Signatures.Contains(signature.Signature));
@@ -154,7 +167,7 @@ public static partial class ResourceService
                     if(options.Types is {Length:>0} && !options.Types.Contains(category) && !(options.Recursive && archiveCandidate))continue;
                     if(++count>limits.MaxEntries)throw new InvalidDataException("Recursive extraction has too many entries.");
                     string target=RawTarget(entry);
-                    bool samePath=Path.GetFullPath(target).Equals(Path.GetFullPath(task.Location.RootPath),OperatingSystem.IsWindows()?StringComparison.OrdinalIgnoreCase:StringComparison.Ordinal);
+                    bool samePath=IsSourcePath(target);
                     if(samePath && !session.Synthetic)
                         throw new IOException("Extraction cannot replace its input archive.");
                     ExtractionPath.RejectLinks(output,target);
@@ -182,19 +195,19 @@ public static partial class ResourceService
                         }
                         finally {File.Delete(temporary);}
                     }
-                    string format=Conversion(entry);
+                    var (format, converted) = Conversion(entry, target);
                     if(format!=null)
                     {
                         ResourceConversion result=null;string source=SourceKey(entry);
                         try
                         {
-                            string converted=Path.ChangeExtension(target,Extension(entry,format));
                             var prohibited=new HashSet<string>(originalTargets.Where(p=>!p.Equals(target,StringComparison.OrdinalIgnoreCase)),StringComparer.OrdinalIgnoreCase);
                             prohibited.UnionWith(claimed.Where(p=>p.Value!=source).Select(p=>p.Key));
                             result=ConvertFile(session,entry.Name,converted,format,overwrite,Math.Min(limits.MaxEntryBytes,limits.MaxTotalBytes-total),completed,options.AdjustImageOffset,prohibited);
                         }
                         catch(MissingOptionsException){throw;}
-                        catch(Exception error)when(error is IOException or InvalidDataException or UnknownFormatException or NotSupportedException)
+                        catch(Exception error)when(error is IOException or InvalidDataException or UnknownFormatException or NotSupportedException ||
+                            scripts.ContainsKey(entry) && error is (ArgumentException or FormatException or JsonException or System.Text.Json.JsonException))
                         {errors.Add(entry.Name+": "+error.Message);Original();}
                         if(result!=null)
                         {
@@ -257,31 +270,36 @@ public static partial class ResourceService
         if(signature!=0 && FormatCatalog.Instance.AudioFormats.Any(f=>f.Signatures.Contains(signature)))return "audio";
         return declared??"";
     }
+    static string ScriptConversionFormat(ResourceSession session, string name, ResourceExtractionOptions options)
+    {
+        if (!options.ConvertScripts) return null;
+        if (options.ScriptFormat == "RB") return ScriptOutputFormats.CanExport(name, "RB") ? "RB" : null;
+        if (options.ScriptFormat != null)
+        {
+            if (!ScriptOutputFormats.Recompile.Contains(options.ScriptFormat)) throw new ArgumentException("Unsupported script output format.");
+            return ScriptOutputFormats.CanRecompile(name, options.ScriptFormat) ? options.ScriptFormat : null;
+        }
+        string script = ScriptOutputFormats.ForInput(name);
+        if (script == null && ScriptOutputFormats.NeedsSignature(name))
+        {
+            using var input = session.OpenEntry(name);
+            if (ScriptTools.IsBgi(input)) script = "BSD";
+        }
+        return script;
+    }
+
+    static string ScriptConversionPath(string output, string format) => ScriptOutputFormats.Recompile.Contains(format)
+        ? ScriptOutputFormats.RecompileOutput(output, format) : ScriptOutputFormats.ExportOutput(output, format);
+
     public static (string Format,string Output) MediaConversionTarget(ResourceSession session,string name,string output,ResourceExtractionOptions options)
     {
         string forcedType=options.TypeOverrides?.GetValueOrDefault(name);
         if (forcedType is null or "script")
         {
-            if (options.ConvertScripts && options.ScriptFormat != null)
-            {
-                if (options.ScriptFormat == "RB")
-                    return ScriptOutputFormats.CanExport(name,"RB") ? ("RB",ScriptOutputFormats.ExportOutput(output,"RB")) : (null,null);
-                if (!ScriptOutputFormats.Recompile.Contains(options.ScriptFormat)) throw new ArgumentException("Unsupported script output format.");
-                if (ScriptOutputFormats.CanRecompile(name, options.ScriptFormat))
-                    return (options.ScriptFormat, ScriptOutputFormats.RecompileOutput(output, options.ScriptFormat));
-                if (ScriptOutputFormats.ForInput(name) != null || ScriptOutputFormats.HasRecompileInput(name)) return (null, null);
-            }
-            else
-            {
-                string script = ScriptOutputFormats.ForInput(name);
-                if (script == null && options.ConvertScripts && ScriptOutputFormats.NeedsSignature(name))
-                {
-                    using var input = session.OpenEntry(name);
-                    if (ScriptTools.IsBgi(input)) script = "BSD";
-                }
-                if (script != null)
-                    return options.ConvertScripts ? (script,ScriptOutputFormats.ExportOutput(output,script)) : (null,null);
-            }
+            string script = ScriptConversionFormat(session, name, options);
+            if (script != null) return (script, ScriptConversionPath(output, script));
+            if (ScriptOutputFormats.ForInput(name) != null || options.ConvertScripts && options.ScriptFormat != null && ScriptOutputFormats.HasRecompileInput(name))
+                return (null, null);
         }
         string kind=MediaKind(session,name,forcedType);
         string format=kind switch {"image"=>options.ImageFormat,"audio"=>options.AudioFormat,"video"=>options.VideoFormat,_=>null};
@@ -295,7 +313,7 @@ public static partial class ResourceService
     {
         formatId=MediaOutputFormats.Normalize(formatId);
         if (formatId == "AUTO") formatId = "AUDIO";
-        if (formatId is "FLAC" or "M4A" or "MP4" or "MKV")
+        if (formatId is not ("WAV" or "AUDIO") && (MediaOutputFormats.Audio.Contains(formatId) || MediaOutputFormats.Video.Contains(formatId)))
             return ConvertStandardMedia(session,name,output,formatId,overwrite,maxBytes,completed,prohibited);
         bool script = ScriptOutputFormats.Supports(formatId);
         bool recompile = ScriptOutputFormats.Recompile.Contains(formatId);
@@ -386,7 +404,7 @@ public static partial class ResourceService
         try
         {
             string input;
-            if(format is "FLAC" or "M4A")
+            if(format!="WAV" && MediaOutputFormats.Audio.Contains(format))
             {
                 input=Path.Combine(scratch,"audio.wav");
                 ConvertFile(session,name,input,"WAV",OverwritePolicy.Fail,maxBytes);

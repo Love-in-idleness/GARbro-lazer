@@ -91,7 +91,7 @@ In Settings → Keyboard shortcuts, search for a command, record and add combina
 
 Select the items first, then choose **Extract selected** (F4). **Extract all** processes the current directory, including items hidden by search. Enable recursive unpacking in the extraction dialog to enter subfolders and nested archives. For a selection, recursion stays inside those items and never adds their siblings.
 
-Images, audio and video have separate output choices. Audio supports automatic common format, WAV, FLAC and M4A; video supports MP4 or MKV with the original streams. Keep original format copies without conversion. Ordinary files go directly into the output folder; archives expand into their `.unpacked` folders.
+Images, audio, video and scripts have separate output choices. To export a .gsc as editable .tsc text while extracting, select **Export editable text** under **Script output format**. Audio supports automatic common format, WAV, FLAC, M4A, Ogg Vorbis, Opus and AIFF on desktop; video supports MP4 or MKV with the original streams. Keep original format copies without conversion. Ordinary files go directly into the output folder; archives expand into their `.unpacked` folders.
 
 Discard options affect output copies only. Game source files are preserved. Failures list the affected items and retain recoverable copies. A “no matching files” result does not mean files were extracted. Batch media conversion uses the same format choices.
 

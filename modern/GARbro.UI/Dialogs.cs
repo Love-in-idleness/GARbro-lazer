@@ -105,7 +105,7 @@ public static class Dialogs
     static ComboBox Overwrite(DesktopText text) => new() { ItemsSource = new[] { text["Fail"], text["Skip"], text["Replace"] }, SelectedIndex = 0 };
     public static async Task<ExtractionChoice> Extraction(AppWindow owner,DesktopText text,string initial,bool selectedOnly,int selectedCount)
     {
-        var window=Window(text,selectedOnly?"ExtractSelected":"ExtractAll",780,730);var body=Panel();
+        var window=Window(text,selectedOnly?"ExtractSelected":"ExtractAll",940,730);var body=Panel();
         body.Children.Add(new TextBlock {Text=selectedOnly?text.Format("ExtractionSelectionScope",selectedCount):text["ExtractionAllScope"],TextWrapping=Avalonia.Media.TextWrapping.Wrap,Classes={"muted"}});
         body.Children.Add(Output(owner,text,initial,out var path));
         var policy=new Grid {ColumnDefinitions=new("Auto,*"),ColumnSpacing=12};var policyLabel=Label(text,"Overwrite");policyLabel.VerticalAlignment=VerticalAlignment.Center;policy.Children.Add(policyLabel);
@@ -120,8 +120,8 @@ public static class Dialogs
         var types=new[]{("Images","image"),("Audio","audio"),("Video","video"),("Scripts","script"),("Archives","archive"),("Other","")};
         var checks=new List<CheckBox>();var row=new WrapPanel();
         foreach(var type in types){var check=new CheckBox {Content=text[type.Item1],IsChecked=true,Margin=new Avalonia.Thickness(0,0,14,0)};checks.Add(check);row.Children.Add(check);}advanced.Children.Add(row);
-        body.Children.Add(Label(text,"MediaConversion"));var conversion=new MediaConversionPanel(text);body.Children.Add(conversion);
-        var discardMedia=new CheckBox {Name="DiscardOriginalMedia",Content=new TextBlock {Text=text["DiscardOriginalMedia"],TextWrapping=Avalonia.Media.TextWrapping.Wrap},IsChecked=false,IsEnabled=false};
+        body.Children.Add(Label(text,"MediaConversion"));var conversion=new MediaConversionPanel(text,offerScripts:true);body.Children.Add(conversion);
+        var discardMedia=new CheckBox {Name="DiscardOriginalMedia",Content=Label(text,"DiscardConvertedOriginals"),IsChecked=false,IsEnabled=false};
         conversion.Changed+=()=>discardMedia.IsEnabled=conversion.HasConversion;body.Children.Add(discardMedia);
         body.Children.Add(new TextBlock {Text=text["SourceMediaPreserved"],TextWrapping=Avalonia.Media.TextWrapping.Wrap,Classes={"muted"}});
         var offset=new CheckBox {Content=text["AdjustOffset"],IsChecked=false};advanced.Children.Add(offset);
@@ -135,7 +135,8 @@ public static class Dialogs
                 if(selected.Length==0)throw new ArgumentException(text["SelectResourceTypes"]);
                 window.Close(new ExtractionChoice(Path.GetFullPath(PathValue(path)),new(Recursive:recurse.IsChecked==true,MaxDepth:(int)(depth.Value??8),Types:selected,
                     ImageFormat:conversion.ImageFormat,AdjustImageOffset:offset.IsChecked==true,AudioFormat:conversion.AudioFormat,VideoFormat:conversion.VideoFormat,
-                    DiscardChildArchives:recurse.IsChecked==true && discardArchives.IsChecked==true,DiscardOriginalMedia:conversion.HasConversion && discardMedia.IsChecked==true),(OverwritePolicy)overwrite.SelectedIndex));
+                    DiscardChildArchives:recurse.IsChecked==true && discardArchives.IsChecked==true,DiscardOriginalMedia:conversion.HasConversion && discardMedia.IsChecked==true,
+                    ConvertScripts:conversion.ConvertScripts,ScriptFormat:conversion.ScriptFormat),(OverwritePolicy)overwrite.SelectedIndex));
             }
             catch(Exception e){error.Text=text["Error"]+": "+text.ErrorMessage(e.Message);}
         }),Button(text,"Cancel",()=>window.Close()));

@@ -186,7 +186,7 @@ internal static class Program
                     throw new ArgumentException("--entry is only supported for script conversion.");
                 if(input.Equals(output,OperatingSystem.IsWindows()?StringComparison.OrdinalIgnoreCase:StringComparison.Ordinal))
                     throw new IOException("Cannot replace a source document. Choose another destination.");
-                if (script || target is "WAV" or "FLAC" or "M4A" or "MP4" or "MKV" or "AUTO" or "AUDIO")
+                if (script || target == "AUDIO" || MediaOutputFormats.Audio.Contains(target) || MediaOutputFormats.Video.Contains(target))
                 {
                     if(Get("--format")!=null)throw new ArgumentException("Forced input formats are only supported for image conversion.");
                     using var resource=new ResourceSession(new(entry==null?Path.GetDirectoryName(input):input),provider);

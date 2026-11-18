@@ -82,11 +82,14 @@ public static class MediaTools
             "WAV" => new[]{"-map","0:a:0","-vn","-c:a","pcm_s32le","-f","wav"},
             "FLAC" => new[]{"-map","0:a:0","-vn","-c:a","flac","-f","flac"},
             "M4A" => new[]{"-map","0:a:0","-vn","-c:a","aac","-b:a","192k","-movflags","frag_keyframe+empty_moov","-f","mp4"},
+            "OGG" => new[]{"-map","0:a:0","-vn","-ac","2","-ar","44100","-c:a","vorbis","-strict","experimental","-q:a","5","-f","ogg"},
+            "OPUS" => new[]{"-map","0:a:0","-vn","-ar","48000","-c:a","opus","-strict","experimental","-b:a","128k","-f","opus"},
+            "AIFF" => new[]{"-map","0:a:0","-vn","-c:a","pcm_s16be","-f","aiff"},
             "MP4" => new[]{"-map","0:V:0","-map","0:a:0?","-c:v","mpeg4","-q:v","3","-vf","pad=ceil(iw/2)*2:ceil(ih/2)*2","-pix_fmt","yuv420p","-c:a","aac","-b:a","192k","-movflags","frag_keyframe+empty_moov","-f","mp4"},
             "MKV" => new[]{"-map","0:V:0","-map","0:a:0?","-c","copy","-f","matroska"},
             _ => throw new ArgumentException("Unsupported media output format.")
         };
-        if(format=="MKV")return ConvertSeekable(input,output,encoding,maxBytes);
+        if(format is "MKV" or "AIFF")return ConvertSeekable(input,output,encoding,maxBytes);
         using var process = Start("ffmpeg",new[]{"-xerror"}.Concat(Input(input)).Concat(encoding).Concat(new[]{"pipe:1"}));
         var errors = ReadErrors(process);
         var copy = Task.Run(() =>
@@ -134,9 +137,8 @@ public static class MediaTools
     }
     static long ConvertSeekable(string input,string output,string[] encoding,long maxBytes)
     {
-        // Matroska needs a seekable output to write duration and seek indexes. The
-        // muxer's limit stops at the first packet beyond the budget; reject that
-        // output instead of accepting FFmpeg's successful-but-truncated result.
+        // Matroska and AIFF need a seekable output to finish metadata. Reject a
+        // packet that exceeds the muxer's budget instead of keeping a truncated file.
         if(maxBytes<0)throw new InvalidDataException("Output limit exceeded.");
         long fileLimit=maxBytes==long.MaxValue?long.MaxValue:maxBytes+1;
         using var process=Start("ffmpeg",new[]{"-xerror"}.Concat(Input(input)).Concat(encoding).Concat(new[]{"-fs",fileLimit.ToString(System.Globalization.CultureInfo.InvariantCulture),"-n",output}));

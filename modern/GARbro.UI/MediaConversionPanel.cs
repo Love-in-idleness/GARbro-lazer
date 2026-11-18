@@ -10,7 +10,7 @@ using GARbro.Domain;
 
 namespace GARbro.Desktop;
 
-/// The same explicit image/audio/video choices are used for extraction and batch conversion.
+/// Output selectors shared by extraction, conversion and archive creation.
 public sealed class MediaConversionPanel : StackPanel
 {
     readonly ComboBox image,audio,video;
@@ -41,7 +41,11 @@ public sealed class MediaConversionPanel : StackPanel
             imageFormats.OrderBy(f=>Array.IndexOf(common,f.Tag) is int index && index>=0?index:int.MaxValue).ThenBy(f=>f.Tag,StringComparer.Ordinal)
                 .Select(f=>new UiChoice(f.Id,ImageLabel(f.Tag)));
         image=Selector("ImageOutputFormat","ImageFormat",new[]{original}.Concat(images).ToArray(),batch?1:0);
-        audio=Selector("AudioOutputFormat","AudioFormat",new[]{original,new UiChoice("AUTO",text["AudioAuto"]),new UiChoice("WAV","WAV"),new UiChoice("FLAC","FLAC"),new UiChoice("M4A","M4A (AAC)")},batch?1:0);
+        var audioFormats = MediaOutputFormats.Audio.Where(f => !UiPlatform.IsMobile || f is not ("OGG" or "OPUS" or "AIFF"));
+        audio=Selector("AudioOutputFormat","AudioFormat",new[]{original}.Concat(audioFormats.Select(f=>new UiChoice(f,f switch
+        {
+            "AUTO" => text["AudioAuto"], "M4A" => "M4A (AAC)", "OGG" => "Ogg Vorbis", "OPUS" => "Opus", _ => f
+        }))).ToArray(),batch?1:0);
         video=Selector("VideoOutputFormat","VideoFormat",new[]{original,new UiChoice("MP4","MP4 (MPEG-4/AAC)"),new UiChoice("MKV",text["VideoMkv"])},batch?1:0);
         if(offerScripts)
             scriptOutput=Selector("ScriptOutputFormat","ScriptOutputFormat",new[]{new UiChoice("",text["NoScriptConversion"]),new UiChoice("EXPORT",text["ScriptExport"]),new UiChoice("RB",text["ScriptRubyExport"])}

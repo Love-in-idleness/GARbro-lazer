@@ -46,7 +46,7 @@ internal static class LocalizationSnapshots
                     var extractHost=page.DesktopHost.OwnedWindows.Single();
                     var controls=extractHost.GetVisualDescendants().ToArray();
                     controls.OfType<CheckBox>().Single(c=>c.Name=="RecursiveExtraction").IsChecked=true;
-                    foreach(var pair in new[]{("ImageOutputFormat","WEBP"),("AudioOutputFormat","WAV"),("VideoOutputFormat","MP4")})
+                    foreach(var pair in new[]{("ImageOutputFormat","WEBP"),("AudioOutputFormat","OPUS"),("VideoOutputFormat","MP4"),("ScriptOutputFormat","EXPORT")})
                     {
                         var picker=controls.OfType<ComboBox>().Single(c=>c.Name==pair.Item1);picker.SelectedItem=picker.Items.OfType<UiChoice>().Single(c=>c.Value==pair.Item2);
                     }

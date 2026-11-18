@@ -160,7 +160,7 @@ public sealed class ExtractionUiTests
         finally {window.Close();Directory.Delete(root,true);}
     }
     [AvaloniaFact]
-    public async Task ExtractionDialogKeepsItsScopeAndExposesIndependentMediaFormats()
+    public async Task ExtractionDialogKeepsItsScopeAndExposesIndependentOutputFormats()
     {
         var owner=new AppWindow();owner.Show();var text=new DesktopText("en-US");
         try
@@ -170,13 +170,17 @@ public sealed class ExtractionUiTests
             var recurse=controls.OfType<CheckBox>().Single(c=>c.Name=="RecursiveExtraction");Assert.False(recurse.IsChecked);
             var discard=controls.OfType<CheckBox>().Single(c=>c.Name=="DiscardChildArchives");Assert.False(discard.IsEnabled);
             recurse.IsChecked=true;Assert.True(discard.IsEnabled);discard.IsChecked=true;
-            var audio=controls.OfType<ComboBox>().Single(c=>c.Name=="AudioOutputFormat");audio.SelectedItem=audio.Items.OfType<UiChoice>().Single(c=>c.Value=="WAV");
+            var scripts=controls.OfType<ComboBox>().Single(c=>c.Name=="ScriptOutputFormat");
+            Assert.Equal("",Assert.IsType<UiChoice>(scripts.SelectedItem).Value);
+            scripts.SelectedItem=scripts.Items.OfType<UiChoice>().Single(c=>c.Value=="EXPORT");
+            var discardMedia=controls.OfType<CheckBox>().Single(c=>c.Name=="DiscardOriginalMedia");Assert.True(discardMedia.IsEnabled);discardMedia.IsChecked=true;
+            var audio=controls.OfType<ComboBox>().Single(c=>c.Name=="AudioOutputFormat");audio.SelectedItem=audio.Items.OfType<UiChoice>().Single(c=>c.Value=="OPUS");
             var image=controls.OfType<ComboBox>().Single(c=>c.Name=="ImageOutputFormat");image.SelectedItem=image.Items.OfType<UiChoice>().Single(c=>c.Value=="WEBP");
             var video=controls.OfType<ComboBox>().Single(c=>c.Name=="VideoOutputFormat");video.SelectedItem=video.Items.OfType<UiChoice>().Single(c=>c.Value=="MP4");
-            var discardMedia=controls.OfType<CheckBox>().Single(c=>c.Name=="DiscardOriginalMedia");Assert.True(discardMedia.IsEnabled);discardMedia.IsChecked=true;
             Assert.Contains(controls.OfType<TextBlock>(),c=>c.Text==text.Format("ExtractionSelectionScope",2));
             controls.OfType<Button>().Single(c=>c.Content as string==text["Start"]).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            var choice=await result;Assert.True(choice.Options.Recursive);Assert.True(choice.Options.DiscardChildArchives);Assert.Equal("WEBP",choice.Options.ImageFormat);Assert.Equal("WAV",choice.Options.AudioFormat);Assert.Equal("MP4",choice.Options.VideoFormat);Assert.True(choice.Options.DiscardOriginalMedia);
+            var choice=await result;Assert.True(choice.Options.Recursive);Assert.True(choice.Options.DiscardChildArchives);Assert.Equal("WEBP",choice.Options.ImageFormat);Assert.Equal("OPUS",choice.Options.AudioFormat);Assert.Equal("MP4",choice.Options.VideoFormat);Assert.True(choice.Options.DiscardOriginalMedia);
+            Assert.True(choice.Options.ConvertScripts);Assert.Null(choice.Options.ScriptFormat);
         }
         finally {owner.Close();}
     }
