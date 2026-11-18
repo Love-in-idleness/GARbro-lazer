@@ -290,6 +290,7 @@
   "Error.Worker response exceeds the size limit.": "解码结果超过大小限制。",
   "Error.Invalid decoder worker response.": "解码服务返回了无效数据。",
   "Error.Decoder worker exited before returning a result.": "解码服务意外退出，请重试。",
+  "Error.This TLG still contains encrypted XP3 data. Open the original XP3 and select its game scheme.": "此 TLG 仍包含加密的 XP3 数据。请打开原 XP3 归档并选择对应的游戏方案。",
   "Error.Image is too large for a preview.": "图像超过预览大小限制。",
   "Error.Resource leaves its input directory.": "资源路径超出来源目录。",
   "Error.Unexpected browsing request number.": "浏览服务返回了过期的请求结果，请重试。",

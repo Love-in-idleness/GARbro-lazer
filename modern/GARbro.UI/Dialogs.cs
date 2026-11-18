@@ -69,7 +69,7 @@ public static class Dialogs
     static StackPanel Output(AppWindow owner, DesktopText text, string initial, out TextBox path)
     {
         var row = new StackPanel { Spacing = 6 }; row.Children.Add(Label(text, "Output"));
-        var input = PathBox(initial); path = input;
+        var input = PathBox(initial); input.Name = "OutputDirectoryPath"; path = input;
         var browse = new Button { Content = text["Browse"] }; browse.Click += async (_, _) =>
         { var selected = await UiPlatform.Storage.PickOutputAsync(true); if (selected != null) SetPath(input, selected.LocalPath); };
         row.Children.Add(PathRow(input,browse));return row;
@@ -137,7 +137,7 @@ public static class Dialogs
         window.Content=Frame(window,body,Button(text,"Close",()=>window.Close()));return window.ShowDialog(owner);
     }
     static ComboBox FormatPicker(ResourceFormatInfo[] formats) => new() { ItemsSource = formats, DisplayMemberBinding = new Binding("Tag"), SelectedIndex = 0 };
-    public static async Task<CreationChoice> Creation(AppWindow owner, DesktopText text, ResourceFormatInfo[] catalog, string source = null, int inputCount = 0, bool selectedOnly = false)
+    public static async Task<CreationChoice> Creation(AppWindow owner, DesktopText text, ResourceFormatInfo[] catalog, string source = null, int inputCount = 0, bool selectedOnly = false, string outputDirectory = null)
     {
         var window = Window(text, "Create", 940, 760); var body = Panel();
         var archives = catalog.Where(f => f.Type == "archive" && f.CanWrite).ToArray();
@@ -145,9 +145,11 @@ public static class Dialogs
         if (source != null)
             body.Children.Add(new TextBlock { Text = text.Format(selectedOnly ? "PackingSelectedScope" : "PackingAllScope", inputCount) + "\n" + source, TextWrapping = Avalonia.Media.TextWrapping.Wrap, Classes = { "muted" } });
         body.Children.Add(Label(text, "Format")); var format = FormatPicker(archives);format.Name="ArchiveOutputFormat";body.Children.Add(format);
+        string SuggestedName() => "archive." + (((ResourceFormatInfo)format.SelectedItem)?.Extensions.FirstOrDefault() ?? "bin");
+        string suggestedPath = null;
         body.Children.Add(Label(text, "Filename")); var output = PathBox("");output.Name="ArchiveOutputPath";
         var browse = new Button { Content = text["Browse"] }; browse.Click += async (_, _) =>
-        { var f = (ResourceFormatInfo)format.SelectedItem; var selected = await UiPlatform.Storage.PickOutputAsync(false, "archive." + f.Extensions.FirstOrDefault()); if (selected != null) SetPath(output, selected.LocalPath); }; body.Children.Add(PathRow(output,browse));
+        { var selected = await UiPlatform.Storage.PickOutputAsync(false, SuggestedName()); if (selected != null) SetPath(output, selected.LocalPath); }; body.Children.Add(PathRow(output,browse));
         var host = new ContentControl(); body.Children.Add(new Border { CornerRadius = new(12), ClipToBounds = true,
             Child = new Expander { Header = text["PackingParameters"], Content = host, HorizontalAlignment = HorizontalAlignment.Stretch, Classes = { "packingParameters" } } }); ParameterForm form = null;
         void Change()
@@ -156,6 +158,11 @@ public static class Dialogs
             bool hasOptions=!string.IsNullOrWhiteSpace(selected?.OptionsJson) && selected.OptionsJson.Trim()!="null";
             form=hasOptions?new(text,selected.OptionsJson,selected.Schemes):null;
             host.Content=form is null?Label(text,"NoCreationOptions"):form;
+            if (!UiPlatform.IsMobile && !string.IsNullOrEmpty(outputDirectory) && (string.IsNullOrEmpty(PathValue(output)) || PathValue(output) == suggestedPath))
+            {
+                suggestedPath = Path.Combine(outputDirectory, SuggestedName());
+                SetPath(output, suggestedPath);
+            }
         }
         format.SelectionChanged += (_, _) => Change(); Change();
         var media = new MediaConversionPanel(text, images, offerScripts: true); body.Children.Add(media);

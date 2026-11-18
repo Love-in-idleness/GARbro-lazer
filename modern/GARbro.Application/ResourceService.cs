@@ -143,6 +143,20 @@ public sealed class ResourceSession : IDisposable
 
 public static partial class ResourceService
 {
+    const string EncryptedTlg = "This TLG still contains encrypted XP3 data. Open the original XP3 and select its game scheme.";
+
+    static bool HasMaskedTlgHeader(string name, Stream input)
+    {
+        if (Path.GetExtension(name).ToLowerInvariant() is not (".tlg" or ".tlg5" or ".tlg6")) return false;
+        Span<byte> header = stackalloc byte[11];
+        if (input.ReadAtLeast(header, header.Length, false) != header.Length) return false;
+        int mask = header[0] ^ 'T';
+        if (mask == 0) return false;
+        for (int i = 0; i < header.Length; i++) header[i] ^= (byte)mask;
+        return header.SequenceEqual("TLG5.0\0raw\u001a"u8) || header.SequenceEqual("TLG6.0\0raw\u001a"u8) ||
+            header.SequenceEqual("TLG0.0\0sds\u001a"u8);
+    }
+
     public static BrowserListing List(ResourceLocation location, IOptionsProvider options)
     {
         ArchiveService.EnsureFormats();
@@ -186,10 +200,19 @@ public static partial class ResourceService
         }
         if (!session.Physical && (forcedType == "image" || forcedType == null && session.Find(name).Type == "image"))
         {
-            using var decoder = session.Archive.OpenImage(session.Find(name));
-            if ((ulong)decoder.Info.Width * decoder.Info.Height > 25000000) throw new InvalidDataException("Image is too large for a preview.");
-            var image = decoder.Image;
-            return ImagePreview(image, name, output, width, height);
+            var entry = session.Find(name);
+            try
+            {
+                using var decoder = session.Archive.OpenImage(entry);
+                if ((ulong)decoder.Info.Width * decoder.Info.Height > 25000000) throw new InvalidDataException("Image is too large for a preview.");
+                return ImagePreview(decoder.Image, name, output, width, height);
+            }
+            catch (InvalidFormatException) when (entry is GameRes.Formats.KiriKiri.Xp3Entry { Cipher: GameRes.Formats.KiriKiri.NoCrypt })
+            {
+                using var input = session.Archive.OpenEntry(entry);
+                if (HasMaskedTlgHeader(name, input)) throw new InvalidDataException(EncryptedTlg);
+                throw;
+            }
         }
         string scratch = WorkerTemporaryFiles.CreateDirectory(Path.GetTempPath());
         try
@@ -222,6 +245,8 @@ public static partial class ResourceService
                     var image = candidate.Item1.Read(imageInput, candidate.Item2);
                     return ImagePreview(image, name, output, width, height);
                 }
+                imageInput.Position = 0;
+                if (candidate == null && HasMaskedTlgHeader(name, imageInput)) throw new InvalidDataException(EncryptedTlg);
                 using var audioInput = new BinaryStream(File.OpenRead(path), name);
                 using var audio = AudioFormat.Read(audioInput);
                 if (audio != null)

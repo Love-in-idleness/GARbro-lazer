@@ -63,6 +63,25 @@ public sealed class ExtractionWorkflowTests
         finally {Directory.Delete(root,true);}
     }
     [Fact]
+    public async Task ExtractionBesideSourcesLeavesLooseFilesAndExtractsArchives()
+    {
+        string root=Directory.CreateTempSubdirectory("garbro-extract-beside-").FullName;
+        try
+        {
+            byte[] image=File.ReadAllBytes(Fixture("colors-rgb.png"));
+            string original=Path.Combine(root,"image.png");File.WriteAllBytes(original,image);
+            File.Copy(Fixture("standard.xfl"),Path.Combine(root,"data.xfl"));
+            var report=await Request<ResourceJobReport>(new("resource-extract",null,Location:new(root),Output:root,
+                ResourceOptions:new(ImageFormat:"WEBP",DiscardOriginalMedia:true)));
+            Assert.Empty(report.Errors);
+            Assert.True(File.Exists(Path.Combine(root,"data.xfl.unpacked","hello.txt")));
+            Assert.True(File.Exists(Path.Combine(root,"image.webp")));
+            Assert.Equal(image,File.ReadAllBytes(original));
+        }
+        finally {Directory.Delete(root,true);}
+    }
+
+    [Fact]
     public async Task UnrecognizedSelectedArchiveIsReportedInsteadOfCompletingWithZeroFiles()
     {
         string root=Path.Combine(Path.GetTempPath(),"garbro-bad-selection-"+Guid.NewGuid());Directory.CreateDirectory(root);

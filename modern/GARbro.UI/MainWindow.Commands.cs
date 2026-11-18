@@ -230,12 +230,18 @@ public sealed partial class MainWindow
         return new(listing.Location,selectedOnly?files.SelectedItems.Cast<BrowserEntry>().Select(e=>e.Name).ToArray():null,
             new(typeOverrides),listing.Physical,listing.Tag);
     }
+    string DefaultOutputDirectory(ResourceLocation source, bool physical)
+    {
+        if (!string.IsNullOrWhiteSpace(Settings.OutputDirectory)) return Settings.OutputDirectory;
+        if (UiPlatform.IsMobile) return null;
+        return physical ? source.RootPath : Path.GetDirectoryName(source.RootPath);
+    }
     async Task ExtractPicker(bool selectedOnly)
     {
         if(listing==null)return;
         var source=CaptureExtraction(selectedOnly);int ticket=navigationGeneration;
         if(source.Selection is {Length:0}){status.Text=Text["SelectFiles"];return;}
-        var choice=await ChooseOperation(()=>Dialogs.Extraction(this,Text,Settings.OutputDirectory,selectedOnly,source.Selection?.Length??0));
+        var choice=await ChooseOperation(()=>Dialogs.Extraction(this,Text,DefaultOutputDirectory(source.Location,source.Physical),selectedOnly,source.Selection?.Length??0));
         if(choice==null)return;
         if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return;}
         string output=source.Physical || source.Tag=="media"?choice.Output:Path.Combine(choice.Output,
@@ -270,7 +276,7 @@ public sealed partial class MainWindow
         {
             catalog??=await Request<ResourceFormatInfo[]>(new("resource-catalog",null));
             if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return (CreationChoice)null;}
-            return await Dialogs.Creation(this,Text,catalog,source.RootPath,inputs.Length,selectedOnly);
+            return await Dialogs.Creation(this,Text,catalog,source.RootPath,inputs.Length,selectedOnly,DefaultOutputDirectory(source,true));
         });
         if(choice==null)return;
         if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return;}
@@ -293,13 +299,13 @@ public sealed partial class MainWindow
     {
         var selected=files.SelectedItems.Cast<BrowserEntry>().Where(e=>!e.IsDirectory).ToArray();
         if(selected.Length==0){status.Text=Text["SelectFiles"];return;}
-        var source=listing.Location;var overrides=new Dictionary<string,string>(typeOverrides);int ticket=navigationGeneration;
+        var source=listing.Location;string output=DefaultOutputDirectory(source,listing.Physical);var overrides=new Dictionary<string,string>(typeOverrides);int ticket=navigationGeneration;
         var choice=await ChooseOperation(async()=>
         {
             catalog??=await Request<ResourceFormatInfo[]>(new("resource-catalog",null));
             if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return (ConversionChoice)null;}
             bool offerScripts= selected.Any(e=>ScriptOutputFormats.ForInput(e.Name)!=null || ScriptOutputFormats.NeedsSignature(e.Name) || ScriptOutputFormats.HasRecompileInput(e.Name));
-            return await Dialogs.Conversion(this,Text,catalog.Where(f=>f.Type=="image"&&f.CanWrite).ToArray(),Settings.OutputDirectory,selected.Length,offerScripts);
+            return await Dialogs.Conversion(this,Text,catalog.Where(f=>f.Type=="image"&&f.CanWrite).ToArray(),output,selected.Length,offerScripts);
         });
         if(choice==null)return;
         if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return;}

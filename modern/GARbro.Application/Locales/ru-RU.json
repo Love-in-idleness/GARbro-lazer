@@ -290,6 +290,7 @@
   "Error.Worker response exceeds the size limit.": "Превышен размер ответа рабочего процесса.",
   "Error.Invalid decoder worker response.": "Некорректный ответ рабочего процесса декодера.",
   "Error.Decoder worker exited before returning a result.": "Декодер завершился без результата. Повторите попытку.",
+  "Error.This TLG still contains encrypted XP3 data. Open the original XP3 and select its game scheme.": "Этот TLG всё ещё содержит зашифрованные данные XP3. Откройте исходный архив XP3 и выберите схему игры.",
   "Error.Image is too large for a preview.": "Изображение слишком велико для предпросмотра.",
   "Error.Resource leaves its input directory.": "Путь ресурса выходит за пределы исходной папки.",
   "Error.Unexpected browsing request number.": "Получен устаревший результат просмотра. Повторите попытку.",

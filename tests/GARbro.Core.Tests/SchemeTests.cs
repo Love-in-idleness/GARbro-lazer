@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using GARbro.Application;
+using GARbro.Worker;
 using GameRes;
 using GameRes.Formats.KiriKiri;
 using GameRes.Formats.DxLib;
@@ -16,7 +18,7 @@ public sealed class SchemeTests
     {
         var report = ArchiveService.BundledSchemes;
         Assert.NotNull(report);
-        Assert.Equal(150, report.Version);
+        Assert.Equal(151, report.Version);
         Assert.Empty(report.Failed);
         Assert.Contains("XP3", report.Applied);
         Assert.Equal(78, report.Applied.Length);
@@ -27,6 +29,32 @@ public sealed class SchemeTests
         Assert.Contains("RCT", report.Applied);
         Assert.Contains("PCK/TAMAMO", report.Applied);
         Assert.True(Xp3Opener.KnownSchemes.Count >= 500);
+    }
+
+    [Fact]
+    public async Task FateXp3AutomaticallyAppliesItsSchemeBeforePreviewingTlg()
+    {
+        string root=Directory.CreateTempSubdirectory("garbro-fate-xp3-").FullName;
+        try
+        {
+            const string name="画像.tlg";
+            using(var writer=new BinaryWriter(File.Create(Path.Combine(root,name))))
+            {
+                writer.Write("TLG5.0\0raw\u001a"u8);
+                writer.Write((byte)3);
+                writer.Write(1);writer.Write(1);writer.Write(1);writer.Write(18);
+                foreach(byte color in new byte[]{0x20,0x40,0x80})
+                {writer.Write((byte)1);writer.Write(1);writer.Write(color);}
+            }
+            string archive=Path.Combine(root,"bgimage.xp3");
+            var result=ResourceService.PackArchive(root,new[]{name},archive,"XP3",scheme:"Fate/hollow ataraxia");
+            Assert.True(result.Written);
+            File.WriteAllBytes(Path.Combine(root,"FateFD.exe"),Array.Empty<byte>());
+            var preview=await WorkerArchiveSession.RequestAsync<ResourcePreview>(WorkerMarker.AssemblyPath,
+                new("resource-preview",null,Location:new(archive),Entry:name,Scheme:"none"),new WorkerLimits(),null,default);
+            Assert.Equal("image",preview.Kind);Assert.StartsWith("1 × 1",preview.Text);Assert.NotEmpty(preview.Image);
+        }
+        finally {Directory.Delete(root,true);}
     }
 
     [Fact]

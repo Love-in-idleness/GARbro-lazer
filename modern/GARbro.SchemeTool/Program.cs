@@ -23,12 +23,13 @@ internal static class Program
             var arguments = new Dictionary<string, string>(StringComparer.Ordinal);
             for (int i = 0; i < args.Length; i += 2)
             {
-                if (i + 1 == args.Length || args[i] is not ("--input" or "--luca" or "--avc" or "--output" or "--report" or "--version") || !arguments.TryAdd(args[i], args[i + 1]))
-                    throw new ArgumentException("SchemeTool --input DATABASE[.gz] [--luca Luca.json] [--avc Avc.json] --output EXPORT.json --report REPORT.json --version NUMBER");
+                if (i + 1 == args.Length || args[i] is not ("--input" or "--luca" or "--avc" or "--game-map" or "--output" or "--report" or "--version") || !arguments.TryAdd(args[i], args[i + 1]))
+                    throw new ArgumentException("SchemeTool --input DATABASE[.gz] [--luca Luca.json] [--avc Avc.json] [--game-map Games.json] --output EXPORT.json --report REPORT.json --version NUMBER");
             }
             foreach (string key in new[] { "--input", "--output", "--report", "--version" })
                 if (!arguments.ContainsKey(key)) throw new ArgumentException("Missing " + key);
-            if (!arguments.ContainsKey("--luca") && !arguments.ContainsKey("--avc")) throw new ArgumentException("Select --luca or --avc scheme data.");
+            if (!arguments.ContainsKey("--luca") && !arguments.ContainsKey("--avc") && !arguments.ContainsKey("--game-map"))
+                throw new ArgumentException("Select --luca, --avc or --game-map scheme data.");
             var catalog = FormatCatalog.Instance;
             JsonNode source;
             using (var file = File.OpenRead(arguments["--input"]))
@@ -75,6 +76,19 @@ internal static class Program
             var updated = JsonNode.Parse(exported.ToArray());
             var document = source.DeepClone();
             foreach (string tag in changed) document["SchemeMap"][tag] = updated["SchemeMap"][tag].DeepClone();
+            if (arguments.TryGetValue("--game-map", out string games))
+            {
+                var aliases = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllBytes(games));
+                if (aliases == null || aliases.Count == 0) throw new InvalidDataException("The game map is empty.");
+                var map = document["GameMap"].AsObject();
+                foreach (var alias in aliases)
+                {
+                    if (string.IsNullOrWhiteSpace(alias.Key) || alias.Key.IndexOfAny(new[] { '/', '\\' }) >= 0 || string.IsNullOrWhiteSpace(alias.Value))
+                        throw new InvalidDataException("Game aliases require a filename and a title.");
+                    map[alias.Key] = alias.Value;
+                }
+                changed.Add("GameMap");
+            }
             document["Version"] = version;
             byte[] encoded = Encoding.UTF8.GetBytes(document.ToJsonString(options) + "\n");
             using var check = new MemoryStream(encoded, false);

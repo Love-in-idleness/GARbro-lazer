@@ -61,7 +61,9 @@ public sealed class ExtractionUiTests
             for(int i=0;i<100 && !window.DesktopHost.OwnedWindows.Any();i++)await Task.Delay(100);
             var dialog=Assert.Single(window.DesktopHost.OwnedWindows);var controls=dialog.GetVisualDescendants().ToArray();
             var format=controls.OfType<ComboBox>().Single(c=>c.Name=="ArchiveOutputFormat");format.SelectedItem=format.Items.OfType<ResourceFormatInfo>().Single(f=>f.Tag=="XFL");
-            string archive=Path.Combine(root,"result.xfl");Dialogs.SetPath(controls.OfType<TextBox>().Single(c=>c.Name=="ArchiveOutputPath"),archive);
+            var output=controls.OfType<TextBox>().Single(c=>c.Name=="ArchiveOutputPath");
+            Assert.Equal(Path.Combine(input,"archive.xfl"),Dialogs.PathValue(output));
+            string archive=Path.Combine(root,"result.xfl");Dialogs.SetPath(output,archive);
             list.SelectedItems.Clear();list.SelectedItems.Add(list.Items.OfType<BrowserEntry>().Single(e=>e.Name=="leave.txt"));
             controls.OfType<Button>().Single(c=>c.Content as string==text["Create"]).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             for(int i=0;i<150 && !File.Exists(archive);i++)await Task.Delay(100);
@@ -84,7 +86,11 @@ public sealed class ExtractionUiTests
             foreach(var item in files.Items.OfType<BrowserEntry>().Where(e=>e.Name!="leave.xfl"))files.SelectedItems.Add(item);
             var process=window.GetVisualDescendants().OfType<Button>().Single(c=>c.Name=="MenuProcess").ContextMenu;
             Assert.Equal(2,process.Items.Count);Assert.DoesNotContain("Recursive",ShortcutCatalog.Defaults.Keys);
-            Assert.NotNull(window.GetVisualDescendants().OfType<Button>().Single(c=>c.Name=="ExtractSelected"));
+            var extract=window.GetVisualDescendants().OfType<Button>().Single(c=>c.Name=="ExtractSelected");
+            extract.Command.Execute(null);
+            var dialog=Assert.Single(window.DesktopHost.OwnedWindows);
+            Assert.Equal(root,Dialogs.PathValue(dialog.GetVisualDescendants().OfType<TextBox>().Single(c=>c.Name=="OutputDirectoryPath")));
+            dialog.Close();await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);
             await window.ExtractToAsync(Path.Combine(root,"out"),true,new(Recursive:true,DiscardChildArchives:true));
             Assert.True(File.Exists(Path.Combine(root,"out","first.xfl.unpacked","hello.txt")));
             Assert.True(File.Exists(Path.Combine(root,"out","second.xfl.unpacked","hello.txt")));

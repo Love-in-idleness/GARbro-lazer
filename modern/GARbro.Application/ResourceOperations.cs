@@ -154,12 +154,14 @@ public static partial class ResourceService
                     if(options.Types is {Length:>0} && !options.Types.Contains(category) && !(options.Recursive && archiveCandidate))continue;
                     if(++count>limits.MaxEntries)throw new InvalidDataException("Recursive extraction has too many entries.");
                     string target=RawTarget(entry);
-                    if(Path.GetFullPath(target).Equals(Path.GetFullPath(task.Location.RootPath),OperatingSystem.IsWindows()?StringComparison.OrdinalIgnoreCase:StringComparison.Ordinal))
+                    bool samePath=Path.GetFullPath(target).Equals(Path.GetFullPath(task.Location.RootPath),OperatingSystem.IsWindows()?StringComparison.OrdinalIgnoreCase:StringComparison.Ordinal);
+                    if(samePath && !session.Synthetic)
                         throw new IOException("Extraction cannot replace its input archive.");
                     ExtractionPath.RejectLinks(output,target);
                     void Notify(string path)=>progress?.Report(new(files.Count,Math.Max(files.Count,entries.Length),entry.Name,total,path));
                     void Original()
                     {
+                        if(samePath){files.Add(new(target,new FileInfo(target).Length,"retained"));Notify(target);return;}
                         if(completed.Contains(target) && File.Exists(target)){files.Add(new(target,new FileInfo(target).Length,"retained"));Notify(target);return;}
                         if(File.Exists(target))
                         {
@@ -203,7 +205,7 @@ public static partial class ResourceService
                             if(!result.Path.Equals(target,StringComparison.OrdinalIgnoreCase))
                             {
                                 if(!options.DiscardOriginalMedia || !owned)Original();
-                                else if(completed.Contains(target) && File.Exists(target))removals.Add(target);
+                                else if(!samePath && completed.Contains(target) && File.Exists(target))removals.Add(target);
                             }
                         }
                     }

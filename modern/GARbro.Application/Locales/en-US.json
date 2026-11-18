@@ -290,6 +290,7 @@
   "Error.Worker response exceeds the size limit.": "Worker response exceeds the size limit.",
   "Error.Invalid decoder worker response.": "Invalid decoder worker response.",
   "Error.Decoder worker exited before returning a result.": "Decoder worker exited before returning a result.",
+  "Error.This TLG still contains encrypted XP3 data. Open the original XP3 and select its game scheme.": "This TLG still contains encrypted XP3 data. Open the original XP3 and select its game scheme.",
   "Error.Image is too large for a preview.": "Image is too large for a preview.",
   "Error.Resource leaves its input directory.": "Resource leaves its input directory.",
   "Error.Unexpected browsing request number.": "Unexpected browsing request number.",
