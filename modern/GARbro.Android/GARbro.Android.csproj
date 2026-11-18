@@ -5,8 +5,8 @@
     <RootNamespace>GARbro.Mobile</RootNamespace>
     <ApplicationId>org.garbro.garbro</ApplicationId>
     <ApplicationTitle>GARbro</ApplicationTitle>
-    <ApplicationVersion>101029999</ApplicationVersion>
-    <ApplicationDisplayVersion>1.1.2</ApplicationDisplayVersion>
+    <ApplicationVersion>101039999</ApplicationVersion>
+    <ApplicationDisplayVersion>1.1.3</ApplicationDisplayVersion>
     <SupportedOSPlatformVersion>31</SupportedOSPlatformVersion>
     <AndroidPackageFormats>apk</AndroidPackageFormats>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">android-arm64</RuntimeIdentifier>

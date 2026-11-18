@@ -1,1 +1,1 @@
-1.1.2: built-in RGSS, Luca, RenPy and TJS script processing
+1.1.3: searchable game schemes, source-folder output defaults and script conversion when packing
