@@ -114,6 +114,10 @@ with tempfile.TemporaryDirectory(prefix='garbro-cli-')as folder:
  original=archive.read_bytes()
  run('extract',archive,'-o',archive.parent,'--overwrite','replace',code=5)
  assert archive.read_bytes()==original
+ if os.name!='nt':
+  alias=root/'alias.xfl';alias.symlink_to(archive)
+  run('extract',alias,'-o',archive.parent,'--overwrite','replace',code=5)
+  assert archive.read_bytes()==original
  plain=run('extract',FIX/'standard.xfl','-o',root/'plain')[0]
  nested=run('extract',FIX/'standard.xfl','-o',root/'nested','--format','XFL','--nested')[0]
  assert set(plain)==set(nested) and nested['format']=='XFL'

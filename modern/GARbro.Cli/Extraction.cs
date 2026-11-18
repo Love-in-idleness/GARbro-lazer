@@ -16,6 +16,19 @@ internal static partial class Program
         return !Path.IsPathRooted(relative) && relative != ".." && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal);
     }
 
+    static string ResolveLinks(string path, Dictionary<string, string> directories, int links = 0)
+    {
+        if (links > 40) throw new IOException("Too many symbolic links in input or output path: " + path);
+        string parent = Path.GetDirectoryName(path);
+        if (parent == null) return path;
+        if (!directories.TryGetValue(parent, out string resolvedParent))
+            directories[parent] = resolvedParent = ResolveLinks(parent, directories, links);
+        string candidate = Path.Combine(resolvedParent, Path.GetFileName(path));
+        FileSystemInfo info = Directory.Exists(candidate) ? new DirectoryInfo(candidate) : new FileInfo(candidate);
+        string target = info.LinkTarget;
+        return target == null ? candidate : ResolveLinks(Path.GetFullPath(target, resolvedParent), directories, links + 1);
+    }
+
     static int Extract(IReadOnlyList<string> inputs, string output, string inputFormat,
         ResourceExtractionOptions options, ExtractionLimits limits, OverwritePolicy overwrite,
         IOptionsProvider provider, bool json, CancellationToken cancellation)
@@ -64,8 +77,18 @@ internal static partial class Program
             }
         }
 
-        var protectedInputs = plan.Where(job => File.Exists(job.Location.RootPath)).Select(job => job.Location.RootPath)
-            .ToHashSet(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        var protectedInputs = new HashSet<string>(OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+            ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        var directories = new Dictionary<string, string>(protectedInputs.Comparer);
+        string physicalOutput = ResolveLinks(output, directories);
+        foreach (var job in plan.Where(job => File.Exists(job.Location.RootPath)))
+        {
+            string source = job.Location.RootPath;
+            string physicalSource = ResolveLinks(source, directories);
+            protectedInputs.Add(source);
+            if (IsWithin(physicalOutput, physicalSource))
+                protectedInputs.Add(Path.GetFullPath(Path.Combine(output, Path.GetRelativePath(physicalOutput, physicalSource))));
+        }
         if (plan.Any(job => protectedInputs.Contains(job.Output)))
             throw new IOException("Extraction cannot replace its input archive.");
         var results = new List<object>();
