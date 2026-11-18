@@ -200,7 +200,7 @@
   "Automatic": "自動判定",
   "Explore": "ファイルマネージャーで表示",
   "Trash": "ごみ箱に移動…",
-  "TrashConfirm": "選択したディスク上のファイルをごみ箱に移動しますか？",
+  "TrashConfirm": "選択した {0} 件のファイルをごみ箱に移動しますか？",
   "Confirm": "確認",
   "Feedback": "問題を報告",
   "Manual": "使い方",

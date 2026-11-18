@@ -14,7 +14,7 @@ public static class ShortcutCatalog
         string primary = OperatingSystem.IsMacOS() ? "Meta" : "Ctrl";
         var result = new Dictionary<string, string[]>(StringComparer.Ordinal);
         foreach (string key in new[] { "Open", "OpenFolder", "NewTab", "CloseTab", "NextTab", "PreviousTab", "Exit", "Cancel", "Back", "Forward", "Parent", "Refresh", "Settings", "General", "Appearance", "Decoding", "Formats", "Shortcuts",
-            "ExtractAll", "ExtractSelected", "PackAll", "PackSelected", "Convert", "OpenSelected", "SelectAll", "CopyNames", "Mask", "Explore", "Trash", "FitWindow", "Toolbar", "Menubar", "Statusbar", "FitImage",
+            "ExtractAll", "ExtractSelected", "PackAll", "PackSelected", "Convert", "OpenSelected", "SelectAll", "CopyNames", "Mask", "Explore", "Trash", "FitWindow", "Toolbar", "Statusbar", "FitImage",
             "Feedback", "Manual", "Troubleshoot", "Updates", "License", "ExportLogs", "About", "FocusMenu", "NextSelection", "SortName", "SortType", "SortSize", "SortNone", "Play", "Pause", "Stop", "NextPage", "PreviousPage", "Copy", "Wrap" }) result[key] = Array.Empty<string>();
         void Bind(string command, params string[] values) => result[command] = values;
         Bind("NewTab",primary+"+T");Bind("CloseTab",primary+"+W");Bind("NextTab","Ctrl+Tab");Bind("PreviousTab","Ctrl+Shift+Tab");
@@ -22,7 +22,7 @@ public static class ShortcutCatalog
         Bind("FitWindow", primary + "+H"); Bind("Explore", primary + "+E"); Bind("SelectAll", primary + "+A"); Bind("CopyNames", primary + "+C");
         Bind("Parent", primary + "+PageUp", "Back"); Bind("PackSelected", "F3"); Bind("ExtractSelected", "F4"); Bind("Refresh", "F5"); Bind("Convert", "F6");
         Bind("Trash", "Delete"); Bind("OpenSelected", "Enter"); Bind("Cancel", "Escape"); Bind("Mask", "Add"); Bind("FocusMenu", "F10"); Bind("NextSelection", "Space");
-        Bind("Toolbar", "Alt+Shift+T"); Bind("Menubar", "Alt+Shift+M"); Bind("Statusbar", "Alt+Shift+S"); Bind("Back", "Alt+Left"); Bind("Forward", "Alt+Right");
+        Bind("Toolbar", "Alt+Shift+T"); Bind("Statusbar", "Alt+Shift+S"); Bind("Back", "Alt+Left"); Bind("Forward", "Alt+Right");
         return result;
     }
     public static string Normalize(string value)
@@ -49,6 +49,10 @@ public static class ShortcutCatalog
         if(settings.ShortcutBindings==null)return;
         if (settings.ShortcutBindings.Remove("Create", out var packing))
             settings.ShortcutBindings.TryAdd("PackSelected", packing);
+        // The old menu-bar command actually toggled the toolbar.
+        if (settings.ShortcutBindings.Remove("Menubar", out var menuBindings) && menuBindings is { Length: > 0 }
+            && settings.ShortcutBindings.GetValueOrDefault("Toolbar", Defaults["Toolbar"]) is { } toolbarBindings)
+            settings.ShortcutBindings["Toolbar"] = [.. toolbarBindings, .. menuBindings];
         var reserved=settings.ShortcutBindings.Where(p=>Defaults.ContainsKey(p.Key))
             .SelectMany(p=>p.Value??throw new ArgumentException("Invalid shortcut.")).Select(Normalize).ToArray();
         foreach(string key in new[]{"NewTab","CloseTab","NextTab","PreviousTab"})

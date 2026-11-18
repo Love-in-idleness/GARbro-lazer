@@ -36,7 +36,7 @@ public static partial class ResourceService
         if (options.MaxDepth is < 0 or > 64 || limits.MaxEntries < 1 || limits.MaxEntryBytes < 0 || limits.MaxTotalBytes < 0
             || !double.IsFinite(limits.MaxExpansionRatio) || limits.MaxExpansionRatio <= 0) throw new ArgumentException("Invalid extraction limits.");
         if(options.Types is {Length:0})throw new ArgumentException("Select at least one resource type.");
-        string imageFormat=options.ImageFormat==null?null:ResolveImageOutput(options.ImageFormat).Tag;
+        string imageFormat=options.ImageFormat==null?null:FormatIdentity.Of(ResolveImageOutput(options.ImageFormat));
         string audioFormat=options.AudioFormat==null?(options.ConvertAudio?"AUTO":null):MediaOutputFormats.Normalize(options.AudioFormat);
         string videoFormat=options.VideoFormat==null?null:MediaOutputFormats.Normalize(options.VideoFormat);
         if(audioFormat!=null && !MediaOutputFormats.Audio.Contains(audioFormat))throw new ArgumentException("Unsupported media output format.");

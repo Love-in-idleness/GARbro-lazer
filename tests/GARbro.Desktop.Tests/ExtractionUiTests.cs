@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
@@ -157,14 +158,22 @@ public sealed class ExtractionUiTests
                     await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);
                     using var frame=window.DesktopHost.CaptureRenderedFrame();
                     frame.Save(Path.Combine(snapshots,$"archive-toolbar-{size}.png"),new PngBitmapEncoderOptions());
+                    foreach (var button in buttons.Where(b => b.Name is "ExtractSelected" or "ExtractAll" or "PackSelected" or "PackAll"))
+                    {
+                        var position = button.TranslatePoint(new Point(), window.DesktopHost).Value;
+                        Assert.InRange(position.X + button.Bounds.Width, 0, window.DesktopHost.ClientSize.Width);
+                    }
                 }
                 window.Width=width;
                 window.MinWidth=minWidth;
             }
             var extract=buttons.Single(c=>c.Name=="ExtractSelected");
             extract.Command.Execute(null);
-            var dialog=Assert.Single(window.DesktopHost.OwnedWindows);
+            var dialog=await WaitForOperationDialog(window);
             Assert.Equal(root,Dialogs.PathValue(dialog.GetVisualDescendants().OfType<TextBox>().Single(c=>c.Name=="OutputDirectoryPath")));
+            var images = dialog.GetVisualDescendants().OfType<ComboBox>().Single(c => c.Name == "ImageOutputFormat");
+            Assert.Contains(images.Items.OfType<UiChoice>(), c => c.Label == "WCG");
+            Assert.DoesNotContain(images.Items.OfType<UiChoice>(), c => c.Label == "TLG");
             dialog.Close();await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);
             await window.ExtractToAsync(Path.Combine(root,"out"),true,new(Recursive:true,DiscardChildArchives:true));
             Assert.True(File.Exists(Path.Combine(root,"out","first.xfl.unpacked","hello.txt")));
@@ -184,8 +193,7 @@ public sealed class ExtractionUiTests
             await window.LoadArchiveAsync(input);var files=await VisibleFiles(window,3);
             foreach(var item in files.Items.OfType<BrowserEntry>().Where(e=>e.Name is "first.xfl" or "second.xfl"))files.SelectedItems.Add(item);
             window.GetVisualDescendants().OfType<Button>().Single(c=>c.Name=="ExtractSelected").Command.Execute(null);
-            await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);
-            var host=Assert.Single(window.DesktopHost.OwnedWindows);var controls=host.GetVisualDescendants().ToArray();
+            var host=await WaitForOperationDialog(window);var controls=host.GetVisualDescendants().ToArray();
             controls.OfType<CheckBox>().Single(c=>c.Name=="RecursiveExtraction").IsChecked=true;
             controls.OfType<CheckBox>().Single(c=>c.Name=="DiscardChildArchives").IsChecked=true;
             files.SelectedItems.Clear();
@@ -299,6 +307,58 @@ public sealed class ExtractionUiTests
         Assert.Equal(count,files.ItemCount);Assert.Equal(count>0,files.IsEnabled);
         return files;
     }
+    static async Task<Window> WaitForOperationDialog(MainWindow window)
+    {
+        for (int i = 0; i < 400 && !window.DesktopHost.OwnedWindows.Any(); i++)
+            await Task.Delay(25, TestContext.Current.CancellationToken);
+        return Assert.Single(window.DesktopHost.OwnedWindows);
+    }
+
+    [AvaloniaFact]
+    public async Task TrashUsesTheFilesThatWereSelectedBeforeConfirmation()
+    {
+        string root = Directory.CreateTempSubdirectory("garbro-trash-selection-").FullName;
+        string input = Path.Combine(root, "input");
+        Directory.CreateDirectory(Path.Combine(input, "folder"));
+        foreach (string name in new[] { "one.txt", "two.txt" }) File.WriteAllText(Path.Combine(input, name), name);
+        var store = new SettingsStore(Path.Combine(root, "settings.json"));
+        store.Save(new AppSettings { Language = "en-US" });
+        var window = new MainWindow(store);
+        var previousTrash = UiPlatform.Trash;
+        var previousCanTrash = UiPlatform.CanTrash;
+        UiPlatform.CanTrash = () => true;
+        UiPlatform.Trash = name => { File.Move(name, Path.Combine(root, Path.GetFileName(name))); return Task.CompletedTask; };
+        window.Show();
+        try
+        {
+            await window.LoadArchiveAsync(input);
+            var files = await VisibleFiles(window, 3);
+            var text = new DesktopText("en-US");
+            var trash = files.ContextMenu.Items.OfType<MenuItem>().Single(i => i.Header as string == text["Trash"]);
+            Assert.False(trash.Command.CanExecute(null));
+            files.SelectedItem = files.Items.OfType<BrowserEntry>().Single(e => e.IsDirectory);
+            Assert.False(trash.Command.CanExecute(null));
+            files.SelectedItems.Add(files.Items.OfType<BrowserEntry>().Single(e => e.Name == "one.txt"));
+            Assert.True(trash.Command.CanExecute(null));
+            trash.Command.Execute(null);
+            var dialog = await WaitForOperationDialog(window);
+            Assert.Contains(dialog.GetVisualDescendants().OfType<TextBlock>(), c => c.Text == text.Format("TrashConfirm", 1));
+            files.SelectedItem = files.Items.OfType<BrowserEntry>().Single(e => e.Name == "two.txt");
+            dialog.GetVisualDescendants().OfType<Button>().Single(b => b.Content as string == text["Confirm"])
+                .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await VisibleFiles(window, 2);
+            Assert.True(File.Exists(Path.Combine(root, "one.txt")));
+            Assert.True(File.Exists(Path.Combine(input, "two.txt")));
+            Assert.True(Directory.Exists(Path.Combine(input, "folder")));
+        }
+        finally
+        {
+            window.Close();
+            UiPlatform.Trash = previousTrash;
+            UiPlatform.CanTrash = previousCanTrash;
+            Directory.Delete(root, true);
+        }
+    }
 
     [AvaloniaFact]
     public async Task SelectAllIsBoundedAndUnavailableForEmptyOrFilteredLists()
@@ -312,6 +372,7 @@ public sealed class ExtractionUiTests
             string input=Path.Combine(root,"input");Directory.CreateDirectory(input);
             await window.LoadArchiveAsync(input);await VisibleFiles(window,0);
             Assert.False(SelectionCommand(window).CanExecute(null));
+            Assert.False(window.GetVisualDescendants().OfType<Button>().Single(c => c.Name == "ExtractAll").Command.CanExecute(null));
             foreach(string name in new[]{"one.txt","two.txt"})File.WriteAllText(Path.Combine(input,name),name);
             var view=window.GetVisualDescendants().OfType<Button>().Single(c=>c.Name=="MenuView").ContextMenu;
             view.Items.OfType<MenuItem>().Single(c=>c.Header as string==UiPlatform.CurrentText["Refresh"]).Command.Execute(null);

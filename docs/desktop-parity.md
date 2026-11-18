@@ -23,7 +23,7 @@ The shared `DeskCommand` supplies menu, toolbar, context-menu and keyboard actio
 | Types / conversion / overwrite / image offset | Extraction dialog | Valid output, at least one type | Bounded atomic conversion; fail/skip/replace policy; source archive protected |
 | Name / type / size / original sorting | View → Sort; repeat choice reverses direction | Listing open | Directory-first display; original preserves source indices |
 | Image original / fit / fit window | View → Fit image / Fit window; Ctrl+H | Image available for window sizing | Pixel and native-window tests |
-| Menu / toolbar / status visibility | View; Alt+Shift+M/T/S; Alt reveals menu | Idle | Saved layout preferences |
+| Toolbar / status visibility | View or Alt+Shift+T/S | Idle | Saved layout preferences |
 | Preferences / per-format settings | Gear; View → Settings; Ctrl+P | Idle | SettingsTests: persistence, corruption preservation, languages; format encoding overrides; secret settings remain in memory |
 | About | Help / ? → About | Idle | Full archive/image/audio/script catalog, extensions, read/write, fixture evidence and limits; MIT and dependency notices |
 | Troubleshooting / update check | Help / ? pages | Idle; update only on explicit click | Version ordering tests, checksum verification, bounded worker database validation and fallback |

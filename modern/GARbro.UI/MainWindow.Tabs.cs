@@ -117,7 +117,7 @@ public sealed partial class MainWindow
         try
         {
             files.Selection.Clear();files.ItemsSource=Array.Empty<BrowserEntry>();files.IsEnabled=false;
-            path.Text=listing?.Location.DisplayPath??"";
+            path.Text=LocationText(listing?.Location);
             search.Text=tab.Query;options.Text=tab.Options;RefreshSchemeButton();
             changingEncoding=true;
             previewEncoding.SelectedItem=previewEncoding.Items.OfType<UiChoice>().FirstOrDefault(c=>c.Value==tab.Encoding);
@@ -128,8 +128,11 @@ public sealed partial class MainWindow
         if(listing==null)path.Focus();
         if(tab.Input!=null && !tab.InputComplete){await LoadInput(tab.Input);return;}
         if(listing!=null && tab.ContextKey!=WorkerProtocol.Serialize(Settings.Context))
+        {
             await LoadLocationAsync(listing.Location with {Fingerprint=null},false,true);
-        else await RefreshFilesAsync(restoring:tab);
+            return;
+        }
+        await RefreshFilesAsync(restoring:tab);
         if(ReferenceEquals(currentTab,tab))
         {
             UpdateListingStatus();await PreviewSelection(false,tab.PreviewOffset);

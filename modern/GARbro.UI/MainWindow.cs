@@ -30,7 +30,7 @@ public sealed partial class MainWindow : AppWindow
     internal DesktopText Text;
     readonly Dictionary<string, DeskCommand> commands = new();
     readonly StackPanel menu = new() { Orientation = Orientation.Horizontal, Name = "IconMenus", Spacing = 2 };
-    readonly StackPanel toolbar = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
+    readonly WrapPanel toolbar = new() { Orientation = Orientation.Horizontal, ItemSpacing = 8 };
     readonly StackPanel footer = new() { Spacing = 6 };
     readonly TextBox search = new() { Name = "Search", Width = 220 };
     readonly Button scheme = new() { Name = "Scheme", MaxWidth = 500 };
@@ -114,9 +114,12 @@ public sealed partial class MainWindow : AppWindow
         heading.Children.Add(menu); BuildMenus();
         var operations = new StackPanel { Spacing = 8 };
         operations.Children.Add(BuildTabs());
-        string[] toolbarCommands = ["Back", "Forward", "Parent", "Open", "OpenFolder", .. ArchiveCommands, "Cancel"];
-        foreach (string key in toolbarCommands) toolbar.Children.Add(IconButton(key));
-        search.Bind(TextBox.PlaceholderTextProperty, Bind("Search")); operations.Children.Add(new ScrollViewer { Content = toolbar, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled });
+        foreach (string key in new[] { "Back", "Forward", "Parent", "Open", "OpenFolder" }) toolbar.Children.Add(IconButton(key));
+        var archiveActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = toolbar.ItemSpacing };
+        foreach (string key in ArchiveCommands) archiveActions.Children.Add(IconButton(key));
+        toolbar.Children.Add(archiveActions);
+        toolbar.Children.Add(IconButton("Cancel"));
+        search.Bind(TextBox.PlaceholderTextProperty, Bind("Search")); operations.Children.Add(toolbar);
         path.KeyDown += async (_, e) => { if (!busy && e.Key == Key.Enter) { e.Handled = true; await Guard(() => NavigateInput(path.Text)); } };
         var locationRow = new Grid { ColumnDefinitions = new("*,220"), RowDefinitions = new("Auto,Auto"), ColumnSpacing = 8, RowSpacing = 8 };
         locationRow.Children.Add(path); Grid.SetColumn(search, 1); locationRow.Children.Add(search); operations.Children.Add(locationRow);
@@ -149,15 +152,22 @@ public sealed partial class MainWindow : AppWindow
             var name = new Grid { ColumnDefinitions = new("Auto,*"), ColumnSpacing = 10,ClipToBounds=true };
             name.Children.Add(MaterialIcons.Create(entry.IsDirectory ? "Folders" : entry.Type switch { "image" => "Images", "audio" => "Audio", "video" => "Video", "script" => "Text", "archive" => "Process", _ => "Other" }, 20));
             var filename = new TextBlock { Name="EntryFilename",Text = entry.DisplayName, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center }; Grid.SetColumn(filename, 1); name.Children.Add(filename); row.Children.Add(name);
+            ToolTip.SetTip(name, entry.DisplayName);
             var kind = new TextBlock { Text = entry.IsDirectory ? Text["Folder"] : ResourceType(entry), Opacity = .65, FontSize = 12 };
             Grid.SetColumn(kind, 1); row.Children.Add(kind);
             var size = new TextBlock { Text = entry.IsDirectory ? "" : FormatSize(entry.Size), HorizontalAlignment = HorizontalAlignment.Right, FontSize = 12 };
             Grid.SetColumn(size, 2); row.Children.Add(size);
             row.SizeChanged+=(_,_)=>FitFileColumns(row,kind,files.Bounds.Width);return row;
         });
-        files.DoubleTapped += async (_, _) => await Guard(OpenSelected);
+        files.DoubleTapped += async (_, e) =>
+        {
+            if (e.Source is not Control source || (source as ListBoxItem ?? source.FindAncestorOfType<ListBoxItem>())?.DataContext is not BrowserEntry entry
+                || !commands["OpenSelected"].CanExecute(null)) return;
+            if (!ReferenceEquals(files.SelectedItem, entry)) files.SelectedItem = entry;
+            await Guard(OpenSelected);
+        };
         files.SelectionChanged += async (_, _) => { if(updatingRows)return; currentTab.Selection=files.SelectedItems.Cast<BrowserEntry>().Select(e=>e.Name).ToArray(); currentTab.Focused=(files.SelectedItem as BrowserEntry)?.Name; UpdateTabHeaders(); UpdateCommands(); await PreviewSelection(); };
-        files.ContextMenu = BuildContextMenu(); Grid.SetRow(files, 1); list.Children.Add(files);
+        Grid.SetRow(files, 1); list.Children.Add(files);
         fileEmpty.Children.Add(MaterialIcons.Create("OpenFolder", 48)); fileEmpty.Children.Add(emptyTitle); fileEmpty.Children.Add(emptyBody);
         foreach (string key in new[] { "Open", "OpenFolder" }) { var button = Button(key); button.Name = null; if (key == "Open") button.Classes.Add("primary"); emptyActions.Children.Add(button); }
         fileEmpty.Children.Add(emptyActions); Grid.SetRow(fileEmpty, 1); list.Children.Add(fileEmpty); Grid.SetColumn(list, 1); browser.Children.Add(list);
@@ -198,7 +208,10 @@ public sealed partial class MainWindow : AppWindow
         encodingControls.Children.Add(wrap); DockPanel.SetDock(encodingControls, Dock.Bottom); previewStack.Children.Insert(0, encodingControls);
         previewEncoding.SelectionChanged += async (_, _) => { if (!changingEncoding && previewEntry != null) await ShowPreviewPage(0); };
         text.PropertyChanged += (_, e) => { if (e.Property == IsVisibleProperty) wrap.IsVisible = text.IsVisible; };
-        search.TextChanged += (_, _) => {if(!updatingRows)RefreshFiles(100);};
+        search.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == TextBox.TextProperty && !updatingRows) RefreshFiles(100);
+        };
         folders.SelectionChanged += async (_, _) =>
         {
             if (!updatingRows && folders.SelectedItem is FolderNode { Location: ResourceLocation location } && location != CurrentLocation)
@@ -231,11 +244,11 @@ public sealed partial class MainWindow : AppWindow
         {
             var types=await Request<Dictionary<string,string>>(new("resource-warm",null),lifetime.Token);
             LightweightResources.RegisterTypes(types);
-            if(listing?.Physical==true)
+            if(!loading && listing?.Physical==true)
             {
                 var source=listing;
                 var entries=await Task.Run(()=>source.Entries.Select(e=>e.IsDirectory?e:e with {Type=LightweightResources.Type(e.Name)}).ToArray(),lifetime.Token);
-                if(listing==source && !isClosed){listing=source with {Entries=entries};RefreshFiles();}
+                if(listing==source && !loading && !isClosed){listing=source with {Entries=entries};RefreshFiles();}
             }
         }
         catch(OperationCanceledException){}
@@ -336,27 +349,24 @@ public sealed partial class MainWindow : AppWindow
     }
     async Task NavigateInput(string input)
     {
+        if (string.IsNullOrWhiteSpace(input) || CurrentLocation != null && input == LocationText(CurrentLocation)) return;
         var source=await UiPlatform.Storage.RestoreAsync(input);
         if(source!=null)await LoadInput(Path.GetFullPath(source.LocalPath));
     }
+    static string LocationText(ResourceLocation location) =>
+        location == null ? "" : (location with { RootPath = UiPlatform.Storage.DisplayPath(location.RootPath) }).DisplayPath;
     async Task LoadInput(string full)
     {
         var tab=currentTab;tab.Input=full;tab.InputComplete=false;UpdateTabHeaders();
         try
         {
             if(File.Exists(full) && LightweightResources.IsOrdinaryName(full))
-            {
-                await LoadLocationAsync(new(Path.GetDirectoryName(full)));
-                if(currentTab!=tab)throw new OperationCanceledException();
-                files.SelectedItem=listing.Entries.FirstOrDefault(f=>f.Name==Path.GetFileName(full));
-            }
+                await LoadLocationAsync(new(Path.GetDirectoryName(full)), selectFile: Path.GetFileName(full));
             else await LoadLocationAsync(new(full));
         }
         catch(WorkerOperationException e)when(e.RemoteType=="UnknownFormatException" && File.Exists(full))
         {
-            await LoadLocationAsync(new(Path.GetDirectoryName(full)));
-            if(currentTab!=tab)throw new OperationCanceledException();
-            files.SelectedItem=listing.Entries.FirstOrDefault(f=>f.Name==Path.GetFileName(full));
+            await LoadLocationAsync(new(Path.GetDirectoryName(full)), selectFile: Path.GetFileName(full));
         }
         if(currentTab!=tab || isClosed)throw new OperationCanceledException();
         tab.InputComplete=true;
@@ -366,7 +376,7 @@ public sealed partial class MainWindow : AppWindow
         SaveTabView();BuildFolders();UpdateTabHeaders();
         if(path.IsFocused && files.IsEnabled)files.Focus();
     }
-    async Task LoadLocationAsync(ResourceLocation location, bool recordHistory = true, bool refresh = false)
+    async Task LoadLocationAsync(ResourceLocation location, bool recordHistory = true, bool refresh = false, string selectFile = null)
     {
         ObjectDisposedException.ThrowIf(isClosed, this);
         navigationCancellation?.Cancel(); StopAudio(); previewCancellation?.Cancel();
@@ -378,15 +388,38 @@ public sealed partial class MainWindow : AppWindow
         {
             var opened = await Request<BrowserListing>(new("resource-list", null, Location: location, Refresh: refresh), operation.Token);
             operation.Token.ThrowIfCancellationRequested(); if (isClosed || ticket != navigationGeneration) return;
-            listing = opened; RefreshSchemeButton(); path.Text = UiPlatform.Storage.DisplayPath(listing.Location.RootPath) + string.Concat(listing.Location.Chain.Select(p => " → " + p)); Title = "GARbro — " + Path.GetFileName(location.RootPath.TrimEnd(Path.DirectorySeparatorChar));
-            ClearPreview(); previewCache.Clear(); typeOverrides.Clear(); currentTab.ContextKey=WorkerProtocol.Serialize(Settings.Context); await RefreshFilesAsync(); BuildFolders(); UpdateTabHeaders();
+            bool sameLocation = CurrentLocation is { } previous && previous.RootPath == opened.Location.RootPath
+                && previous.Directory == opened.Location.Directory && previous.Chain.SequenceEqual(opened.Location.Chain);
+            string previousFile = currentTab.Focused;
+            if (!sameLocation || selectFile != null)
+            {
+                currentTab.Focused = null;
+                currentTab.Selection = [];
+                updatingRows = true;
+                try { search.Text = ""; }
+                finally { updatingRows = false; }
+            }
+            listing = opened;
+            RefreshSchemeButton(); path.Text = LocationText(listing.Location);
+            ClearPreview(); previewCache.Clear();
+            if (!sameLocation) typeOverrides.Clear();
+            currentTab.ContextKey = WorkerProtocol.Serialize(Settings.Context);
+            await RefreshFilesAsync(updatePreview: false);
             operation.Token.ThrowIfCancellationRequested(); if (ticket != navigationGeneration) return;
+            BuildFolders(); UpdateTabHeaders();
             if (recordHistory)
             {
                 if (historyIndex + 1 < history.Count) history.RemoveRange(historyIndex + 1, history.Count - historyIndex - 1);
                 history.Add(listing.Location); historyIndex = history.Count - 1;
             }
             UpdateListingStatus();
+            if (selectFile != null && files.Items.OfType<BrowserEntry>().FirstOrDefault(e => e.Name == selectFile) is { } entry)
+            {
+                files.SelectedItem = entry;
+                files.ScrollIntoView(entry);
+            }
+            else if (currentTab.Focused != null)
+                _ = PreviewSelection(resetEncoding: !sameLocation || currentTab.Focused != previousFile);
         }
         finally
         {
@@ -410,7 +443,7 @@ public sealed partial class MainWindow : AppWindow
         folders.ItemsSource = nodes;
     }
     void RefreshFiles(int delay = 0) => _ = Guard(() => RefreshFilesAsync(delay));
-    async Task RefreshFilesAsync(int delay = 0, BrowserTab restoring = null)
+    async Task RefreshFilesAsync(int delay = 0, BrowserTab restoring = null, bool updatePreview = true)
     {
         filterCancellation?.Cancel(); using var cancel = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token); filterCancellation = cancel;
         int ticket = ++filterGeneration;
@@ -459,7 +492,12 @@ public sealed partial class MainWindow : AppWindow
                 },DispatcherPriority.Loaded);
             }
             currentTab.Selection=files.SelectedItems.Cast<BrowserEntry>().Select(e=>e.Name).ToArray();
+            var selectedEntry = files.SelectedItem as BrowserEntry;
+            currentTab.Focused = selectedEntry?.Name;
+            UpdateTabHeaders();
             fileEmpty.IsVisible=rows.Length==0;UpdateCommands();
+            if (updatePreview && restoring == null && previewEntry?.Name != (selectedEntry?.IsDirectory == false ? selectedEntry.Name : null))
+                _ = PreviewSelection();
         }
         catch(OperationCanceledException)when(cancel.IsCancellationRequested){}
         finally {if(ReferenceEquals(filterCancellation,cancel))filterCancellation=null;}
@@ -563,7 +601,8 @@ public sealed partial class MainWindow : AppWindow
         imageScroll.HorizontalScrollBarVisibility = imageScroll.VerticalScrollBarVisibility = Settings.FitImage ?
             Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled : Avalonia.Controls.Primitives.ScrollBarVisibility.Auto;
         if (languageChanged && !busy && !loading) UpdateListingStatus();
-        ApplyShortcutBindings(); if (save) store.Save(Settings); BuildMenus(); RefreshFiles(); BuildFolders(); UpdateTabHeaders();
+        ApplyShortcutBindings(); if (save) store.Save(Settings); BuildMenus(); files.ContextMenu = BuildContextMenu();
+        RefreshFiles(); BuildFolders(); UpdateTabHeaders();
     }
     void SetBusy(bool value)
     {

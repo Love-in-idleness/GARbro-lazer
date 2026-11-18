@@ -50,9 +50,11 @@ public sealed class LocalizationShortcutTests
             foreach(int version in new[]{1,2,3})
             {
                 string legacyPacking=version==3?"[\"Ctrl+Shift+F3\"]":"[]";
-                File.WriteAllText(store.Path,"{\"Version\":"+version+",\"Language\":\"ru-RU\",\"TextEncoding\":\"shift_jis\",\"Volume\":0.4,\"ShortcutBindings\":{\"Create\":"+legacyPacking+"}}");
+                File.WriteAllText(store.Path,"{\"Version\":"+version+",\"Language\":\"ru-RU\",\"TextEncoding\":\"shift_jis\",\"Volume\":0.4,\"ShortcutBindings\":{\"Create\":"+legacyPacking+",\"Menubar\":[\"Ctrl+Shift+M\"]}}");
                 var migrated=store.Load();Assert.Null(store.LoadError);Assert.Equal(3,migrated.Version);Assert.Equal(.4,migrated.Volume);
                 Assert.False(migrated.ShortcutBindings.ContainsKey("Create"));
+                Assert.False(migrated.ShortcutBindings.ContainsKey("Menubar"));
+                Assert.Contains("Ctrl+Shift+M", ShortcutCatalog.Effective(migrated)["Toolbar"]);
                 string[] expected=version==3?["Ctrl+Shift+F3"]:[];
                 Assert.Equal(expected,ShortcutCatalog.Effective(migrated)["PackSelected"]);
                 migrated.ShortcutBindings["Open"]=Array.Empty<string>();
@@ -101,6 +103,23 @@ public sealed class LocalizationShortcutTests
             window.DesktopHost.KeyPress(copy.Key,modifiers,PhysicalKey.C,"c");
             await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);
             Assert.Equal("text copied from editor",await window.Clipboard.TryGetTextAsync());
+
+            var text = new DesktopText("en-US");
+            var preferences = window.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "MenuSettings").ContextMenu;
+            preferences.Items.OfType<MenuItem>().Single(m => m.Header as string == text["Shortcuts"]).Command.Execute(null);
+            for (int i = 0; i < 400 && !window.DesktopHost.OwnedWindows.Any(); i++)
+                await Task.Delay(25, TestContext.Current.CancellationToken);
+            var dialog = Assert.Single(window.DesktopHost.OwnedWindows);
+            var controls = dialog.GetVisualDescendants().ToArray();
+            var commands = controls.OfType<ListBox>().Single(c => c.Name == "ShortcutCommands");
+            commands.SelectedItem = commands.Items.OfType<UiChoice>().Single(c => c.Value == "ExtractSelected");
+            controls.OfType<ListBox>().Single(c => c.Name == "ShortcutBindings").SelectedIndex = 0;
+            controls.OfType<Button>().Single(c => c.Content as string == text["ShortcutRemove"]).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            controls.OfType<Button>().Single(c => c.Content as string == text["Save"]).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await Dispatcher.UIThread.InvokeAsync(()=>{},DispatcherPriority.Background);
+            var files = window.GetVisualDescendants().OfType<ListBox>().Single(c => c.Name == "Files");
+            Assert.Empty(ShortcutCatalog.Effective(store.Load())["ExtractSelected"]);
+            Assert.Null(files.ContextMenu.Items.OfType<MenuItem>().Single(m => m.Header as string == text["ExtractSelected"]).InputGesture);
         }
         finally{window.Close();File.Delete(path);}
     }

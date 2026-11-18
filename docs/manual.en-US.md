@@ -73,7 +73,7 @@ Ctrl+O: open. Ctrl+P: settings. Ctrl+Q: quit. F3: pack selected.
 F4: extract selected. F5: refresh. F6: convert. Enter: open selected.
 Backspace / Ctrl+PageUp: parent. Alt+Left/Right: navigation history.
 Ctrl+A: select all. Ctrl+C: copy selected filenames. Numpad +: select by wildcard.
-Alt+Shift+T/M/S: toggle toolbar/menu/status bar.
+Alt+Shift+T toggles the toolbar. Alt+Shift+S toggles the status bar.
 Text fields and input methods retain their normal editing shortcuts.
 
 ## Flatpak

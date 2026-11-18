@@ -44,6 +44,51 @@ public sealed class BrowserTabTests
         finally {window.Close();Directory.Delete(root,true);}
     }
     [AvaloniaFact]
+    public async Task SearchAndNavigationKeepThePreviewWithTheVisibleSelection()
+    {
+        string root = Directory.CreateTempSubdirectory("garbro-browser-selection-").FullName;
+        string child = Path.Combine(root, "child");
+        Directory.CreateDirectory(child);
+        File.WriteAllText(Path.Combine(root, "sample.txt"), "parent preview");
+        File.WriteAllText(Path.Combine(child, "sample.txt"), "child preview");
+        var window = new MainWindow(new SettingsStore(Path.Combine(root, "settings.json")));
+        window.Show();
+        try
+        {
+            await window.LoadArchiveAsync(root);
+            var list = Files(window);
+            var preview = window.GetVisualDescendants().OfType<TextBox>().Single(b => b.IsReadOnly && b.AcceptsReturn);
+            var search = Search(window);
+            search.Text = "sample";
+            await Until(() => list.ItemCount == 1);
+            list.SelectedIndex = 0;
+            await Until(() => preview.IsVisible && preview.Text == "parent preview");
+            File.WriteAllText(Path.Combine(root, "sample.txt"), "refreshed preview");
+            window.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.F5 });
+            await Until(() => preview.IsVisible && preview.Text == "refreshed preview");
+            Assert.Equal("sample", search.Text);
+            search.Text = "child";
+            await Until(() => list.ItemCount == 1 && list.Items.OfType<BrowserEntry>().Single().Name == "child");
+            Assert.Empty(list.SelectedItems);
+            Assert.False(preview.IsVisible);
+            list.SelectedIndex = 0;
+            window.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
+            await Until(() => window.CurrentLocation?.RootPath == child && list.ItemCount == 1 && list.Items.OfType<BrowserEntry>().Single().Name == "sample.txt");
+            Assert.Equal("", search.Text);
+            Assert.Empty(list.SelectedItems);
+
+            search.Text = "missing";
+            await Until(() => list.ItemCount == 0);
+            var path = window.GetVisualDescendants().OfType<TextBox>().Single(b => b.Name == "Location");
+            path.Text = Path.Combine(child, "sample.txt");
+            path.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Enter });
+            await Until(() => preview.IsVisible && preview.Text == "child preview");
+            Assert.Equal("", search.Text);
+            Assert.Equal("sample.txt", Assert.IsType<BrowserEntry>(list.SelectedItem).Name);
+        }
+        finally { window.Close(); Directory.Delete(root, true); }
+    }
+    [AvaloniaFact]
     public async Task TabShortcutsAndClosingTheLastTabLeaveAUsableWelcomePage()
     {
         string root=Path.Combine(Path.GetTempPath(),"garbro-tab-close-"+Guid.NewGuid());Directory.CreateDirectory(root);

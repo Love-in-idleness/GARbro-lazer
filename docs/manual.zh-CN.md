@@ -53,7 +53,7 @@ Linux 使用系统 FFmpeg 和 SDL2，缺少视频工具时请安装 `ffmpeg`；W
 Ctrl+O 打开，Ctrl+P 设置，Ctrl+Q 退出。F3 封包所选，F4 提取所选，F5 刷新，F6 转换。
 Enter 打开所选；Backspace / Ctrl+PageUp 上一级；Alt+左右箭头 后退/前进。
 Ctrl+A 全选，Ctrl+C 复制文件名，小键盘 + 按通配符选择。
-Alt+Shift+T/M/S 切换工具栏、菜单栏、状态栏；Alt 可恢复隐藏菜单。
+Alt+Shift+T 切换工具栏，Alt+Shift+S 切换状态栏。
 文本框和输入法保留各自的编辑快捷键。
 
 ## Flatpak

@@ -53,6 +53,7 @@ public sealed partial class MainWindow
         commands.Add(key, new(() => Guard(action), enabled ?? (() => !busy), key is "Open" or "OpenFolder" or "Back" or "Forward" or "Parent" or "Refresh"));
     void CreateCommands()
     {
+        bool CanUseListing() => !busy && !loading && !choosingOperation && listing != null;
         Register("Open", OpenPicker); Register("OpenFolder", FolderPicker);
         Register("NewTab",NewTab,()=>!busy && !choosingOperation);
         Register("CloseTab",()=>CloseTab(currentTab),()=>!busy && !choosingOperation);
@@ -63,45 +64,42 @@ public sealed partial class MainWindow
         Register("Back", () => NavigateHistory(-1), () => !busy && historyIndex > 0);
         Register("Forward", () => NavigateHistory(1), () => !busy && historyIndex + 1 < history.Count);
         Register("Parent", NavigateParent, () => !busy && listing != null);
-        Register("Refresh", () => CurrentLocation == null ? Task.CompletedTask : LoadLocationAsync(CurrentLocation with { Fingerprint = null }, false, true));
+        Register("Refresh", () => LoadLocationAsync(CurrentLocation with { Fingerprint = null }, false, true),
+            () => !busy && !choosingOperation && CurrentLocation != null);
         Register("Settings", () => ShowSettings());
         Register("ChangeGameScheme", ChangeGameScheme, () => !busy && !loading && !choosingOperation && listing?.ProviderId != null && !listing.Physical && listing.Tag != "media");
         foreach (string section in new[] { "General", "Appearance", "Decoding", "Formats", "Shortcuts" })
             Register(section, () => ShowSettings(section));
-        Register("ExtractAll", () => ExtractPicker(false), () => !busy && !loading && !choosingOperation && listing != null);
-        Register("ExtractSelected", () => ExtractPicker(true), () => !busy && !loading && !choosingOperation && listing != null && files.SelectedItems.Count > 0);
-        Register("PackSelected", () => CreateArchive(true), () => !busy && !loading && !choosingOperation && listing?.Physical == true && files.SelectedItems.Count > 0);
-        Register("PackAll", () => CreateArchive(false), () => !busy && !loading && !choosingOperation && listing?.Physical == true && listing.Entries.Length > 0);
-        Register("Convert", ConvertSelected, () => !busy && !loading && !choosingOperation && listing != null && files.SelectedItems.Cast<BrowserEntry>().Any(e => !e.IsDirectory));
-        Register("OpenSelected", OpenSelected, () => !busy && listing != null);
+        Register("ExtractAll", () => ExtractPicker(false), () => CanUseListing() && listing.Entries.Length > 0);
+        Register("ExtractSelected", () => ExtractPicker(true), () => CanUseListing() && files.SelectedItems.Count > 0);
+        Register("PackSelected", () => CreateArchive(true), () => CanUseListing() && listing.Physical && files.SelectedItems.Count > 0);
+        Register("PackAll", () => CreateArchive(false), () => CanUseListing() && listing.Physical && listing.Entries.Length > 0);
+        Register("Convert", ConvertSelected, () => CanUseListing() && files.SelectedItems.Cast<BrowserEntry>().Any(e => !e.IsDirectory));
+        Register("OpenSelected", OpenSelected, () => CanUseListing() && files.SelectedItem != null);
         Register("SelectAll", () =>
         {
             // Bound the range even before the framework has attached its selection source.
             if (files.ItemCount > 0) files.Selection.SelectRange(0, files.ItemCount - 1);
             return Task.CompletedTask;
         }, () => !busy && files.ItemCount > 0);
-        Register("CopyNames", async () => { if (Clipboard != null) await Clipboard.SetTextAsync(string.Join(Environment.NewLine, files.SelectedItems.Cast<BrowserEntry>().Select(e => e.Name))); });
+        Register("CopyNames", async () =>
+        {
+            if (Clipboard != null) await Clipboard.SetTextAsync(string.Join(Environment.NewLine, files.SelectedItems.Cast<BrowserEntry>().Select(e => e.DisplayName)));
+        }, () => CanUseListing() && files.SelectedItems.Count > 0);
         Register("Mask", async () =>
         {
             string mask = await Dialogs.Input(this, Text, "Mask", "*.*"); if (mask == null) return;
             string pattern = "^" + Regex.Escape(mask == "*.*" ? "*" : mask).Replace("\\*", ".*").Replace("\\?", ".") + "$";
             foreach (var item in files.Items.OfType<BrowserEntry>()) if (Regex.IsMatch(item.DisplayName, pattern, RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1))) files.SelectedItems.Add(item);
-        });
+        }, () => CanUseListing() && files.ItemCount > 0);
         Register("Explore", () => { DesktopServices.Explore(listing.Location.RootPath); return Task.CompletedTask; }, () => listing != null && (UiPlatform.CanExplore?.Invoke(listing.Location.RootPath) ?? true));
-        Register("Trash", async () =>
-        {
-            if (!await Dialogs.Confirm(this, Text, "TrashConfirm")) return;
-            StopAudio();await mediaCleanup;
-            await Request<bool>(new("resource-release",null),lifetime.Token);
-            foreach (var item in files.SelectedItems.Cast<BrowserEntry>().Where(e => !e.IsDirectory).ToArray())
-                await DesktopServices.Trash(Path.Combine(listing.Location.RootPath, item.Name));
-            await LoadLocationAsync(listing.Location, false);
-        }, () => !busy && listing?.Physical == true && (UiPlatform.CanTrash?.Invoke() ?? true));
+        Register("Trash", TrashSelected, () => CanUseListing() && listing.Physical && (UiPlatform.CanTrash?.Invoke() ?? true)
+            && files.SelectedItems.Cast<BrowserEntry>().Any(e => !e.IsDirectory));
         Register("FitWindow", () => { if (bitmap != null) { Width = Math.Clamp(bitmap.Size.Width + 650, MinWidth, Screens?.Primary?.WorkingArea.Width ?? 2000); Height = Math.Clamp(bitmap.Size.Height + 280, MinHeight, Screens?.Primary?.WorkingArea.Height ?? 1400); browser.ColumnDefinitions[2].Width = new Avalonia.Controls.GridLength(Math.Clamp(bitmap.Size.Width, 100, Math.Max(100, Width - 600))); } return Task.CompletedTask; }, () => !UiPlatform.IsMobile && !busy && bitmap != null);
-        foreach (string key in new[] { "Toolbar", "Menubar", "Statusbar", "FitImage" })
+        foreach (string key in new[] { "Toolbar", "Statusbar", "FitImage" })
             Register(key, () =>
             {
-                switch (key) { case "Toolbar": Settings.ToolbarVisible = !Settings.ToolbarVisible; break; case "Menubar": Settings.ToolbarVisible = !Settings.ToolbarVisible; break;
+                switch (key) { case "Toolbar": Settings.ToolbarVisible = !Settings.ToolbarVisible; break;
                     case "Statusbar": Settings.StatusVisible = !Settings.StatusVisible; break; case "FitImage": Settings.FitImage = !Settings.FitImage; break; }
                 ApplySettings(); return key=="FitImage" && previewEntry!=null ? ShowPreviewPage(0) : Task.CompletedTask;
             });
@@ -114,8 +112,10 @@ public sealed partial class MainWindow
         Register("Play", PlayAudio, () => !busy && mediaPreparation == null && preview?.Kind is "audio" or "video");
         Register("Pause", () => { Playback?.Pause(); return Task.CompletedTask; }, () => Playback != null);
         Register("Stop", () => { Playback?.Stop(); return Task.CompletedTask; }, () => Playback != null);
-        Register("PreviousPage", () => ShowPreviewPage(Math.Max(0, (preview?.Offset ?? 0) - 65536)), () => preview != null && pageControls.IsVisible);
-        Register("NextPage", () => ShowPreviewPage((preview?.Offset ?? 0) + 65536), () => preview?.More == true);
+        Register("PreviousPage", () => ShowPreviewPage(Math.Max(0, preview.Offset - 65536)),
+            () => !busy && previewCancellation == null && preview?.Offset > 0 && pageControls.IsVisible);
+        Register("NextPage", () => ShowPreviewPage(preview.Offset + 65536),
+            () => !busy && previewCancellation == null && preview?.More == true && pageControls.IsVisible);
         Register("Copy", async () => { if (Clipboard != null) await Clipboard.SetTextAsync(text.Text ?? ""); }, () => text.IsVisible);
         Register("Wrap", () => { Settings.WrapText = !Settings.WrapText; ApplySettings(); return Task.CompletedTask; });
         ApplyShortcutBindings();
@@ -186,7 +186,17 @@ public sealed partial class MainWindow
     {
         var selected = await UiPlatform.Storage.PickInputsAsync(true); if (selected.Length > 0) await LoadInputsAsync(selected.Select(f => f.Id));
     }
-    async Task NavigateHistory(int delta) { historyIndex += delta; await LoadLocationAsync(history[historyIndex], false); }
+    async Task NavigateHistory(int delta)
+    {
+        int target = historyIndex + delta;
+        int ticket = navigationGeneration + 1;
+        await LoadLocationAsync(history[target], false);
+        if (ticket == navigationGeneration && !isClosed)
+        {
+            historyIndex = target;
+            UpdateCommands();
+        }
+    }
     async Task NavigateParent()
     {
         if (listing == null) return; var location = listing.Location;
@@ -249,7 +259,6 @@ public sealed partial class MainWindow
         var source = listing;
         var location = source.Location;
         int ticket = navigationGeneration;
-        var tab = currentTab;
         string key = ScopedOptionsProvider.FormatKey(location, source.ProviderId);
         if (!sessionOptions.TryGetValue(location.RootPath, out var profile)) sessionOptions[location.RootPath] = profile = new();
         string previous = profile.GetValueOrDefault(key);
@@ -277,7 +286,6 @@ public sealed partial class MainWindow
             RefreshSchemeButton();
             throw;
         }
-        if (ReferenceEquals(tab, currentTab) && ticket + 1 == navigationGeneration && !isClosed) await PreviewSelection();
     }
     ExtractionSource CaptureExtraction(bool selectedOnly)
     {
@@ -296,7 +304,13 @@ public sealed partial class MainWindow
         if(listing==null)return;
         var source=CaptureExtraction(selectedOnly);int ticket=navigationGeneration;
         if(source.Selection is {Length:0}){status.Text=Text["SelectFiles"];return;}
-        var choice=await ChooseOperation(()=>Dialogs.Extraction(this,Text,DefaultOutputDirectory(source.Location,source.Physical),selectedOnly,source.Selection?.Length??0));
+        var choice = await ChooseOperation(async () =>
+        {
+            catalog ??= await Request<ResourceFormatInfo[]>(new("resource-catalog", null), lifetime.Token);
+            if (ticket != navigationGeneration || isClosed) return null;
+            return await Dialogs.Extraction(this, Text, DefaultOutputDirectory(source.Location, source.Physical),
+                selectedOnly, source.Selection?.Length ?? 0, catalog.Where(f => f.Type == "image" && f.CanWrite).ToArray());
+        });
         if(choice==null)return;
         if(ticket!=navigationGeneration){status.Text=Text["ExtractionSourceChanged"];return;}
         string output=source.Physical || source.Tag=="media"?choice.Output:Path.Combine(choice.Output,
@@ -350,6 +364,40 @@ public sealed partial class MainWindow
             status.Text=result.Written?Text.Format("PackingCompleted",result.Entries,result.Converted):Text["PackingSkipped"];
         }
         finally { active = null; SetBusy(false); }
+    }
+    async Task TrashSelected()
+    {
+        var source = listing.Location;
+        int ticket = navigationGeneration;
+        var paths = files.SelectedItems.Cast<BrowserEntry>().Where(e => !e.IsDirectory)
+            .Select(e => Path.Combine(source.RootPath, e.Name)).ToArray();
+        string[] confirmed = await ChooseOperation(async () =>
+            await Dialogs.Confirm(this, Text, Text.Format("TrashConfirm", paths.Length)) ? paths : null);
+        if (confirmed == null || ticket != navigationGeneration || isClosed) return;
+        previewCancellation?.Cancel();
+        StopAudio();
+        using var operation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        active = operation;
+        SetBusy(true);
+        bool changed = false;
+        try
+        {
+            await mediaCleanup;
+            await Request<bool>(new("resource-release", null), operation.Token);
+            foreach (string filename in confirmed)
+            {
+                operation.Token.ThrowIfCancellationRequested();
+                await DesktopServices.Trash(filename);
+                changed = true;
+            }
+        }
+        finally
+        {
+            active = null;
+            SetBusy(false);
+            if (changed && ticket == navigationGeneration && !isClosed)
+                await Guard(() => LoadLocationAsync(source, false, true));
+        }
     }
     async Task ConvertSelected()
     {

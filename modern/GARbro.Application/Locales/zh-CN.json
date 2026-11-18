@@ -200,7 +200,7 @@
   "Automatic": "自动识别",
   "Explore": "在文件管理器中显示",
   "Trash": "移入回收站…",
-  "TrashConfirm": "将所选磁盘文件移入回收站？",
+  "TrashConfirm": "将选中的 {0} 个文件移入回收站？",
   "Confirm": "确认",
   "Feedback": "问题反馈",
   "Manual": "使用说明",

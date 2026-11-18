@@ -200,7 +200,7 @@
   "Automatic": "Detect automatically",
   "Explore": "Show in file manager",
   "Trash": "Move to recycle bin…",
-  "TrashConfirm": "Move the selected physical files to the recycle bin?",
+  "TrashConfirm": "Move selected files ({0}) to the recycle bin?",
   "Confirm": "Confirm",
   "Feedback": "Report a problem",
   "Manual": "User guide",

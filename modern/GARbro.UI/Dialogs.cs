@@ -55,7 +55,7 @@ public static class Dialogs
     }
     public static async Task<bool> Confirm(AppWindow owner, DesktopText text, string question)
     {
-        var window = Window(text, "Confirm", 520, 240); var body = Panel(); body.Children.Add(Label(text, question));
+        var window = Window(text, "Confirm", 520, 240); var body = Panel(); body.Children.Add(new TextBlock { Text = question, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
         window.Content = Frame(window, body, Button(text, "Confirm", () => window.Close(true)), Button(text, "Cancel", () => window.Close(false)));
         return await window.ShowDialog<bool>(owner);
     }
@@ -103,7 +103,7 @@ public static class Dialogs
     }
     public static string PathValue(TextBox box) => box.Tag as string ?? box.Text;
     static ComboBox Overwrite(DesktopText text) => new() { ItemsSource = new[] { text["Fail"], text["Skip"], text["Replace"] }, SelectedIndex = 0 };
-    public static async Task<ExtractionChoice> Extraction(AppWindow owner,DesktopText text,string initial,bool selectedOnly,int selectedCount)
+    public static async Task<ExtractionChoice> Extraction(AppWindow owner,DesktopText text,string initial,bool selectedOnly,int selectedCount,ResourceFormatInfo[] images=null)
     {
         var window=Window(text,selectedOnly?"ExtractSelected":"ExtractAll",940,730);var body=Panel();
         body.Children.Add(new TextBlock {Text=selectedOnly?text.Format("ExtractionSelectionScope",selectedCount):text["ExtractionAllScope"],TextWrapping=Avalonia.Media.TextWrapping.Wrap,Classes={"muted"}});
@@ -120,7 +120,7 @@ public static class Dialogs
         var types=new[]{("Images","image"),("Audio","audio"),("Video","video"),("Scripts","script"),("Archives","archive"),("Other","")};
         var checks=new List<CheckBox>();var row=new WrapPanel();
         foreach(var type in types){var check=new CheckBox {Content=text[type.Item1],IsChecked=true,Margin=new Avalonia.Thickness(0,0,14,0)};checks.Add(check);row.Children.Add(check);}advanced.Children.Add(row);
-        body.Children.Add(Label(text,"MediaConversion"));var conversion=new MediaConversionPanel(text,offerScripts:true);body.Children.Add(conversion);
+        body.Children.Add(Label(text,"MediaConversion"));var conversion=new MediaConversionPanel(text,images,offerScripts:true);body.Children.Add(conversion);
         var discardMedia=new CheckBox {Name="DiscardOriginalMedia",Content=Label(text,"DiscardConvertedOriginals"),IsChecked=false,IsEnabled=false};
         conversion.Changed+=()=>discardMedia.IsEnabled=conversion.HasConversion;body.Children.Add(discardMedia);
         body.Children.Add(new TextBlock {Text=text["SourceMediaPreserved"],TextWrapping=Avalonia.Media.TextWrapping.Wrap,Classes={"muted"}});
