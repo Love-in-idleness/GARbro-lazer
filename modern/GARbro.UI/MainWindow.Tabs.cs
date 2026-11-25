@@ -27,6 +27,7 @@ public sealed partial class MainWindow
         public bool InputComplete;
         public long PreviewOffset;
         public Vector Scroll;
+        public (string Location, string Title)? PreviewTarget;
         public string[] Selection=Array.Empty<string>();
         public BrowserListing Listing;
         public List<ResourceLocation> History=new(), Roots=new();
@@ -89,6 +90,7 @@ public sealed partial class MainWindow
                 location.Chain.LastOrDefault()??Path.GetFileName(location.RootPath.TrimEnd(Path.DirectorySeparatorChar));
             if(location!=null && tab.Listing.Physical && Path.GetDirectoryName(tab.Input)==location.RootPath)
                 title=tab.Selection.FirstOrDefault()??Path.GetFileName(tab.Input);
+            if (tab.PreviewTarget is { } target && location?.DisplayPath == target.Location) title = target.Title;
             tab.Describe(string.IsNullOrEmpty(title)?location?.RootPath??Text["NewTab"]:title,location?.DisplayPath??tab.Input??Text["NewTab"]);
         }
         Title=currentTab.Listing==null?"GARbro":"GARbro — "+currentTab.Header;
@@ -136,9 +138,33 @@ public sealed partial class MainWindow
             UpdateListingStatus();await PreviewSelection(false,tab.PreviewOffset);
         }
     }
-    async Task NewTab()
+    Task NewTab() => NewTab(new());
+
+    async Task NewTab(BrowserTab tab)
     {
-        var tab=new BrowserTab();openTabs.Add(tab);await SelectTab(tab);
+        openTabs.Add(tab);await SelectTab(tab);
+    }
+    async Task OpenEntryInNewTab(BrowserEntry entry)
+    {
+        var source = listing.Location;
+        bool previewOnly = OpensInPreview(entry);
+        var destination = previewOnly ? null : EntryLocation(entry);
+        string forcedType = typeOverrides.GetValueOrDefault(entry.Name);
+        var tab = new BrowserTab { Options = options.Text };
+        await NewTab(tab);
+        if (currentTab != tab || isClosed) return;
+        await Guard(async () =>
+        {
+            if (!previewOnly)
+            {
+                try { await LoadLocationAsync(destination); return; }
+                catch (WorkerOperationException e) when (!entry.IsDirectory && e.RemoteType == "UnknownFormatException") { }
+            }
+            if (currentTab != tab || isClosed) return;
+            tab.PreviewTarget = (source.DisplayPath, entry.DisplayName);
+            await LoadLocationAsync(source, selectFile: entry.Name, selectedType: forcedType);
+        });
+        if (currentTab == tab && path.IsFocused && files.IsEnabled) files.Focus();
     }
     async Task CloseTab(BrowserTab tab)
     {

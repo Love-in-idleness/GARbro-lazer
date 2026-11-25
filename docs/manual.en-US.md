@@ -13,6 +13,8 @@ Hover over an icon for its name; every popup combines icons with text.
 
 GARbro uses one main window. Opening or dropping several files or folders creates a tab for each; opening a resource again selects its existing tab. Later launches and Open With send files to the existing window. Each tab keeps its location, navigation history, search and selection.
 
+Right-click a file or folder in the resource list and choose **Open in New Tab**, or middle-click its row. GARbro switches to the new tab and keeps the original tab’s location and selection.
+
 Use Ctrl/Cmd+T for a new tab, Ctrl/Cmd+W to close it, and Ctrl+Tab / Ctrl+Shift+Tab to switch tabs. These bindings can be changed in Settings → Shortcuts. Switching tabs stops media playback; closing the last tab returns to the welcome page. The location bar navigates within the current tab.
 
 ## Browse resources

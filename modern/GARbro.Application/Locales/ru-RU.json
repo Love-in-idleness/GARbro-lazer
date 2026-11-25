@@ -8,6 +8,7 @@
   "Error.Use schemes --reset without a file or --check.": "Используйте schemes --reset без файла и --check.",
   "Error.Invalid saved scheme database.": "Сохранённая база схем недействительна. Используйте garbro schemes --reset.",
   "Error.Input file does not exist.": "Входной файл не существует.",
+  "OpenInNewTab": "Открыть в новой вкладке",
   "OpenWithFormat": "Открыть с указанием формата…",
   "OpenSelectedWithFormat": "Открыть выбранный файл с указанием формата…",
   "OpenWithFormatFailed": "Не удалось открыть в формате {0}. {1}",

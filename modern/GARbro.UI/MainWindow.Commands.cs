@@ -17,16 +17,18 @@ using GARbro.Domain;
 
 namespace GARbro.Desktop;
 
-public sealed class DeskCommand(Func<Task> execute, Func<bool> enabled, bool concurrent = false) : ICommand
+public sealed class DeskCommand(Func<object, Task> execute, Func<object, bool> enabled, bool concurrent = false) : ICommand
 {
+    public DeskCommand(Func<Task> execute, Func<bool> enabled, bool concurrent = false)
+        : this(_ => execute(), _ => enabled(), concurrent) { }
     bool running;
     public event EventHandler CanExecuteChanged;
-    public bool CanExecute(object parameter) => (concurrent || !running) && enabled();
+    public bool CanExecute(object parameter) => (concurrent || !running) && enabled(parameter);
     public async void Execute(object parameter)
     {
         if (!CanExecute(parameter)) return;
         running = true; Update();
-        try { await execute(); }
+        try { await execute(parameter); }
         finally { running = false; Update(); }
     }
     public void Update() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
@@ -79,6 +81,9 @@ public sealed partial class MainWindow
         Register("PackAll", () => CreateArchive(false), () => CanUseListing() && listing.Physical && listing.Entries.Length > 0);
         Register("Convert", ConvertSelected, () => CanUseListing() && files.SelectedItems.Cast<BrowserEntry>().Any(e => !e.IsDirectory));
         Register("OpenSelected", OpenSelected, () => CanUseListing() && files.SelectedItem != null);
+        commands.Add("OpenInNewTab", new(
+            target => Guard(() => OpenEntryInNewTab((BrowserEntry)(target ?? files.SelectedItem))),
+            target => CanUseListing() && (target ?? files.SelectedItem) is BrowserEntry));
         Register("SelectAll", () =>
         {
             // Bound the range even before the framework has attached its selection source.
@@ -170,7 +175,7 @@ public sealed partial class MainWindow
     {
         var context = new ContextMenu();
         string[] selectionCommands = { "SelectAll", "Mask", "CopyNames", "Explore", "Trash" };
-        string[] keys = selectionOnly ? selectionCommands : ["OpenSelected", "OpenSelectedWithFormat", .. ArchiveCommands, "Convert", .. selectionCommands, "Refresh"];
+        string[] keys = selectionOnly ? selectionCommands : ["OpenSelected", "OpenInNewTab", "OpenSelectedWithFormat", .. ArchiveCommands, "Convert", .. selectionCommands, "Refresh"];
         foreach (string key in keys) context.Items.Add(Item(key));
         var type = Group("AssignType"); foreach (var pair in new[] { ("Automatic", ""), ("Images", "image"), ("Audio", "audio"), ("Video", "video"), ("Scripts", "script"), ("Binary", "binary") })
         {

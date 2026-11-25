@@ -10,6 +10,7 @@ using Avalonia.Controls.Templates;
 using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
+using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -163,11 +164,23 @@ public sealed partial class MainWindow : AppWindow
         });
         files.DoubleTapped += async (_, e) =>
         {
-            if (e.Source is not Control source || (source as ListBoxItem ?? source.FindAncestorOfType<ListBoxItem>())?.DataContext is not BrowserEntry entry
+            if (EntryAt(e.Source) is not BrowserEntry entry
                 || !commands["OpenSelected"].CanExecute(null)) return;
             if (!ReferenceEquals(files.SelectedItem, entry)) files.SelectedItem = entry;
             await Guard(OpenSelected);
         };
+        files.AddHandler(PointerPressedEvent, (_, e) =>
+        {
+            if (e.GetCurrentPoint(files).Properties.PointerUpdateKind != PointerUpdateKind.MiddleButtonPressed
+                || EntryAt(e.Source) is not BrowserEntry entry || !commands["OpenInNewTab"].CanExecute(entry)) return;
+            e.Handled = true;
+            commands["OpenInNewTab"].Execute(entry);
+        }, RoutingStrategies.Tunnel);
+        files.AddHandler(ContextRequestedEvent, (_, e) =>
+        {
+            var item = files.ContextMenu?.Items.OfType<MenuItem>().FirstOrDefault(i => i.Command == commands["OpenInNewTab"]);
+            if (item != null) item.CommandParameter = EntryAt(e.Source);
+        }, RoutingStrategies.Tunnel);
         files.SelectionChanged += async (_, _) => { if(updatingRows)return; currentTab.Selection=files.SelectedItems.Cast<BrowserEntry>().Select(e=>e.Name).ToArray(); currentTab.Focused=(files.SelectedItem as BrowserEntry)?.Name; UpdateTabHeaders(); UpdateCommands(); await PreviewSelection(); };
         Grid.SetRow(files, 1); list.Children.Add(files);
         fileEmpty.Children.Add(MaterialIcons.Create("OpenFolder", 48)); fileEmpty.Children.Add(emptyTitle); fileEmpty.Children.Add(emptyBody);
@@ -384,7 +397,7 @@ public sealed partial class MainWindow : AppWindow
         SaveTabView();BuildFolders();UpdateTabHeaders();
         if(path.IsFocused && files.IsEnabled)files.Focus();
     }
-    async Task LoadLocationAsync(ResourceLocation location, bool recordHistory = true, bool refresh = false, string selectFile = null)
+    async Task LoadLocationAsync(ResourceLocation location, bool recordHistory = true, bool refresh = false, string selectFile = null, string selectedType = null)
     {
         ObjectDisposedException.ThrowIf(isClosed, this);
         navigationCancellation?.Cancel(); StopAudio(); previewCancellation?.Cancel();
@@ -426,6 +439,7 @@ public sealed partial class MainWindow : AppWindow
                 selectFile = opened.Entries.Single().Name;
             if (selectFile != null && files.Items.OfType<BrowserEntry>().FirstOrDefault(e => e.Name == selectFile) is { } entry)
             {
+                if (selectedType != null) typeOverrides[entry.Name] = selectedType;
                 files.SelectedItem = entry;
                 files.ScrollIntoView(entry);
             }
@@ -513,14 +527,20 @@ public sealed partial class MainWindow : AppWindow
         catch(OperationCanceledException)when(cancel.IsCancellationRequested){}
         finally {if(ReferenceEquals(filterCancellation,cancel))filterCancellation=null;}
     }
+    static BrowserEntry EntryAt(object source) => source is Control control
+        ? (control as ListBoxItem ?? control.FindAncestorOfType<ListBoxItem>())?.DataContext as BrowserEntry : null;
+
+    bool OpensInPreview(BrowserEntry entry) => !entry.IsDirectory &&
+        (listing.Physical && LightweightResources.IsOrdinaryName(entry.Name) || typeOverrides.GetValueOrDefault(entry.Name, entry.Type) == "video" || listing.Tag == "media");
+
+    ResourceLocation EntryLocation(BrowserEntry entry) => listing.Physical ? new(Path.Combine(listing.Location.RootPath, entry.Name)) :
+        entry.IsDirectory ? listing.Location.EnterDirectory(entry.Name) : listing.Location.EnterArchive(entry.Name);
+
     async Task OpenSelected()
     {
         if (files.SelectedItem is not BrowserEntry entry) return;
-        if (!entry.IsDirectory && (listing.Physical && LightweightResources.IsOrdinaryName(entry.Name) || typeOverrides.GetValueOrDefault(entry.Name, entry.Type) == "video" || listing.Tag == "media"))
-        { await PreviewSelection(); return; }
-        ResourceLocation location = listing.Physical ? new(Path.Combine(listing.Location.RootPath, entry.Name)) :
-            entry.IsDirectory ? listing.Location.EnterDirectory(entry.Name) : listing.Location.EnterArchive(entry.Name);
-        try { await LoadLocationAsync(location); }
+        if (OpensInPreview(entry)) { await PreviewSelection(); return; }
+        try { await LoadLocationAsync(EntryLocation(entry)); }
         catch (WorkerOperationException e) when (!entry.IsDirectory && e.RemoteType == "UnknownFormatException") { await PreviewSelection(); }
     }
     async Task PreviewSelection(bool resetEncoding = true,long offset = 0)

@@ -8,6 +8,7 @@
   "Error.Use schemes --reset without a file or --check.": "请单独使用 schemes --reset，无需传入文件或 --check。",
   "Error.Invalid saved scheme database.": "已保存的方案库无效。可使用 garbro schemes --reset。",
   "Error.Input file does not exist.": "输入文件不存在。",
+  "OpenInNewTab": "在新标签页中打开",
   "OpenWithFormat": "以指定格式打开…",
   "OpenSelectedWithFormat": "以指定格式打开所选…",
   "OpenWithFormatFailed": "无法以 {0} 格式打开。{1}",

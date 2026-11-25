@@ -1,11 +1,16 @@
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using GARbro.Application;
@@ -85,6 +90,79 @@ public sealed class BrowserTabTests
             await Until(() => preview.IsVisible && preview.Text == "child preview");
             Assert.Equal("", search.Text);
             Assert.Equal("sample.txt", Assert.IsType<BrowserEntry>(list.SelectedItem).Name);
+        }
+        finally { window.Close(); Directory.Delete(root, true); }
+    }
+    [AvaloniaFact]
+    public async Task ContextMenuAndMiddleClickOpenThePointedAtEntryInNewTabs()
+    {
+        string root = Directory.CreateTempSubdirectory("garbro-tab-entry-").FullName;
+        string source = Directory.CreateDirectory(Path.Combine(root, "resources")).FullName;
+        string archive = Path.Combine(source, "bundle.zip");
+        using (var zip = ZipFile.Open(archive, ZipArchiveMode.Create))
+            zip.CreateEntryFromFile(Path.Combine(AppContext.BaseDirectory, "Fixtures", "standard.xfl"), "folder/inner.xfl");
+        File.WriteAllText(Path.Combine(source, "first.txt"), "original selection");
+        var store = new SettingsStore(Path.Combine(root, "settings.json"));
+        store.Save(new AppSettings { Language = "en-US", Width = 1320, Height = 820 });
+        var window = new MainWindow(store);
+        window.Show();
+        var host = window.DesktopHost;
+        var files = Files(window);
+        var tabs = Tabs(window);
+        async Task Click(string filename, MouseButton button)
+        {
+            ListBoxItem row = null;
+            await Until(() => (row = files.GetVisualDescendants().OfType<ListBoxItem>()
+                .FirstOrDefault(item => item.DataContext is BrowserEntry entry && entry.Name == filename))?.Bounds.Height > 0);
+            var point = row.TranslatePoint(new Point(row.Bounds.Width / 2, row.Bounds.Height / 2), host).Value;
+            host.MouseDown(point, button);
+            host.MouseUp(point, button);
+        }
+        try
+        {
+            await window.LoadArchiveAsync(source);
+            files.Selection.Select(files.Items.OfType<BrowserEntry>().ToList().FindIndex(entry => entry.Name == "first.txt"));
+            files.Selection.Select(files.Items.OfType<BrowserEntry>().ToList().FindIndex(entry => entry.Name == "bundle.zip"));
+            Assert.Equal("first.txt", Assert.IsType<BrowserEntry>(files.SelectedItem).Name);
+            await Click("bundle.zip", MouseButton.Right);
+            var menu = files.ContextMenu;
+            await Until(() => menu.IsOpen);
+            var open = menu.Items.OfType<MenuItem>().Single(item => item.Header as string == "Open in New Tab");
+            Assert.Equal("bundle.zip", Assert.IsType<BrowserEntry>(open.CommandParameter).Name);
+            string screenshot = Environment.GetEnvironmentVariable("GARBRO_TAB_MENU_SCREENSHOT");
+            if (screenshot != null)
+            {
+                using var frame = TopLevel.GetTopLevel(menu).CaptureRenderedFrame();
+                frame.Save(screenshot, new PngBitmapEncoderOptions());
+            }
+            open.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            menu.Close();
+            await Until(() => tabs.ItemCount == 2 && window.CurrentLocation?.RootPath == archive && files.ItemCount == 1);
+
+            await Click("folder", MouseButton.Middle);
+            await Until(() => tabs.ItemCount == 3 && window.CurrentLocation?.Directory == "folder/" && files.ItemCount == 1);
+            await Click("folder/inner.xfl", MouseButton.Middle);
+            await Until(() => tabs.ItemCount == 4 && window.ArchiveTag == "XFL" && files.ItemCount == 3);
+            window.MinWidth = 360;
+            window.Width = 430;
+            await Until(() => window.Bounds.Width < 600);
+            await Click("hello.txt", MouseButton.Middle);
+            var preview = window.GetVisualDescendants().OfType<TextBox>().Single(box => box.IsReadOnly && box.AcceptsReturn);
+            await Until(() => tabs.ItemCount == 5 && preview.IsVisible && preview.Text == "Hello, GARbro!\n");
+            Assert.Equal("hello.txt", tabs.SelectedItem.ToString());
+            var selectedTab = (ListBoxItem)tabs.ContainerFromItem(tabs.SelectedItem);
+            await Until(() => selectedTab.TranslatePoint(default, tabs) is { } position && position.X >= -1 &&
+                position.X + selectedTab.Bounds.Width <= tabs.Bounds.Width + 1);
+            Assert.Empty(host.OwnedWindows);
+            if (screenshot != null)
+            {
+                using var frame = host.CaptureRenderedFrame();
+                frame.Save(Path.ChangeExtension(screenshot, null) + "-compact.png", new PngBitmapEncoderOptions());
+            }
+
+            tabs.SelectedIndex = 0;
+            await Until(() => window.CurrentLocation?.RootPath == source && files.SelectedItems.Count == 2);
+            Assert.Equal("first.txt", Assert.IsType<BrowserEntry>(files.SelectedItem).Name);
         }
         finally { window.Close(); Directory.Delete(root, true); }
     }
